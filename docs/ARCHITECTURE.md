@@ -88,7 +88,7 @@ engine switches to demo mode and talks to no API.
 | --- | ---: | --- |
 | `audio/sfx.js` | 60 | Sounds, synthesized in the browser. |
 | `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
-| `core/loop.js` | 155 | The render loop and its frame budget. |
+| `core/loop.js` | 167 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo.js` | 224 | Demo mode: fictional projects and a fictional Mac. |
@@ -97,24 +97,29 @@ engine switches to demo mode and talks to no API.
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
 | `interact/props.js` | 267 | Furniture you can point at: highlight, tooltip, click actions. |
 | `interact/rings.js` | 16 | Selection and hover rings on the floor. |
+| `life/altar.js` | 171 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
 | `life/incidents.js` | 81 | Incidents: repeated failures turn the office red. |
-| `life/rain.js` | 70 | Umbrellas and a wet-floor sign when it rains. |
+| `life/nap.js` | 61 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
+| `life/quota.js` | 139 | Out of Claude: an account's plan limit used up, its people on a break until it resets. |
+| `life/rain.js` | 77 | Umbrellas and a wet-floor sign when it rains. |
 | `life/seasons.js` | 234 | Seasonal decorations: Halloween, Christmas, Tết. |
 | `life/trophies.js` | 118 | The trophy cabinet and the opening plaque. |
 | `life/weather.js` | 90 | Real weather outside (Open-Meteo). |
 | `life/your-turn.js` | 37 | "Your turn": sessions that finished or wait for you. |
-| `net/live.js` | 95 | The live connection: sessions, desks, teams, events. |
+| `net/live.js` | 147 | The live connection: sessions, desks, teams, events. |
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
 | `people/breaks.js` | 64 | Lunch and the afternoon coffee queue. |
-| `people/chibi-rig.js` | 581 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
+| `people/chibi-rig.js` | 628 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
 | `people/errands.js` | 283 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
-| `people/gatherings.js` | 128 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
+| `people/gatherings.js` | 144 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
-| `people/navigation.js` | 231 | The walking graph, desk spots and stations people go to. |
+| `people/navigation.js` | 240 | The walking graph, desk spots and stations people go to. |
 | `people/outings.js` | 407 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with a drink. |
+| `people/staff.js` | 379 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
-| `people/workers.js` | 514 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/teatime.js` | 87 | Friday 16:00: afternoon tea. |
+| `people/workers.js` | 515 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
@@ -136,17 +141,30 @@ engine switches to demo mode and talks to no API.
 | `ui/timelapse.js` | 117 | A 15-second clip of the office to share: square (1080 × 1080), the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds. |
 | `ui/tips.js` | 111 | The first visit: a short tour of what you can click. |
 | `ui/topbar.js` | 60 | Phone modal, notifications, the night switch. |
-| `ui/whiteboard.js` | 265 | The whiteboard: agents' tasks and your own sticky notes. |
+| `ui/whiteboard.js` | 272 | The whiteboard: agents' tasks and your own sticky notes. |
 | `ui/wrapped.js` | 107 | The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as a PNG or copy, for sharing. |
 | `world/backdrops/beach.js` | 117 | Beach backdrop: sand, surf, palms, umbrellas and loungers. |
-| `world/backdrops/city.js` | 243 | The city backdrop: street grid, buildings, rooftops, lamps and traffic. |
+| `world/backdrops/city.js` | 276 | The city backdrop: street grid, buildings, rooftops, lamps and traffic. |
 | `world/backdrops/countryside.js` | 186 | Countryside backdrop: rice paddies, dikes, a river, a bridge, a village. |
 | `world/backdrops/index.js` | 49 | Choosing the backdrop: city, countryside or beach. |
 | `world/backdrops/shared.js` | 82 | Pieces shared by the countryside and beach backdrops. |
 | `world/backdrops/shops.js` | 257 | Shops near the office: the three street-facing ground floors nearest to it become shops, as in the city you picked for the weather. |
-| `world/backdrops/street-life.js` | 1021 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
+| `world/backdrops/street-corner.js` | 143 | … |
+| `world/backdrops/street-folk.js` | 139 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
+| `world/backdrops/street-life.js` | 1128 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
+| `world/backdrops/street-lunar.js` | 84 | … |
+| `world/backdrops/street-morning.js` | 103 | … |
+| `world/backdrops/street-park.js` | 360 | … |
+| `world/backdrops/street-repair.js` | 120 | … |
+| `world/backdrops/street-riders.js` | 148 | … |
+| `world/backdrops/street-shade.js` | 102 | … |
+| `world/backdrops/street-signals.js` | 64 | … |
+| `world/backdrops/street-siren.js` | 77 | … |
+| `world/backdrops/street-spots.js` | 76 | … |
+| `world/backdrops/street-wedding.js` | 254 | … |
+| `world/backdrops/street-wires.js` | 76 | … |
 | `world/cozy-room.js` | 54 | The cozy plan's room: floor and walls. |
-| `world/desks.js` | 181 | Desks and office chairs, and each person's coat and backpack at their desk. |
+| `world/desks.js` | 184 | Desks and office chairs, and each person's coat and backpack at their desk. |
 | `world/entrance.js` | 113 | The cozy plan's door and the company floor's lift. |
 | `world/furniture/board.js` | 25 | The whiteboard's frame (its drawing lives in ui/whiteboard.js). |
 | `world/furniture/coffee.js` | 33 | The coffee corner (the pantry counter on the company floor). |
@@ -156,8 +174,8 @@ engine switches to demo mode and talks to no API.
 | `world/furniture/room-pieces.js` | 106 | Wall clock, framed art, bookshelf, sofa corner and the globe. |
 | `world/furniture/server-racks.js` | 65 | Server racks with LEDs and fans that follow the Mac's CPU. |
 | `world/layout.js` | 39 | The floor plans (cozy, pro, hq): where the shared furniture stands, and the headquarters wing. |
-| `world/pro/floor.js` | 312 | The company floor: rooms, partitions and furniture. |
-| `world/pro/pieces.js` | 139 | Company floor building pieces: floor finishes, walls, glass, chairs, dining sets. |
+| `world/pro/floor.js` | 351 | The company floor: rooms, partitions and furniture. |
+| `world/pro/pieces.js` | 142 | Company floor building pieces: floor finishes, walls, glass, chairs, dining sets. |
 | `world/pro/wing.js` | 134 | Headquarters' wing: in front of the company floor, a corridor along it, a corridor down the middle and four department rooms of two pods each (the desks, pods' screens and carpets come from the shared code). |
 | `world/props/aquarium.js` | 44 | The aquarium. |
 | `world/props/arcade.js` | 62 | The arcade cabinet and its little game. |
@@ -175,4 +193,4 @@ engine switches to demo mode and talks to no API.
 | `world/room-update.js` | 176 | Room lights, particles, the rocket, the clock and day / night. |
 | `world/screens.js` | 100 | What each desk's screens show: the editor while it edits, a terminal for commands, a browser for the web, code with the match highlighted while it reads or searches, a chat while it thinks, a permission dialog while it waits for you, a screensaver while it naps. |
 | `world/terrace.js` | 114 | The terrace around the office: tiles, glass railing, bollards, planters, potted plants, seating. |
-| `world/windows.js` | 82 | Windows on the outer walls and the views they show. |
+| `world/windows.js` | 96 | Windows on the outer walls and the views they show. |
