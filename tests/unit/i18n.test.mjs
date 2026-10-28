@@ -26,7 +26,8 @@ test('every key the code asks for exists in English', () => {
   const missing = [];
   for (const f of files) {
     // comments left out (they quote example keys); a line comment needs a space before it, so URLs stay
-    const text = fs.readFileSync(path.join(root, f), 'utf8').split('\n').filter((l) => !/^\s*(\/\/|\/?\*)/.test(l)).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
+    const text = fs.readFileSync(path.join(root, f), 'utf8').split(/\r?\n/)   // (a Windows checkout has CRLF line ends)
+      .filter((l) => !/^\s*(\/\/|\/?\*)/.test(l)).map((l) => l.replace(/\s\/\/\s.*$/, '')).join('\n');
     // tr('area.key' …) and t('area.key' …) with a literal key; keys built at run time ('area.tier' + n) are not checked
     for (const m of text.matchAll(/\b(?:tr|t)\(\s*'([a-zA-Z][\w]*(?:\.[\w]+)+)'\s*[,)]/g)) if (!has(dicts[DEFAULT_LANG], m[1])) missing.push(`${f}: ${m[1]}`);
   }

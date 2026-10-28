@@ -54,7 +54,7 @@ jobs:
 
   e2e:
     name: End-to-end (demo office in a browser)
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # (ubuntu-latest is Ubuntu 26.04 since 19/10/2026, which Playwright 1.56 has no browsers for)
     needs: check
     steps:
       - uses: actions/checkout@v4
