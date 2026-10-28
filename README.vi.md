@@ -6,7 +6,7 @@
 
 Văn phòng chibi 3D cho thấy các session Claude Code đang làm gì, kèm bảng "Máy Mac" để xem RAM, CPU, ổ đĩa và giải phóng.
 
-Mở: http://localhost:4310 · Xem thử không cần Claude Code: http://localhost:4310/?demo
+Mở: http://localhost:4310 · Xem thử không cần Claude Code: http://localhost:4310/?demo · Xem online, không cần cài: https://khanh020905.github.io/my-office/vi/
 
 Chạy được trên macOS, Linux và Windows (bảng máy đọc từng hệ điều hành theo cách riêng; mở cửa sổ IDE và thoát app chỉ có trên macOS). Giao diện mặc định là tiếng Anh; đổi sang tiếng Việt trong **Cài đặt → Ngôn ngữ** (hoặc đặt `OFFICE_LANG=vi`).
 

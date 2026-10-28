@@ -27,6 +27,7 @@ const { GIFEncoder, quantize, applyPalette } = gifenc;   // a CommonJS package
 
 const browser = await chromium.launch({ args: ['--use-angle=metal', '--enable-gpu', '--ignore-gpu-blocklist', '--hide-scrollbars'] });
 const page = await (await browser.newContext({ viewport: { width: VIEW, height: VIEW_H }, deviceScaleFactor: 1 })).newPage();
+await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); } catch { /* storage blocked */ } });   // (no first-visit tour in the GIF)
 console.log(`Opening ${URL_} at ${VIEW}×${VIEW_H}, recording at ${WIDTH}×${HEIGHT}…`);
 await page.goto(URL_, { waitUntil: 'load', timeout: 120_000 });
 await page.waitForTimeout(WARMUP * 1000);

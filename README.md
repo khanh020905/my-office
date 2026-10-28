@@ -14,8 +14,8 @@ The office also looks after your Mac: RAM per session, forgotten dev servers, on
 ![My Office: the company floor with sessions at work](docs/media/demo.gif)
 
 **Try it before you install anything.** The demo has made-up projects and needs no Claude Code: run `npm run dev` and
-open <http://localhost:4310/?demo>. The online demo is a static build of the same thing
-(`.github/workflows/pages.yml` publishes it to GitHub Pages).
+open <http://localhost:4310/?demo>. Or try it online, nothing to install: <https://khanh020905.github.io/my-office/>
+(a static build of the same demo, published by `.github/workflows/pages.yml`).
 
 > My Office is a community project. It is not made by, endorsed by or affiliated with Anthropic.
 
