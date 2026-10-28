@@ -19,7 +19,7 @@
     "start": "NODE_ENV=production node server/index.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "test": "node --test \"tests/unit/*.test.mjs\"",
+    "test": "node --test",
     "test:e2e": "playwright test",
     "smoke": "node scripts/smoke.mjs",
     "doctor": "node bin/cli.mjs doctor"

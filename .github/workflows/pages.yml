@@ -19,6 +19,8 @@ concurrency:
 
 jobs:
   build:
+    # GitHub Pages needs a public repository (or a paid plan): a private one skips the demo instead of failing
+    if: ${{ !github.event.repository.private }}
     name: Build the demo site
     runs-on: ubuntu-latest
     steps:
