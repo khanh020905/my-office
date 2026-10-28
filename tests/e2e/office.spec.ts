@@ -12,7 +12,7 @@ function watchErrors(page: Page) {
 test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { localStorage.setItem('office-tips', 'seen'); } catch { /* private mode */ } }); });
 
 for (const layout of ['pro', 'cozy', 'hq']) {
-  test(`the ${layout} office starts in demo mode without errors`, async ({ page }) => {
+  test(`the ${layout} office starts in demo mode without errors`, { tag: '@smoke' }, async ({ page }) => {
     const errors = watchErrors(page);
     await page.goto(`/?demo&layout=${layout}`);
     await expect(page.locator('#stage canvas')).toBeVisible();
@@ -44,7 +44,7 @@ test('panels open and close', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('hooks are accepted only from this machine and the page needs a token from elsewhere', async ({ request }) => {
+test('hooks are accepted only from this machine and the page needs a token from elsewhere', { tag: '@smoke' }, async ({ request }) => {
   const r = await request.post('/event', { data: { hook_event_name: 'Ping' } });
   expect(r.status()).toBe(200);
   const health = await request.get('/health');
@@ -65,7 +65,7 @@ test('a session opens its drawer from the list', async ({ page }) => {
   expect(errors).toEqual([]);
 });
 
-test('English by default, another language on request', async ({ page }) => {
+test('English by default, another language on request', { tag: '@smoke' }, async ({ page }) => {
   await page.goto('/?demo&layout=cozy');
   await expect(page.locator('html')).toHaveAttribute('lang', 'en');
   await expect(page.locator('#btn-look')).toContainText('Settings');

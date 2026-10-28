@@ -21,6 +21,7 @@
     "typecheck": "tsc --noEmit",
     "test": "node --test",
     "test:e2e": "playwright test",
+    "test:e2e:smoke": "playwright test --grep @smoke",
     "smoke": "node scripts/smoke.mjs",
     "doctor": "node bin/cli.mjs doctor"
   },
