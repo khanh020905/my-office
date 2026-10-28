@@ -1,0 +1,23 @@
+export default {
+  demoNothing: 'Bản demo chưa có gì để xem lại. Mở bản thật để xem lại các phiên của bạn.',
+  loadFailed: 'Không tải được dữ liệu xem lại.',
+  nothingYesterday: 'Hôm qua chưa có gì được ghi lại.',
+  nothingHere: 'Khoảng này chưa có gì được ghi lại. Office chỉ ghi khi đang chạy.',
+  chip: 'XEM LẠI · {time} · ×{speed}',
+  tagLive: 'trực tiếp',
+  tagReplay: 'xem lại',
+  conn: 'đang xem lại',
+  pause: 'Tạm dừng',
+  restart: 'Xem lại từ đầu',
+  play: 'Phát',
+  loading: 'đang tải…',
+  rec: {
+    unsupported: 'Trình duyệt này không quay được video.',
+    canceled: 'Đã huỷ quay video.',
+    failed: 'Không bắt đầu quay được.',
+    saved: 'Đã lưu video {ext} ({size}) vào thư mục Tải về.',
+    viewOnly: 'Đang quay khung văn phòng (không kèm hai bảng bên).',
+    stop: 'Dừng · {time}',
+    start: 'Quay video',
+  },
+};

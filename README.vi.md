@@ -1,0 +1,152 @@
+# My Office
+
+[English](README.md) · Tiếng Việt
+
+![My Office: tầng công ty với các phiên đang làm việc](docs/media/demo.gif)
+
+Văn phòng chibi 3D cho thấy các session Claude Code đang làm gì, kèm bảng "Máy Mac" để xem RAM, CPU, ổ đĩa và giải phóng.
+
+Mở: http://localhost:4310 · Xem thử không cần Claude Code: http://localhost:4310/?demo
+
+Chạy được trên macOS, Linux và Windows (bảng máy đọc từng hệ điều hành theo cách riêng; mở cửa sổ IDE và thoát app chỉ có trên macOS). Giao diện mặc định là tiếng Anh; đổi sang tiếng Việt trong **Cài đặt → Ngôn ngữ** (hoặc đặt `OFFICE_LANG=vi`).
+
+> My Office là dự án cộng đồng, không do Anthropic làm, bảo trợ hay liên kết.
+
+## Cài
+
+```bash
+git clone https://github.com/khanh020905/my-office.git && cd my-office
+npm install
+node bin/cli.mjs install --service   # thêm hook vào ~/.claude/settings.json + chạy nền khi đăng nhập
+node bin/cli.mjs doctor              # kiểm tra Node, curl, server, đủ hook, dịch vụ nền
+```
+
+`install` sao lưu `settings.json` trước khi sửa và chỉ thêm hook của My Office (chạy lại không thêm trùng). Gỡ: `node bin/cli.mjs uninstall`.
+
+| Lệnh | Việc |
+| --- | --- |
+| `install [--service] [--lan] [--no-approve] [--no-status]` | Thêm 13 hook báo sự kiện, hook duyệt quyền, hook trả lời câu hỏi / duyệt kế hoạch, và status line báo hạn mức gói (status line cũ của bạn vẫn chạy bên trong). `--service`: chạy nền bằng launchd. `--lan`: cho điện thoại cùng wifi xem. `--no-approve`: bỏ hai hook duyệt. `--no-status`: không đụng status line |
+| `uninstall` | Gỡ mọi hook của My Office và dịch vụ nền, giữ nguyên phần còn lại của `settings.json` |
+| `doctor` | Kiểm tra từng bước, nói rõ thiếu gì và lệnh sửa |
+| `start [--lan]` | Chạy server ở cửa sổ hiện tại (không dùng launchd) |
+| `pin [--new]` | Xem mã PIN điện thoại; `--new` đổi mã và đăng xuất mọi điện thoại |
+
+Khởi động lại sau khi sửa code: `launchctl kickstart -k gui/$(id -u)/com.my-office` · Log: `tail -f data/server.log`
+
+## Có gì
+
+- **Văn phòng 3D**: mỗi session là một nhân vật (kiểu A Đồ chơi hoặc B Pixar), đi tới thư viện khi đọc file, ngồi gõ khi sửa, ra phòng máy khi chạy lệnh, phóng tên lửa khi deploy. Cảnh nền thành phố, đồng quê, biển; ngày/đêm theo giờ. Thành phố có xe cộ dừng đèn đỏ, xe hơi theo dáng các dòng xe phổ biến ở Việt Nam: VinFast VF3, VF8, Toyota Vios, Fortuner, Honda City, Kia Morning, Ford Ranger, Mitsubishi Xpander (phần lớn dựng trên bộ Car Kit của Kenney, CC0) (taxi điện Xanh SM màu xanh ngọc; tài xế Grab và Xanh SM mặc áo, đội mũ của hãng có logo ở lưng, ngực và hông mũ, phần lớn chở khách đội mũ của hãng; GrabFood chở thùng xanh; nhiều người đeo khẩu trang), người đi bộ chờ đèn qua vạch kẻ (trời mưa thì che ô), và cửa hàng theo thành phố chọn ở mục thời tiết: TP.HCM có GS25, Circle K, 7-Eleven; Hà Nội có Circle K, GS25, WinMart+; Đà Nẵng có WinMart+, quán mì Quảng và hải sản. Đường phố theo giờ của văn phòng: giờ cao điểm sáng và chiều xe máy gấp đôi, chạy hàng ba, nhích từng chút; nửa đêm đường vắng. Ô tô xi-nhan tấp vào lề trước cửa hàng và dọc công viên rồi lát sau xi-nhan ra; taxi dừng đón khách thì bật đèn khẩn cấp. **Ra ngoài** (cảnh thành phố): trước giờ trưa shipper GrabFood dừng trước toà nhà, một người đang nghỉ đi thang máy xuống lấy cơm cho cả nhóm (văn phòng Chuyên nghiệp); thỉnh thoảng có người đang nghỉ xuống cửa hàng tiện lợi bên kia đường, chờ đèn xanh qua vạch kẻ, mua ly nước rồi về; có việc thì chạy về liền. Logo cửa hàng lấy từ Wikimedia Commons (logo chữ, không có bản quyền), vẫn là nhãn hiệu của các công ty đó; dự án không liên quan tới họ. Bên kia đường có xe bánh mì (sáng và chiều), quán trà đá ghế nhựa (tối đông, có bóng đèn), cô gánh hàng rong đội nón lá, người bán vé số. Công viên bên kia đường theo giờ: 5 giờ sáng các cụ tập dưỡng sinh thành hàng, 16:30 đánh cầu lông và đá cầu thành vòng, trẻ con chạy đuổi nhau, tối người ngồi ghế đá (tối có ánh điện thoại). Cạnh quán trà đá hai ông cụ đánh cờ tướng, vài người đứng xem, thỉnh thoảng có người cãi nước cờ. Cuối tuần, một nhà gần văn phòng có đám cưới: rạp hồng trắng dựng trên vỉa hè, cổng hoa (Lễ Vu Quy hoặc Lễ Tân Hôn, 囍); 8:36 xe hoa trắng kết hoa trên nắp capo tới đón dâu, nhà gái mặc áo dài đứng chờ; tiệc trưa và tối, cô dâu chú rể đi chào bàn, xe máy của khách đỗ dọc lề, tối có dây đèn (`?wedding` để xem ngày nào cũng được). Nghề vỉa hè: hai ba bác xe ôm chờ khách ở góc phố (6:30–19:30), giờ nghỉ trưa nằm ngủ ngay trên yên xe, gác chân lên ghi-đông, mũ úp mặt; trong công viên có người đu võng ngủ trưa. 5:30–8:30 có gánh xôi và nồi bánh cuốn bốc hơi: người đi làm ghé đứng ăn vội, ngồi ăn một đĩa, hoặc dừng xe mua mang đi. Ban ngày có ông cắt tóc treo gương lên gốc cây, cạnh góc vá xe với chồng lốp, máy bơm và chiếc xe dựng chân chống. Cột điện bê tông với từng bó dây võng dọc phố; thỉnh thoảng xe cấp cứu (115) hoặc xe cứu hoả (114) hú còi chạy qua, xe cộ tấp vào lề nhường đường (`?siren` để xem). Cột đèn có hộp đếm ngược số đỏ, xanh; ngày nắng nóng (từ 33 °C, theo thời tiết thật) xe máy dừng đèn đỏ lùi lại dưới bóng cây. Ngày nắng nhiều chị mặc đồ chống nắng "ninja" hoa văn, đeo kính, quấn váy; thỉnh thoảng có xe chở tủ lạnh, thang nhôm, bình ga, chậu cây, lồng gà hay chồng thùng xốp cao hơn người lái. Mùng một và rằm, trước vài cửa hàng nhỏ có người đốt vàng mã trong thùng sắt cạnh mâm cúng (`?lunar=1` để xem ngày nào cũng được). Tối về nhà và sáng đi làm qua phố, mỗi người một kiểu: xe máy riêng dựng thành hàng trên vỉa hè trước toà nhà, GrabBike, Xanh SM Bike hoặc taxi Xanh SM; danh sách phiên ghi người đó đang ở đâu ("Đang ở Circle K", "Đang về nhà (GrabBike)"). Nút **Hoá thân** để đi trong văn phòng ở góc nhìn thứ nhất; cạnh thang máy (hoặc cửa) bấm E để xuống phố: đi vỉa hè, qua đường (xe sẽ dừng), mua nước ở cửa hàng tiện lợi, mua bánh mì, bấm E ở cửa toà nhà để lên lại. Lần đầu mở có hướng dẫn ngắn chỉ những thứ bấm được; Cài đặt → Khác → "Xem lại hướng dẫn".
+- **Hai kiểu văn phòng** (Cài đặt → Văn phòng): **Ấm cúng** là một phòng mở như trước. **Chuyên nghiệp** là cả tầng công ty 22 × 17 m:
+  - **Các phòng:** phòng giám đốc, phòng họp kính, thư viện, phòng máy chủ, sảnh lễ tân có cửa ra vào, nhà vệ sinh, phòng ăn, khu thư giãn (sofa, bể cá, arcade, bi lắc, bệ phóng deploy).
+  - **Tường thật:** các phòng ngăn bằng tường dày có khung cửa, cắt ngang ở 1,3 m như mô hình kiến trúc để camera nhìn vào được. Phòng giám đốc, phòng họp, phòng máy chủ là vách kính; từ sảnh vào khu làm việc qua cửa kính đôi.
+  - **Khối Dev:** 12 bàn chia ba cụm, mỗi cụm bốn bàn quay mặt vào nhau, ngăn giữa bằng vách nỉ. Mỗi bàn có laptop, màn hình rời và tủ hồ sơ; dưới mỗi cụm là thảm. Mỗi cụm là một nhóm theo thư mục dự án ("Nhóm website-ielts · 3"); hai người đầu tiên của nhóm ngồi phía nhìn thẳng ra camera.
+  - **Tiện ích:** hai buồng gọi điện cách âm, tủ hồ sơ và máy in.
+  - **Giám đốc là bạn:** mỗi việc bạn nhắn, giám đốc mang tới bàn người làm, đưa tận tay nếu họ đang ngồi, không thì để trên bàn. Xong việc, người làm tới phòng giám đốc báo cáo (khi giám đốc có mặt) rồi mới ra phòng ăn nghỉ.
+  - **Nhà vệ sinh:** thỉnh thoảng có người ghé trước khi ngủ trưa; vào buồng thì cửa đóng, đèn đỏ.
+
+  Kiểu văn phòng lưu theo trình duyệt; `?layout=pro` hoặc `?layout=cozy` để thử một lần.
+- **Đồ vật bấm được**: rê chuột lên đồ vật thì nó sáng viền, hiện tên khu vực và chú thích. Bấm vào thì mở thẻ ghi agent đã làm gì ở đó:
+  - thư viện: file vừa đọc;
+  - cửa sổ: tra web;
+  - bệ phóng: deploy;
+  - góc cà phê / phòng ăn: ai đang nghỉ;
+  - phòng họp: trợ lý;
+  - máy in: việc vừa xong;
+  - phòng giám đốc: việc vừa giao, việc chờ giao.
+
+  Có cả trò nhỏ: cho cá ăn, pha cà phê, gọi mèo lên sofa, bật tắt đèn, đổi giờ ở đồng hồ. Tên khu vực chỉ hiện khi rê chuột tới, cho đỡ rối; muốn luôn hiện thì bật trong Cài đặt. Ở chế độ Hoá thân, đứng trước đồ vật rồi bấm **E**. Đứng trước người đang ngủ rồi bấm **E** để gọi dậy: họ vươn vai, nói một câu rồi ngủ tiếp (gọi mãi thì họ bực).
+- **Nhân vật phản ứng với bạn**:
+  - tối mà tắt đèn cây thì người làm gần đó kêu "Ơ, tôi đang làm mà!", đi tới bật lại rồi về làm tiếp. Tắt nữa thì họ bực hơn, tới lần thứ tư thì chịu thua;
+  - công tắc cạnh cửa tắt đèn cả tầng: ai cũng kêu, người gần nhất ra bật lại;
+  - in một trang hay pha cà phê thì có người ra lấy;
+  - vuốt mèo thì nó đi nằm lên bàn phím ai đó, người đó bế nó xuống;
+  - bấm vào người đang làm thì họ ngẩng lên một chút;
+  - bấm chuông trên bàn họp: ai rảnh thì vào họp, từng người nói mình đang làm gì, rồi giám đốc cho về;
+  - có cúp mới thì có bánh trên bàn họp và cả phòng vỗ tay; deploy xong thì mấy bàn gần đó vỗ tay;
+  - cây để lâu không tưới thì héo vàng, bấm vào cây khát nước thì có người cầm bình ra tưới.
+- **Khuya** (sau 21 giờ), phiên nào nghỉ quá nửa tiếng thì mặc áo khoác, đi thang máy về nhà; có việc là quay lại, không thì sáng hôm sau mới tới.
+- **Hết lượt Claude**: khi hạn mức gói của một tài khoản (5 giờ hoặc tuần) dùng hết, người của tài khoản đó rời bàn đi nghỉ: uống trà ở bàn pantry, đọc sách, ngồi tán gẫu. Tấm bảng trên tường đếm ngược tới lúc dùng lại được; tới giờ thì chuông reo, mọi người về chỗ. Phiên nào còn đang chạy thì người đó vẫn làm. (`?limitout=30` để xem thử trong nửa tiếng.)
+- **Nhịp tuần**: 9:00 thứ Hai chuông tự reo giao ban đầu tuần, ai rảnh ra bàn họp nói nhanh đang làm gì; 16:00 thứ Sáu trà chiều ở pantry, có trà sữa và bánh tráng trộn cho ai đang nghỉ.
+- **Nhân viên không phải phiên**: ở văn phòng Chuyên nghiệp có cô lễ tân ngồi quầy từ 7:45 tới 18:15, chào người bước ra thang máy và chào người về buổi tối. Mỗi ngày hai lần shipper Shopee lên giao hàng cho một người đang nghỉ: để hộp ở quầy, lễ tân gọi tên, người đó ra lấy, ôm về bàn mở (văn phòng nhỏ thì shipper gọi ở cửa). 18:30 cô lao công đẩy xe lên, lau từng lối đi, dựng biển vàng "Sàn ướt" (sàn bóng nước tới khi khô, ai đi qua thì đi vòng), đổ thùng rác lớn rồi về.
+- **Khu theo dự án**: mỗi dự án (theo repo git) có khu bàn riêng: ở văn phòng Chuyên nghiệp là nửa cụm bàn (hai bàn đối diện), trải thảm màu của dự án kèm biển "Nhóm …"; dự án nhiều phiên thì lấy luôn nửa còn lại. Văn phòng nhớ chỗ của từng dự án nên phiên sau ngồi lại đúng chỗ cũ; chỉ khi hết khu mới phải ngồi chung. Văn phòng nhỏ thì mỗi dự án một dãy.
+- **Bàn thờ Thần Tài – Thổ Địa** (văn phòng Chuyên nghiệp): khám sơn đỏ đặt sát đất cạnh quầy lễ tân, quay ra sảnh; bên trong Ông Địa và Thần Tài, câu đối trên hai cột, bát hương, đôi đèn thờ đỏ sáng khi tối. Mùng 1 và rằm (theo lịch âm thật) lễ tân bày mâm ngũ quả trên đĩa chân cao, xôi gấc, cúc vàng, thắp ba nén nhang và vái; khói nhang bay gần một tiếng (`?lunar=1` để xem ngày nào cũng được).
+- **Ngủ trưa** 12:30–13:30: rèm kéo xuống, phòng tối bớt, ai không có việc đang chạy thì ngủ ngay tại bàn, nửa ngả ghế đắp chăn, nửa gục xuống bàn. 13:30 chuông báo thức, rèm kéo lên.
+- **Logo agent**: vòng tròn trong danh sách phiên là logo của agent chạy phiên đó (Claude Code; Codex và Gemini khi văn phòng đọc được phiên của chúng), viền màu là màu riêng của phiên.
+- **Bảng kế hoạch**: bảng trắng ghi việc của từng session (đang làm, chờ bạn, xong; kèm tiến độ checklist TodoWrite nếu Claude có dùng) và việc của riêng bạn dưới dạng giấy dán. Bấm bảng để thêm, đánh dấu xong hay xoá việc; lưu trong `data/todos.json`.
+- **Hội thoại dễ đọc**: tab Hội thoại hiển thị markdown (danh sách, bảng, code có nút chép), thu gọn tin dài, gom các bước công cụ thành một dòng đếm "đọc / sửa / lệnh", và gập đoạn tóm tắt Claude tự viết khi phiên quá dài.
+- **Duyệt quyền ngay trong văn phòng**: khi trang đang mở và đang được nhìn, yêu cầu quyền của Claude Code hiện thành thẻ Cho phép / Luôn cho phép / Từ chối. Trang không được nhìn, hoặc 45 giây không ai bấm, thì Claude Code hỏi như bình thường. Tắt trong Cài đặt.
+- **Câu hỏi và kế hoạch của Claude**: khi Claude hỏi bạn chọn phương án (AskUserQuestion) hay xin duyệt kế hoạch (ExitPlanMode), văn phòng hiện thẻ có đủ câu hỏi, các lựa chọn, ô "Khác", hoặc nội dung kế hoạch với nút Duyệt / Sửa tiếp kèm góp ý. Cùng luật với duyệt quyền: chỉ giữ khi trang đang được nhìn, tối đa 45 giây; "Trả lời trong IDE" trả lại cho Claude Code hỏi như thường.
+- **Hạn mức gói**: viên "Gói Claude" trên thanh trên cùng hiện hạn mức sát nhất, tô màu theo mức; bấm vào xem từng hạn mức:
+  - 5 giờ;
+  - tuần (chỉ gói cá nhân Pro / Max; gói tổ chức Team / Enterprise không có, thẻ ghi rõ);
+  - riêng theo model nếu có.
+
+  Có tài khoản đang đăng nhập; báo khi qua 80% và 95%; số 5 giờ cũng hiện trên màn hình TV. Văn phòng đọc trực tiếp từ tài khoản như mục Usage của IDE: lấy đăng nhập của Claude Code trong Keychain mỗi lần (không lưu, không ghi log), gọi địa chỉ hạn mức của Anthropic mỗi 2 phút khi có trang mở. Địa chỉ này chưa có trong tài liệu nên có thể đổi; lỗi thì văn phòng dùng số từ status line (khi chạy trong terminal). Tắt bằng `OFFICE_USAGE=0`.
+
+  Có tài khoản Claude Code thứ hai trên cùng máy (thư mục cấu hình riêng, `CLAUDE_CONFIG_DIR`, ví dụ `~/.claude-org2`) thì hạn mức của tài khoản đó hiện ngay bên dưới, và nhân vật của các phiên chạy bằng tài khoản đó đeo nhãn tên tài khoản.
+- **Sếp và đội trợ lý**: khi Claude gọi trợ lý (subagent), nhân vật chính ra bảng giao việc; mỗi trợ lý vào cửa, tới cạnh sếp nhận việc, rồi đi tới đúng chỗ đang làm (thư viện khi đọc, phòng máy khi chạy lệnh, cửa sổ khi tra web, bàn họp khi sửa), xong việc thì quay về đưa báo cáo rồi mới ra về. Nhãn của sếp có số trợ lý; chọn hoặc rê chuột lên sếp thì hiện đường nối tới cả đội. Phòng họp có 4 ghế và 12 chỗ đứng; nhãn và bóng thoại chen nhau thì tự tránh.
+- **Nghỉ có chăn gối**: phiên nghỉ lâu thì nhân vật ngả ghế, kê gối, đắp chăn; có việc thì vươn vai, gấp chăn đặt lên bàn rồi cất. Phiên còn việc chạy nền thì không ngủ mà ngồi canh. Lỗi hai lần trong 2 phút thì đập bàn (ý từ agents-at-work).
+- **Lệnh nguy hiểm**: thẻ duyệt tô đỏ và ghi lý do (xoá đệ quy, force push, `curl | sh`, `sudo`, có chữ prod…), phải bấm Cho phép hai lần, không có "Luôn cho phép". Phím Y / N / A trả lời thẻ trên cùng (mẫu lệnh từ cubicle-crew, MIT).
+- **Mở đúng cửa sổ**: nút "Mở cửa sổ" (phím O) trong chi tiết phiên đưa cửa sổ IDE hay terminal đang chạy phiên đó lên trước (ý từ cubicle-crew).
+- **Thời tiết thật**: chọn thành phố trong Cài đặt (mặc định tắt); mưa rơi quanh văn phòng, mây làm tối trời, giông có chớp và sấm, sương mù làm xa mờ đi; đồng hồ hiện nhiệt độ. Dữ liệu Open-Meteo, không cần khoá.
+- **Chế độ danh sách**: nút danh sách ở thanh dưới tắt cảnh 3D (đỡ pin, dùng được khi máy không có WebGL) và hiện các phiên thành thẻ: cần bạn, đang làm, đang nghỉ.
+- **Câu trả lời cuối của Claude**: lúc xong việc, bóng thoại, bảng hoạt động và thông báo hiện câu cuối Claude viết.
+- **Dòng thời gian**: trong khung Hoạt động. Mỗi phiên một hàng, trợ lý thụt vào bên dưới, tô màu theo việc (nghĩ, đọc, sửa, chạy lệnh, web, giao trợ lý, chờ duyệt, đến lượt bạn), có số phút Claude chờ bạn trong ngày. Bấm một đoạn để xem lại đúng lúc đó; xuất CSV.
+- **Tên phiên theo tên chat**: tên bạn đổi trong IDE, không có thì tên Claude tự đặt; cạnh đó là thư mục dự án.
+- **Đến lượt bạn**: chuông khi một session xong việc lúc bạn đang ở cửa sổ khác; phím **N** nhảy tới session đang chờ bạn.
+- **Ngữ cảnh và chi phí**: thanh ngữ cảnh mỗi session, thùng rác cạnh bàn đầy dần theo ngữ cảnh, nhân vật dẫm bẹp khi nén hội thoại. Chi phí tính theo giá API (với gói đăng ký thì không phải hoá đơn của bạn).
+- **Sự cố**: 3 lỗi trong 5 phút thì văn phòng chuyển đỏ, có còi.
+- **Máy Mac**: viên "Máy Mac" trên thanh trên cùng là chỗ duy nhất xem máy (chấm vàng khi có gợi ý dọn); bấm vào mở bảng RAM, swap, CPU, ổ đĩa; tắt dev server, đóng session rảnh, thoát app nặng, dọn cache. Luật mới (ý từ cc-reaper, Apache-2.0): tiến trình phình thêm 512 MB trong 15 phút, tiến trình giữ một lõi CPU trên 80% suốt 10 phút (đo bằng thời gian CPU, không bằng %cpu), dev server có người đang mở (kết nối ESTABLISHED) thì không bị gợi ý tắt, và ngưỡng "rảnh bao lâu thì nên đóng" rút ngắn khi máy căng RAM. Dev server ghi rõ **session nào mở**; session đã đóng mà bỏ quên dev server thì nó nằm ở phòng máy với đèn đỏ và lên đầu danh sách "Nên giải phóng". Máy chủ mini trên bàn = dev server của session ngồi bàn đó.
+- **Xem lại**: nút **Xem lại** tua lại 1 giờ, 3 giờ, hôm nay hoặc hôm qua ở ×10 đến ×120 (mặc định 1 giờ trong 1 phút), bỏ qua đoạn yên ắng. **Quay video** ghi cả tab thành MP4 (Chrome) từ đầu tới cuối đoạn xem lại, rồi lưu vào thư mục Tải về.
+- **Chế độ quay màn hình**: làm mờ lệnh, đường dẫn và nội dung hội thoại để quay video hay livestream.
+- **Git trong văn phòng**: bàn bừa dần theo số file chưa commit; commit thì máy in in một trang; push thì tên lửa phóng; CI trên GitHub đỏ thì hiện thông báo đỏ, có còi nếu bật âm thanh (đọc bằng `gh` đã đăng nhập, tắt bằng `OFFICE_CI=0`).
+- **Màn hình trên bàn**: hiện đúng việc phiên đang làm: trình soạn code, terminal, trình duyệt, khung chat, hộp thoại xin quyền, màn hình chờ khi ngủ.
+- **Tổng kết tuần**: thẻ ảnh 7 ngày qua (giờ làm của các agent, việc đã giao, lần sửa file, lệnh, chi phí theo giá API, dự án chăm nhất), tải về hoặc chép để đăng mạng xã hội.
+- **Tủ cúp**: cột mốc 1.000 việc, 10.000 lần sửa file, lần deploy đầu tiên…
+- **Kiểu văn phòng Tập đoàn**: tầng Công ty thêm một cánh bốn phòng ban (tổng 44 bàn); biển trên cửa mỗi phòng hiện tên dự án đang ngồi ở đó.
+- **Chế độ chụp ảnh** (phím P): ẩn mọi bảng, xoay camera tự do, lưu ảnh PNG tới 4K, có vẽ sẵn tên nhân vật.
+- **Clip 15 giây** (nút trong chế độ chụp ảnh): video vuông quay văn phòng từ sáng tới tối, camera xoay chậm, có tiêu đề và số liệu trong ngày. Chrome lưu ra MP4, đăng Facebook được ngay.
+- **Đồ hoạ**: Tự động, Thấp, Vừa, Cao (Cài đặt → Hiển thị). Tự động tự hạ khi máy giật và nhớ theo từng máy.
+- **Hai ngôn ngữ**: tiếng Anh (mặc định) và tiếng Việt; chữ nằm trong `src/i18n/locales/`, thêm ngôn ngữ mới bằng cách chép thư mục `en/`.
+
+## Không cần mạng
+
+three.js và hai font (Be Vietnam Pro, JetBrains Mono, OFL) đóng gói cùng trang, qrcode.js nằm trong `public/assets/vendor`, nên văn phòng mở được khi không có mạng. Chỉ hạn mức gói, kiểm tra CI, dịch tiếng Việt và thời tiết (nếu bật) cần mạng.
+
+## Nhẹ máy
+
+Lúc mở trang, các vật tĩnh dùng chung kiểu vật liệu được gộp lại theo từng món đồ (màu từng phần giữ nguyên), nên số lần vẽ mỗi khung giảm từ khoảng 3.300 xuống khoảng 1.100 (đo trên M1 Pro). Trang vẽ 60 khung/giây khi bạn đang xoay camera hay rê chuột, 40 khi có người đi lại, 30 khi văn phòng yên, 10 khi cửa sổ ở phía sau; bóng đổ vẽ lại cách khung khi không ai đi. Viền sáng khi rê chuột chỉ vẽ lại đúng món đồ đó.
+
+## Xem trên điện thoại
+
+Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại cùng wifi: `install --service --lan`, rồi bấm "Mở trên điện thoại" trên Mac để quét mã QR, hoặc gõ địa chỉ và nhập **mã PIN 6 số**. Nhập sai 5 lần thì khoá địa chỉ đó 15 phút; 20 lần sai trong 15 phút thì khoá trang PIN với mọi máy. Điện thoại chỉ xem được: không duyệt quyền, hook chỉ nhận từ chính Mac. Chỉ bật ở mạng nhà hoặc mạng tin cậy (trang chạy HTTP, không mã hoá).
+
+## An toàn
+
+- Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường.
+- Chuỗi giống mật khẩu, token, khoá API bị che trước khi lưu hay hiển thị (`redact.mjs`).
+- Nút Tắt kiểm lại PID **và giờ khởi động** của tiến trình ngay trước khi tắt, nên không tắt nhầm tiến trình mới mang lại PID cũ. Mọi lần tắt, dọn, duyệt quyền ghi vào `data/actions.log`.
+
+## Tệp
+
+- `server/`: máy chủ Node. `index.mjs` nhận hook, đọc `~/.claude/sessions/*.json` (theo `CLAUDE_CONFIG_DIR` nếu có), đẩy sự kiện qua SSE, giữ yêu cầu duyệt quyền, ghi nhật ký xem lại, trang PIN, và giao trang cho Next.js. `system.mjs`: RAM/CPU/ổ đĩa, dev server, session rảnh, dọn dẹp. `usage.mjs`: token và ngữ cảnh. `trophies.mjs`: tổng tích luỹ cho tủ cúp. `redact.mjs`: luật che bí mật.
+- `app/` + `src/components/`: trang Next.js (App Router). `src/styles/`: CSS theo từng khu vực.
+- `src/office/`: văn phòng 3D (three.js), chia module theo thư mục `core`, `scene`, `world`, `people`, `life`, `ui`, `interact`, `net`, `demo`, `replay`. Bản đồ module ở [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+- `bin/cli.mjs`: lệnh install / uninstall / doctor / start / pin. `hooks/hooks.json` + `.claude-plugin/`: cài dạng plugin. `hooks/status-line.mjs`: status line gửi hạn mức gói về văn phòng.
+- `tests/unit/` (node --test) và `tests/e2e/` (Playwright), chạy trên CI ở `.github/workflows/ci.yml`.
+- `data/` (không đưa lên git): `state.json`, `token`, `pin`, `todos.json`, `limits.json`, `totals.json`, `statusline-prev.json`, `owners.json`, `replay/YYYY-MM-DD.jsonl` (giữ 7 ngày), `actions.log`, `server.log`.
+
+## Phát triển
+
+```bash
+npm install
+npm run dev        # Turbopack, tự nạp lại khi sửa code: http://localhost:4310/?demo
+npm run lint && npm run typecheck && npm test
+npm run build && npm run test:e2e
+```
+
+Đọc [CONTRIBUTING.md](CONTRIBUTING.md) trước khi gửi pull request.
+
+## Giấy phép
+
+[MIT](LICENSE). Tên và logo thương hiệu nhắc tới trong dự án vẫn thuộc về chủ sở hữu; My Office không liên kết với các thương hiệu đó.

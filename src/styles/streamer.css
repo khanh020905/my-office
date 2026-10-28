@@ -1,0 +1,10 @@
+/* Streamer mode. */
+/* streamer mode: blur what text masking cannot cover (folders, transcripts, permission details, machine paths) */
+.is-stream #ds-dir, .is-stream .chat, .is-stream #ds-body .msg, .is-stream .pc-detail, .is-stream .row-sub, .is-stream .tip-detail, .is-stream .ri-sub span { filter: blur(5px); user-select: none; }
+.is-stream .ri-dtxt { filter: none; }
+
+
+.ri[data-done="1"] .av-st { background: var(--blue); box-shadow: 0 0 0 2.5px var(--side), 0 0 0 5px rgba(106, 174, 255, .35); }
+.ri[data-done="1"] .ri-doing { color: #BFDCFF; }
+.incident { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); padding: 9px 16px; border-radius: 999px; background: #C62828; color: #fff; font-weight: 800; font-size: .84rem; letter-spacing: .01em; box-shadow: 0 0 0 4px rgba(255, 60, 60, .25), 0 14px 30px rgba(0, 0, 0, .45); z-index: 4; animation: hop .9s ease-in-out infinite; }
+.stage-wrap.is-incident::after { content: ""; position: absolute; inset: 0; pointer-events: none; box-shadow: inset 0 0 120px 30px rgba(255, 30, 30, .45); animation: blink 1s ease-in-out infinite; z-index: 1; }

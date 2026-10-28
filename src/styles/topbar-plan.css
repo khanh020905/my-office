@@ -1,0 +1,12 @@
+/* The plan pill and its popover. */
+/* the plan pill sits beside the Mac pill: the tightest limit at a glance, every limit in its popover */
+.plan-pill .mp-bar { width: 64px; }
+.mp-tip { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2.5px var(--bg, #0F141C); }
+.pop-plan { width: 330px; }
+.pop-plan .plan-card { display: grid; gap: 5px; }
+.plan-foot { margin: 6px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: .66rem; line-height: 1.45; color: var(--faint); }
+.pop-acts { display: grid; gap: 6px; }
+.pop-acts:not(:has(.tb-btn:not([hidden]))) { display: none; }
+.pop-acts .tb-btn { width: 100%; justify-content: flex-start; }
+@media (max-width: 1100px) { .plan-pill .mp-label { display: none; } }
+@media (max-width: 900px) { .plan-pill .mp-bar, .mac-pill .mp-bar { display: none; } }

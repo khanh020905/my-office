@@ -1,0 +1,7 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "my-office",
+  "owner": { "name": "TODO: owner" },
+  "metadata": { "description": "A 3D office for your Claude Code sessions.", "version": "0.1.0" },
+  "plugins": [ { "name": "my-office", "source": "./", "description": "A 3D office for your Claude Code sessions: live agents, approve from the office, RAM per session and Mac cleanup.", "version": "0.1.0", "category": "productivity" } ]
+}

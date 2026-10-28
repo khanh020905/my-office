@@ -1,0 +1,20 @@
+/* Modal and toast. */
+/* modal + toast */
+.modal { position: absolute; inset: 0; display: grid; place-items: center; background: rgba(5, 8, 12, .6); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); padding: 16px; z-index: 6; }
+.modal-card { width: min(380px, 100%); padding: 22px; display: flex; flex-direction: column; gap: 12px; align-items: center; text-align: center; background: var(--side); border: 1px solid var(--line-2); border-radius: 16px; }
+.modal-card h2 { margin: 0; font-size: 1.15rem; }
+#pm-body { display: flex; flex-direction: column; gap: 12px; align-items: center; }
+#pm-body > p { margin: 0; }
+.qr { width: fit-content; margin: 0 auto; background: #fff; padding: 10px; border-radius: 12px; }
+.qr img, .qr canvas { display: block; }
+.url { font: .72rem/1.4 var(--mono); word-break: break-all; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 6px 9px; user-select: all; }
+.pm-pin { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; font-size: .82rem; }
+.pm-digits { font: 700 1.5rem/1 var(--mono); letter-spacing: .12em; color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 12px; user-select: all; }
+.pm-note { font-size: .74rem; margin: 0; }
+.pm-cmd { margin: 0; width: 100%; font: .74rem/1.5 var(--mono); text-align: left; white-space: pre-wrap; word-break: break-all; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; user-select: all; }
+
+/* the week-in-review card: the picture scales to the window, the buttons stay under it */
+.wrap-card { width: min(560px, calc(100vw - 32px)); max-height: calc(100vh - 32px); overflow: auto; }
+.wrap-card canvas { display: block; width: 100%; height: auto; border-radius: 14px; margin: 10px 0 8px; background: #0E1424; }
+.wrap-note { margin: 0 0 12px; color: var(--muted); font-size: .8rem; }
+.wrap-actions { display: flex; gap: 8px; flex-wrap: wrap; }

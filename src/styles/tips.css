@@ -1,0 +1,21 @@
+/* The first visit's tour (src/office/ui/tips.js): a card over the thing it points at, or above a button on the page. */
+.tour-wrap { width: 0; height: 0; position: relative; z-index: 100000 !important; }   /* (over the name tags and speech bubbles: the label layer orders them by depth) */
+.tour { position: absolute; left: 0; bottom: 16px; transform: translateX(-50%); width: 264px; max-width: calc(100vw - 32px); box-sizing: border-box; pointer-events: auto;
+  font: 500 12.5px/1.45 var(--font); color: #EEF1F7; background: rgba(14, 19, 27, .95); border: 1px solid var(--green); border-radius: 13px; padding: 11px 12px 10px;
+  box-shadow: 0 0 0 4px rgba(61, 220, 132, .16), 0 14px 32px rgba(0, 0, 0, .5); animation: tour-in .25s ease-out; }
+.tour::after { content: ''; position: absolute; left: var(--arrow, 50%); bottom: -7px; width: 12px; height: 12px; transform: translateX(-50%) rotate(45deg); background: rgba(14, 19, 27, .95);
+  border-right: 1px solid var(--green); border-bottom: 1px solid var(--green); }
+.tour--page { position: absolute; z-index: 7; }
+.tour-top { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.tour-title { font-size: .86rem; font-weight: 700; color: #FFFFFF; }
+.tour-n { font-size: .7rem; color: var(--muted, #9AA4B5); white-space: nowrap; }
+.tour-text { margin: 5px 0 9px; color: #D7DDE8; }
+.tour-acts { display: flex; justify-content: flex-end; gap: 8px; }
+.tour-skip, .tour-next { font: 600 .76rem/1 var(--font); border-radius: 9px; padding: 7px 12px; cursor: pointer; }
+.tour-skip { color: #C9D1E0; background: transparent; border: 1px solid rgba(255, 255, 255, .16); }
+.tour-next { color: #0E1A12; background: var(--green); border: 1px solid var(--green); }
+.tour-skip:hover { border-color: rgba(255, 255, 255, .32); }
+.tour-next:hover { filter: brightness(1.08); }
+.tour-skip:focus-visible, .tour-next:focus-visible { outline: 2px solid #FFFFFF; outline-offset: 2px; }
+@keyframes tour-in { from { opacity: 0; transform: translate(-50%, 6px); } }
+@media (prefers-reduced-motion: reduce) { .tour { animation: none; } }

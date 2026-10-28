@@ -1,0 +1,21 @@
+/* Top bar. */
+/* top bar */
+.topbar { grid-area: top; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 16px; background: var(--bar); border-bottom: 1px solid var(--line); z-index: 3; }
+.tb-brand { display: flex; align-items: center; gap: 10px; font-size: 1.12rem; font-weight: 700; letter-spacing: -.01em; white-space: nowrap; }
+.logo { width: 28px; height: 28px; display: grid; place-items: center; color: #F08A3E; }
+.logo svg { width: 28px; height: 28px; }
+.tb-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.tb-btn { position: relative; height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s; }
+.tb-btn:hover { background: var(--card-2); border-color: rgba(255, 255, 255, .2); }
+.tb-btn[aria-pressed="true"] { border-color: var(--amber); background: var(--amber-soft); }
+.tb-icon { width: 38px; padding: 0; justify-content: center; }
+.badge { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--card); }
+.mac-pill { gap: 10px; }
+.mac-pill .lvl { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.mac-pill[data-level="warn"] .lvl { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.mac-pill[data-level="critical"] .lvl { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+.mp-val { color: var(--muted); font-weight: 500; font-variant-numeric: tabular-nums; }
+.mp-bar { width: 84px; height: 6px; border-radius: 999px; background: var(--card-3); overflow: hidden; }
+.mp-bar b { display: block; height: 100%; width: 0; background: var(--green); border-radius: 999px; transition: width .5s; }
+.mac-pill[data-level="warn"] .mp-bar b { background: var(--amber); }
+.mac-pill[data-level="critical"] .mp-bar b { background: var(--red); }

@@ -1,0 +1,24 @@
+/* The two side columns. */
+/* sidebars */
+.side { background: var(--side); display: flex; flex-direction: column; min-height: 0; z-index: 2; }
+.side-left { grid-area: left; border-right: 1px solid var(--line); }
+.side-right { grid-area: right; border-left: 1px solid var(--line); }
+.conn { display: inline-flex; align-items: center; gap: 6px; }
+.conn i { width: 6px; height: 6px; border-radius: 50%; background: var(--green); }
+.conn[data-state="off"] { color: var(--red); }
+.conn[data-state="off"] i { background: var(--red); }
+.search { margin: 0 12px 10px; position: relative; display: block; }
+.search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--faint); }
+.search input { width: 100%; height: 36px; padding: 0 12px 0 34px; background: var(--side); border: 1px solid var(--line-2); border-radius: 10px; outline: none; font-size: .8rem; }
+.search input::placeholder { color: var(--faint); }
+.search input:focus { border-color: var(--amber); }
+.sess-list { list-style: none; margin: 0; padding: 0 8px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
+.pill { font: 600 .64rem/1 var(--font); padding: 4px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line-2); color: var(--muted); }
+.pill[data-status="work"] { background: #2FB36C; border-color: #2FB36C; color: #06150C; }
+.pill[data-status="wait"] { background: var(--amber); border-color: var(--amber); color: #1E1405; }
+.ri-subs { list-style: none; margin: 0 0 4px 30px; padding: 0 0 0 10px; border-left: 1px dashed var(--line-2); display: flex; flex-direction: column; gap: 1px; }
+.ri-sub { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 14px minmax(0, 1fr); gap: 0 8px; align-items: center; padding: 6px 8px; border-radius: 9px; cursor: pointer; }
+.ri-sub:hover { background: var(--card-2); }
+.ri-sub svg { width: 13px; height: 13px; color: var(--blue); }
+.ri-sub b { font-size: .76rem; font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ri-sub span { grid-column: 2; font-size: .72rem; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

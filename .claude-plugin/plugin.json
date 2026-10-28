@@ -1,0 +1,6 @@
+{
+  "name": "my-office",
+  "description": "A 3D office for your Claude Code sessions: live agents, approve from the office, RAM per session and Mac cleanup",
+  "version": "0.1.0",
+  "keywords": ["dashboard", "sessions", "agents", "visualization", "3d", "three.js", "monitoring"]
+}

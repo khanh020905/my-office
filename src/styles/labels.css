@@ -1,0 +1,29 @@
+/* Name tags and speech bubbles over people. */
+/* 3D labels */
+.tag { transition: margin-top .2s ease-out; font: 600 12px/1 var(--font); color: #EEF1F7; background: rgba(14, 19, 27, .86); border: 1px solid rgba(255, 255, 255, .12); border-radius: 999px; padding: 6px 11px 6px 9px; display: flex; align-items: center; gap: 7px; white-space: nowrap; box-shadow: 0 6px 16px rgba(0, 0, 0, .35); }
+.tag i { width: 8px; height: 8px; border-radius: 50%; display: block; font-size: 0; }
+.tag--sub { font-size: 11px; padding: 4px 9px 4px 7px; }
+.tag--on { border-color: var(--green); box-shadow: 0 0 0 3px rgba(61, 220, 132, .22), 0 6px 16px rgba(0, 0, 0, .35); }
+.tag--wait { border-color: var(--amber); }
+.cat-say { border-color: #FF8FB0; color: #FFE0EA; font-size: 11px; padding: 4px 9px; }
+.bubble-wrap { width: 0; height: 0; position: relative; }
+.bubble { transition: margin-bottom .2s ease-out; position: absolute; left: 0; bottom: 22px; transform: translateX(-50%); width: max-content; max-width: 210px; display: flex; align-items: center; gap: 8px; font: 500 12px/1.3 var(--font); color: #EEF1F7; background: rgba(14, 19, 27, .92); border: 1px solid rgba(61, 220, 132, .75); border-radius: 11px; padding: 7px 10px 7px 7px; box-shadow: 0 8px 22px rgba(0, 0, 0, .4); }
+.b-ico { width: 22px; height: 22px; flex: none; border-radius: 6px; display: grid; place-items: center; background: rgba(61, 220, 132, .16); color: var(--green); font-size: 12px; }
+.b-ico svg { width: 13px; height: 13px; }
+.b-txt { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.bubble--wait { border-color: var(--amber); animation: hop .9s ease-in-out infinite; }
+.bubble--muted { opacity: 0; pointer-events: none; }
+.tag--muted { opacity: 0; pointer-events: none; }
+.tag-acct { margin-left: 2px; padding: 2px 6px; border-radius: 999px; background: rgba(242, 179, 61, .2); color: #F6D08A; font-size: 10px; font-weight: 700; }
+.is-stream .tag-acct { filter: blur(3px); }
+.tag-team { margin-left: 2px; padding: 2px 7px; border-radius: 999px; background: rgba(106, 174, 255, .18); color: #A9CCFF; font-size: 10px; font-weight: 700; }
+.tag { transition: margin-top .2s ease-out, opacity .2s; }
+.bubble { transition: opacity .2s, margin-bottom .2s ease-out; }
+.bubble--wait .b-ico { background: var(--amber-soft); color: var(--amber); }
+.bubble--fail { border-color: var(--red); }
+.bubble--fail .b-ico { background: var(--red-soft); color: var(--red); }
+.bubble--sub { border-color: rgba(106, 174, 255, .7); font-size: 11px; max-width: 180px; }
+.bubble--rest { border-color: rgba(176, 150, 255, .75); }
+.bubble--rest .b-ico { background: rgba(176, 150, 255, .16); color: #C9B8FF; }
+.bubble--sub .b-ico { background: rgba(106, 174, 255, .16); color: var(--blue); }
+@keyframes hop { 50% { transform: translateX(-50%) translateY(-4px); } }

@@ -1,0 +1,26 @@
+/* Your to-dos on the whiteboard card. */
+/* your to-dos */
+.todo-add { display: flex; gap: 6px; margin: 0 4px 4px; }
+.todo-add input { all: unset; box-sizing: border-box; flex: 1; min-width: 0; height: 34px; padding: 0 12px; border-radius: 9px; background: var(--bg); border: 1px solid var(--line-2); font-size: .8rem; color: var(--ink); }
+.todo-add input::placeholder { color: var(--faint); }
+.todo-add input:focus { border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.todo-add .btn { height: 34px; }
+.todo-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 1px; }
+.todo-list li { display: flex; align-items: flex-start; gap: 10px; padding: 6px 6px; border-radius: 9px; }
+.todo-list li:hover { background: var(--card-2); }
+.todo-check { all: unset; width: 18px; height: 18px; flex: none; margin-top: 1px; display: grid; place-items: center; border-radius: 6px; border: 1.5px solid var(--faint); color: transparent; cursor: pointer; }
+.todo-check svg { width: 12px; height: 12px; }
+.todo-check:hover { border-color: var(--green); }
+.todo-check:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+.todo-list li[data-done="true"] .todo-check { background: var(--green); border-color: var(--green); color: #06210F; }
+.todo-txt { flex: 1; min-width: 0; font-size: .8rem; line-height: 1.45; overflow-wrap: anywhere; }
+.todo-list li[data-done="true"] .todo-txt { color: var(--muted); text-decoration: line-through; }
+.todo-del { all: unset; width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 6px; color: var(--faint); cursor: pointer; opacity: 0; }
+.todo-del svg { width: 12px; height: 12px; }
+.todo-list li:hover .todo-del, .todo-del:focus-visible { opacity: 1; }
+.todo-del:hover { background: var(--red-soft); color: var(--red); }
+@media (hover: none) { .todo-del { opacity: .7; } }
+.is-stream .pl-rows, .is-stream .pl-now, .is-stream .todo-list, .is-stream .pl-todos { filter: blur(5px); user-select: none; }
+@media (max-width: 720px) {
+  .plc, .plc[data-place="board"] { position: absolute; left: 8px; right: 8px; top: auto; bottom: calc(140px + env(safe-area-inset-bottom, 0px)); width: auto; max-height: calc(100% - 210px); transform: none !important; background: #131922; }
+}

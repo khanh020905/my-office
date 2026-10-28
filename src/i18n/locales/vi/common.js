@@ -1,0 +1,20 @@
+export default {
+  close: 'Đóng',
+  cancel: 'Huỷ',
+  save: 'Lưu',
+  delete: 'Xoá',
+  open: 'Mở',
+  on: 'Bật',
+  off: 'Tắt',
+  yes: 'Có',
+  no: 'Không',
+  loading: 'Đang tải…',
+  you: 'bạn',
+  session: 'phiên',
+  ram: 'RAM',
+  disk: 'ổ đĩa',
+  device: {
+    mac: { darwin: 'Mac', win32: 'máy tính', linux: 'máy tính' },
+    Mac: { darwin: 'Máy Mac', win32: 'Máy tính', linux: 'Máy tính' },
+  },
+};

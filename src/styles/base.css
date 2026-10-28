@@ -1,0 +1,25 @@
+/* Layout shell and design tokens. */
+/* Layout: dark control-room shell. Top bar 56px; left sidebar (sessions) 300px; right sidebar (activity) 340px;
+   the 3D office fills the middle with a floating camera toolbar; drawers slide over the right side.
+   ≤1100px the left sidebar becomes a chip row; ≤720px the activity column becomes a bottom sheet. */
+:root {
+  --bg: #0D1219; --bar: #111720; --side: #131922; --card: #18202B; --card-2: #1E2734; --card-3: #263040;
+  --line: rgba(255, 255, 255, .07); --line-2: rgba(255, 255, 255, .13);
+  --ink: #E8ECF4; --muted: #8D97AA; --faint: #5E687B;
+  --green: #3DDC84; --green-ink: #8FEDB8; --green-soft: rgba(61, 220, 132, .11);
+  --amber: #F2B544; --amber-soft: rgba(242, 181, 68, .12);
+  --red: #FF5F5F; --red-soft: rgba(255, 95, 95, .12);
+  --blue: #6AAEFF;
+  --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; }
+button, input { font: inherit; color: inherit; }
+svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+
+#app { position: relative; height: 100%; display: grid; grid-template-columns: 330px minmax(0, 1fr) 350px; grid-template-rows: 56px minmax(0, 1fr); grid-template-areas: "top top top" "left stage right"; }

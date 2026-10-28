@@ -1,0 +1,33 @@
+/* The Mac drawer. */
+/* Mac drawer */
+.meters { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.meter { display: grid; gap: 7px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; }
+.meter-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.meter-top b { font-size: .78rem; color: var(--muted); font-weight: 600; }
+.meter-top strong { font-size: 1.15rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.meter > span { color: var(--muted); font-size: .7rem; font-variant-numeric: tabular-nums; }
+.bar { height: 6px; border-radius: 999px; overflow: hidden; background: var(--card-3); }
+.bar i { display: block; height: 100%; background: var(--green); border-radius: 999px; transition: width .4s; }
+.bar[data-level="warn"] i { background: var(--amber); }
+.bar[data-level="critical"] i { background: var(--red); }
+.sec { margin-top: 22px; }
+.sec h3 { font-size: .95rem; font-weight: 700; margin: 0 0 10px; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.sec h3 small { font-size: .74rem; font-weight: 500; color: var(--muted); }
+.tips, .rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.tip { border: 1px solid var(--line); border-radius: 12px; padding: 11px 12px; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; align-items: center; background: var(--card); }
+.tip[data-level="high"] { border-color: rgba(255, 95, 95, .55); background: var(--red-soft); }
+.tip-title { font-weight: 600; font-size: .84rem; min-width: 0; overflow-wrap: anywhere; }
+.tip-detail { grid-column: 1 / 2; font-size: .74rem; color: var(--muted); overflow-wrap: anywhere; }
+.tip-act { grid-column: 2; grid-row: 1 / 3; display: flex; flex-direction: column; gap: 6px; align-items: flex-end; }
+.gain { font-size: .7rem; font-weight: 700; color: var(--green-ink); white-space: nowrap; }
+.row { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 2px 12px; align-items: center; padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.row-main { min-width: 0; }
+.row-name { font-weight: 600; font-size: .83rem; overflow-wrap: anywhere; }
+.row-sub { font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.row-owner { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; font-size: .68rem; font-weight: 600; color: var(--green-ink); }
+.row-owner::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+.row-owner--left { color: #FF8A80; }
+.row-owner--none { color: var(--muted); }
+.tag--lost { cursor: pointer; pointer-events: auto; border-color: rgba(255, 77, 77, .55); }
+.tag--lost i { width: 8px; height: 8px; border-radius: 50%; background: #FF4D4D; box-shadow: 0 0 8px #FF4D4D; }
+.row-num { font-size: .78rem; font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; white-space: nowrap; }

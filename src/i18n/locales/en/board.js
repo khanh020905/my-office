@@ -1,0 +1,40 @@
+// The whiteboard (ui/whiteboard.js): the plan drawn on the board, the sticky notes, and the board's card.
+export default {
+  // drawn on the board canvas; the two headings are uppercased in code
+  title: 'Plan',
+  sumDoing: '{n} working',
+  sumWait: '{n} waiting on you',
+  sumDone: '{n} done',
+  sumNone: 'no tasks yet',
+  emptyLine1: 'Give Claude a task',
+  emptyLine2: 'and it will show up here.',
+  more: '+{n} more',
+  yours: 'Your to-dos',
+  open: '{n} still open',
+  clickToAdd: 'click the board to add one',
+  addNote: 'Add to-do',
+  // the board's card
+  cardTitle: 'Whiteboard',
+  cardSub: 'What the agents are working on, and your own to-dos',
+  agentTasks: 'Agent tasks',
+  agentEmpty: 'No tasks yet. Message Claude and they will show up here.',
+  metaWait: '{name} · waiting for your approval {time}',
+  metaDoing: '{name} · working {time}',
+  metaDone: '{name} · done {ago}',
+  markUndone: 'Mark as not done',
+  markDone: 'Mark as done',
+  deleteTodo: 'Delete “{text}”',
+  mineEmpty: 'Jot down what you need to remember. Each to-do becomes a sticky note on the board.',
+  clearDone: { one: 'Clear {n} finished to-do', other: 'Clear {n} finished to-dos' },
+  addPlaceholder: 'Add a to-do…',
+  addLabel: 'Add a to-do',
+  add: 'Add',
+  saveFailed: "Couldn't save.",
+  saveOffline: "Couldn't save: lost the connection to My Office.",
+  // the to-dos the demo starts with
+  demo: {
+    d1: 'Answer the client email about pricing',
+    d2: 'Review the shopping cart PR',
+    d3: 'Book the Friday meeting',
+  },
+};

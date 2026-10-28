@@ -1,0 +1,32 @@
+/* Photo mode: the office alone over the whole window, with one bar to frame and take the picture */
+body.is-photo #app { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr); grid-template-areas: "stage"; }
+body.is-photo .topbar, body.is-photo .side, body.is-photo .drawer { display: none !important; }
+body.is-photo .stage-wrap > :not(#stage):not(#photo-bar):not(.clip-cover) { display: none !important; }
+/* people's names only: no bubbles, chips, warnings or the cat's meow */
+body.is-photo .labels > :not(.tag), body.is-photo .labels > .tag--lost, body.is-photo .labels > .cat-say, body.is-photo .labels > .tag--me { display: none !important; }
+body.is-photo.photo-nonames .labels { display: none !important; }
+body.is-photo .toast { bottom: 118px; }
+body.is-photo .stage-wrap { padding-bottom: 0; }   /* phones keep room for the bottom sheet: not needed here */
+body.is-photo #stage { bottom: 0; }
+
+.photo-bar { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: grid; gap: 8px; justify-items: center; width: max-content; max-width: calc(100% - 24px); }   /* (max-content: from left: 50% it would only get half the width and wrap) */
+.photo-hint { margin: 0; font-size: .74rem; color: #EEF1F7; background: rgba(14, 19, 27, .6); padding: 4px 10px; border-radius: 999px; text-align: center; }
+.pb-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; background: rgba(14, 19, 27, .88); border: 1px solid rgba(255, 255, 255, .12); border-radius: 16px; padding: 8px; box-shadow: 0 14px 34px rgba(0, 0, 0, .45); backdrop-filter: blur(8px); }
+.pb-sep { width: 1px; height: 26px; background: rgba(255, 255, 255, .12); }
+.pb-tgl, .pb-seg button, .pb-exit { font: 600 .78rem/1 var(--font); color: #C9D1E0; background: transparent; border: 1px solid rgba(255, 255, 255, .14); border-radius: 10px; padding: 8px 11px; cursor: pointer; }
+.pb-tgl[aria-pressed="true"], .pb-seg button[aria-pressed="true"] { color: #fff; background: rgba(232, 134, 95, .2); border-color: rgba(232, 134, 95, .7); }
+.pb-seg { display: flex; gap: 4px; }
+.pb-shoot { display: inline-flex; align-items: center; gap: 7px; font: 700 .84rem/1 var(--font); color: #1A1206; background: #F2B33D; border: 0; border-radius: 11px; padding: 10px 16px; cursor: pointer; }
+.pb-shoot:disabled { opacity: .6; cursor: progress; }
+.pb-clip { display: inline-flex; align-items: center; gap: 7px; font: 700 .84rem/1 var(--font); color: #F6EFE4; background: rgba(255, 255, 255, .08); border: 1px solid rgba(242, 179, 61, .55); border-radius: 11px; padding: 9px 14px; cursor: pointer; }
+.pb-clip .ic { color: #FF6B5E; }
+/* the clip being made: a dark cover over the office with the square picture as it is recorded */
+.clip-cover { position: absolute; inset: 0; z-index: 8; display: grid; place-content: center; justify-items: center; gap: 12px; background: rgba(8, 11, 17, .92); }
+.clip-view { width: min(72vh, 82vw); height: min(72vh, 82vw); border-radius: 14px; box-shadow: 0 18px 48px rgba(0, 0, 0, .5); }
+.clip-prog { width: min(72vh, 82vw); height: 5px; border-radius: 3px; background: rgba(255, 255, 255, .12); overflow: hidden; }
+.clip-prog i { display: block; height: 100%; width: 0; background: #F2B33D; }
+.clip-label { font: 600 .82rem/1.3 var(--font); color: #EEF1F7; }
+.clip-stop { font: 700 .8rem/1 var(--font); color: #EEF1F7; background: rgba(255, 255, 255, .08); border: 1px solid rgba(255, 255, 255, .2); border-radius: 10px; padding: 8px 16px; cursor: pointer; }
+.pb-exit { display: inline-grid; place-items: center; padding: 7px; }
+.pb-tgl:focus-visible, .pb-seg button:focus-visible, .pb-shoot:focus-visible, .pb-clip:focus-visible, .clip-stop:focus-visible, .pb-exit:focus-visible { outline: 2px solid #F2B33D; outline-offset: 2px; }
+@media (max-width: 720px) { .photo-hint { display: none; } .pb-sep { display: none; } }
