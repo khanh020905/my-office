@@ -43,10 +43,10 @@ export const fmtClock = (s) => { s = Math.max(0, Math.floor(s)); return s >= 360
 export function setup() {
   stage = $('stage');
   reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  // Floor plan, each viewer's own choice: 'cozy' (one open room), 'pro' (a company floor; the online demo starts there)
+  // Floor plan, each viewer's own choice: 'pro' (a company floor, the default), 'cozy' (one open room)
   // or 'hq' (headquarters: the company floor plus a wing of department rooms). Switching reloads the page;
   // ?layout=cozy|pro|hq overrides it for one visit.
-  LAYOUT = (() => { const q = new URLSearchParams(location.search).get('layout'); if (PLANS.includes(q)) return q; const def = STATIC ? 'pro' : 'cozy'; try { const v = localStorage.getItem('office-layout'); return PLANS.includes(v) ? v : def; } catch { return def; } })();
+  LAYOUT = (() => { const q = new URLSearchParams(location.search).get('layout'); if (PLANS.includes(q)) return q; const def = 'pro'; try { const v = localStorage.getItem('office-layout'); return PLANS.includes(v) ? v : def; } catch { return def; } })();
   // the company floor's rooms, people and habits; headquarters is the company floor plus a wing of departments
   PRO = LAYOUT === 'pro' || LAYOUT === 'hq';
   HQ = LAYOUT === 'hq';

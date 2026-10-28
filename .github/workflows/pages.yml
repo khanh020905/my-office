@@ -34,9 +34,11 @@ jobs:
       - name: Build
         run: |
           if [[ "$REPO" == *.github.io ]]; then export OFFICE_BASE_PATH=""; else export OFFICE_BASE_PATH="/$REPO"; fi
+          export OFFICE_SITE_URL="https://${OWNER,,}.github.io"   # (absolute share links and canonical URLs)
           node scripts/build-demo.mjs
         env:
           REPO: ${{ github.event.repository.name }}
+          OWNER: ${{ github.repository_owner }}
       - uses: actions/upload-pages-artifact@v3
         with:
           path: demo-site

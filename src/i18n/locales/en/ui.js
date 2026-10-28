@@ -1,5 +1,9 @@
 // The page markup (src/components/office), one group per component. The office's code fills most of it in later.
 export default {
+  meta: {
+    title: 'My Office: a 3D office for your Claude Code sessions',
+    description: 'Each Claude Code session is a character at a desk in a 3D office. Approve permissions, watch RAM and plan limits, and see what every agent is doing. Free and open source.',
+  },
   // shared by the replay bar and the timeline panel
   ranges: {
     label: 'Time range',
