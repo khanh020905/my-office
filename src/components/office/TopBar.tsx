@@ -16,6 +16,7 @@ export default async function TopBar() {
               <span className="hl-head"><b>{t('ui.topBar.planLimits')}</b><span className="pl-at" id="plan-at"></span></span>
               <span className="plan-acct" id="plan-acct" hidden></span>
               <div className="plan-rows" id="plan-rows"></div>
+              <div className="plan-add" id="plan-add"></div>
               <p className="plan-empty" id="plan-empty">{t('ui.topBar.planEmpty')}</p>
               <p className="plan-foot">{t('ui.topBar.planFoot')}</p>
             </div>

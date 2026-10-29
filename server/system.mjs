@@ -363,6 +363,10 @@ async function buildSnapshot() {
     orphans.push({ pid: p.pid, start: p.start, label: binOf(p.comm), up: p.up, mem: treeMem(P, p.pid), owner: ownerOf(P, p.pid, files) });
   }
 
+  const editor = ideParts(P, appList, claude);
+  // everything your own processes hold (footprints: compressed and swapped memory included), for "who holds the RAM"
+  const held = [...P.procs.values()].reduce((s, p) => s + (mine(p) ? p.mem : 0), 0);
+
   const totalCpu = [...P.procs.values()].reduce((s, p) => s + p.cpu, 0);
   const tight = mem.pressure !== 'normal' || mem.swapUsed > 4 * GB;
   const diskTight = dsk.free / dsk.total < 0.15;
@@ -438,17 +442,68 @@ async function buildSnapshot() {
     mem, disk: dsk, tight, diskTight,
     cpu: { cores, percent: Math.min(100, Math.round(totalCpu / cores)), load: os.loadavg()[0] },
     rules: { sessionIdle: SESSION_IDLE, devIdle: DEV_IDLE, pressure: mem.pressure },
-    devServers, claude, apps: appList, orphans, tips,
+    devServers, claude, apps: appList, orphans, tips, ide: editor, held, trend: trend.slice(),
     cleanups: cleanups.map(({ paths, cmd, words, ...c }) => ({ ...c, ...cleanupWords({ words }), count: paths ? paths.length : undefined })),
     cleanupsAt,
   };
+}
+
+/* ---------- what a VS Code-family editor (Antigravity, VS Code, Cursor…) holds ----------
+   Its processes say what they are: a renderer per window and per webview (the Claude chat panels), an extension host
+   per window, a TypeScript server per project with TypeScript open. The windows are told apart by the window id each
+   renderer carries. The Claude Code chats it holds: the sessions whose process sits under it. */
+function ideParts(P, appList, claude) {
+  const first = [...P.procs.values()].find((p) => mine(p) && /--vscode-window-config=/.test(p.args));
+  const name = first && appOf(first.comm), app = name && appList.find((a) => a.name === name);
+  if (!app) return null;
+  const parts = { ui: { mem: 0, n: 0 }, ts: { mem: 0, n: 0 }, ext: { mem: 0, n: 0 } }, windows = new Set();
+  let known = 0;
+  for (const p of P.procs.values()) {
+    if (!mine(p) || appOf(p.comm) !== name) continue;
+    const k = /--type=renderer/.test(p.args) ? 'ui' : /tsserver\.js/.test(p.args) ? 'ts' : /utility-sub-type=node\.mojom\.NodeService/.test(p.args) && /\(Plugin\)/.test(p.comm) ? 'ext' : null;
+    const w = /--vscode-window-config=vscode:([0-9a-f-]+)/.exec(p.args)?.[1];
+    if (w) windows.add(w);
+    if (!k) continue;
+    parts[k].mem += p.mem; known += p.mem;
+    if (k !== 'ts' || !/partialSemantic/.test(p.args)) parts[k].n++;   // (a project's TypeScript runs as two servers: count it once)
+  }
+  const under = (pid) => { for (let p = P.procs.get(pid), i = 0; p && i < 12; p = P.procs.get(p.ppid), i++) if (p.comm.includes(`${name}.app/`)) return true; return false; };
+  const chats = claude.filter((c) => under(c.pid));
+  return { name, mem: app.mem, windows: windows.size, ui: parts.ui, ts: parts.ts, ext: parts.ext, other: Math.max(0, app.mem - known),
+    chats: chats.length, idleChats: chats.filter((c) => !c.busy).length };
+}
+
+/* ---------- RAM and swap over the last half hour: one reading a minute ---------- */
+const trend = [];
+let trendTimer = null;
+export function startTrend() {
+  if (trendTimer) return;
+  const take = () => memory().then((m) => { trend.push({ t: Date.now(), used: m.used, total: m.total, swap: m.swapUsed }); if (trend.length > 31) trend.shift(); }).catch(() => {});
+  take(); trendTimer = setInterval(take, 60_000); trendTimer.unref();
 }
 
 /* ---------- actions ---------- */
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 function within(p, roots) { const r = path.resolve(p); return roots.some((root) => r.startsWith(root + path.sep)); }
 
-export async function sysAction({ action, target, force, start }) {
+export async function sysAction({ action, target, force, start, items }) {
+  // several idle Claude sessions at once (the drawer's main button, and closing idle sessions on a timer): the same checks
+  // as closing one, never forced, never a session that is working
+  if (action === 'closeIdle') {
+    const list = (Array.isArray(items) ? items : []).slice(0, 40).map((x) => ({ pid: Number(x?.target), start: Number(x?.start) }));
+    const snap = await buildSnapshot(), P = await processes(), guard = protectedPids(P);
+    const idle = new Map(snap.claude.filter((c) => !c.busy).map((c) => [c.pid, c]));
+    const go = list.filter(({ pid, start: st }) => { const cur = P.procs.get(pid); return idle.has(pid) && !guard.has(pid) && cur && Number.isFinite(st) && Math.abs(cur.start - st) <= 3; });
+    if (!go.length) { cache = null; return { ok: false, closed: [], message: tr('server.sys.result.notOffered') }; }
+    const trees = go.map(({ pid }) => [...descendants(P.kids, pid).reverse(), pid]);
+    for (const t of trees.flat()) { try { process.kill(t, 'SIGTERM'); } catch { /* already gone */ } }
+    await sleep(1500);
+    cache = null;
+    const closed = go.filter((_, i) => !trees[i].some(alive)).map(({ pid }) => ({ name: idle.get(pid).name, mem: idle.get(pid).mem }));
+    const size = fmtBytes(closed.reduce((a, c) => a + c.mem, 0));
+    const left = go.length - closed.length;
+    return { ok: !left, closed, message: left ? tr('server.sys.result.closedSome', { n: closed.length, left }) : tr('server.sys.result.closedIdle', { n: closed.length, size }) };
+  }
   if (action === 'kill') {
     const pid = Number(target);
     const snap = await buildSnapshot();

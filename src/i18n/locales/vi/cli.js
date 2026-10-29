@@ -14,6 +14,7 @@ export default {
     next: 'Mở http://localhost:{port} rồi gõ một câu trong Claude Code để thấy nhân vật đi vào.',
   },
   uninstall: {
+    editors: 'Đã bỏ cổng đổi tài khoản của văn phòng khỏi cài đặt trình soạn thảo',
     title: 'Gỡ My Office',
     removed: 'Đã gỡ {n} mục của My Office khỏi {file}',
     none: 'Không có hook nào của My Office.',

@@ -15,6 +15,7 @@ export default {
     next: 'Open http://localhost:{port}, then type something in Claude Code to see a character walk in.',
   },
   uninstall: {
+    editors: "Took the office's account switch out of the editors' settings",
     title: 'Removing My Office',
     removed: { one: 'Removed {n} My Office entry from {file}', other: 'Removed {n} My Office entries from {file}' },
     none: 'No My Office hooks found.',

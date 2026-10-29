@@ -103,6 +103,23 @@ async function uninstall() {
   if (removed) { await writeSettings(cfg); ok(tr('cli.uninstall.removed', { n: removed, file: SETTINGS })); } else ok(tr('cli.uninstall.none'));
   // The login service is machine-wide: only touch it when working on the real settings (not a --settings copy).
   if (!opt('--settings') && (await service().uninstall())) ok(tr('cli.uninstall.service'));
+  if (!opt('--settings') && unwrapEditors()) ok(tr('cli.uninstall.editors'));
+}
+// the editors' Claude Code started through the office's account script (the plan card's "Use" / switching): taken out,
+// or Claude Code wouldn't start once the office is gone
+function unwrapEditors() {
+  const script = path.join(DATA_DIR, 'claude-switch.sh'), home = os.homedir(), key = 'claudeCode.claudeProcessWrapper';
+  const base = process.platform === 'darwin' ? path.join(home, 'Library', 'Application Support') : path.join(home, '.config');
+  let n = 0;
+  for (const app of ['Code', 'Code - Insiders', 'Cursor', 'Windsurf', 'Antigravity', 'Antigravity IDE', 'Kiro', 'Trae', 'Positron']) {
+    try {
+      const f = fs.realpathSync(path.join(base, app, 'User', 'settings.json')), cfg = JSON.parse(fs.readFileSync(f, 'utf8'));
+      if (cfg[key] !== script) continue;
+      delete cfg[key]; fs.writeFileSync(f, `${JSON.stringify(cfg, null, 4)}\n`); n++;
+    } catch { /* no such editor, or a file with comments */ }
+  }
+  try { fs.writeFileSync(path.join(DATA_DIR, 'account-now'), '\n'); } catch { /* none */ }
+  return n;
 }
 async function doctor() {
   console.log(`${tr('cli.doctor.title')}\n`);

@@ -99,7 +99,8 @@ export function setup() {
   // the plan popover, opened from its pill
   popPlan = $('pop-plan'); btnPlan = $('btn-plan');
   btnPlan.addEventListener('click', (e) => { e.stopPropagation(); togglePlan(); });
-  document.addEventListener('click', (e) => { if (!popPlan.hidden && !e.target.closest('#pop-plan, #btn-plan')) togglePlan(false); });
+  // (a click on something the card just replaced (a step of adding an account) isn't a click outside it)
+  document.addEventListener('click', (e) => { if (!popPlan.hidden && e.target.isConnected && !e.target.closest('#pop-plan, #btn-plan')) togglePlan(false); });
   popLook.addEventListener('click', (e) => {
     const tb = e.target.closest('[data-st-tab]'); if (tb) { showTab(tb.dataset.stTab); return; }
     if (e.target.closest('#st-close')) { togglePop(false); btnLook.focus(); return; }

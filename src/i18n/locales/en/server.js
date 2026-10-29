@@ -1,6 +1,14 @@
 // Words the server writes: event and tool labels, chat notes, API errors, the phone PIN page, plan-limit labels, replies
 // to Claude's hooks, and the Mac drawer's cleanup tips (server/system.mjs). The server translates when it makes them.
 export default {
+  account: {
+    noCli: "Couldn't find Claude Code on this computer.",
+    badName: 'Use letters and numbers, e.g. work.',
+    isMain: "That's the main account's folder.",
+    installFailed: "Couldn't connect the new folder to the office.",
+    onMac: 'Accounts can only be added on this computer.',
+    main: 'the main account',
+  },
   forbidden: 'Not allowed.',
   badRequest: 'Invalid request.',
   // a name for a command that has no description, from its first words: "Run tests · npm run test"
@@ -37,6 +45,8 @@ export default {
   event: {
     needYou: 'needs your confirmation',
     modelError: 'model call failed',
+    limitHit: 'out of Claude usage',
+    limitSwitch: 'out of Claude usage · new sessions use {to}, reopen this one to go on',
   },
   originApp: 'Claude app',
   note: {
@@ -161,6 +171,9 @@ export default {
       noItem: 'This item is no longer on the cleanup list.',
       cleaned: 'Cleaned up, freed about {size}.',
       unknown: 'Unknown action.',
+      closedIdle: { one: 'Closed {n} idle session, freed about {size}. The history stays, reopen it with /resume.', other: 'Closed {n} idle sessions, freed about {size}. The history stays, reopen them with /resume.' },
+      closedSome: "Closed {n}, {left} more haven't stopped yet.",
+      autoClosed: { one: 'Closed {n} session idle for over {hours} h ({names}), freed about {size}. The history stays, reopen it with /resume.', other: 'Closed {n} sessions idle for over {hours} h ({names}), freed about {size}. The history stays, reopen them with /resume.' },
     },
   },
 };

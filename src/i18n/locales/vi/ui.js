@@ -20,7 +20,7 @@ export default {
     reading: 'đang đọc…',
     planLimits: 'Hạn mức gói Claude',
     planEmpty: 'Đang đọc hạn mức từ tài khoản Claude Code…',
-    planFoot: 'Gói cá nhân (Pro, Max) có hạn mức 5 giờ và theo tuần; gói tổ chức (Team, Enterprise) có hạn mức 5 giờ. Đổi tài khoản bằng /login, văn phòng tự đọc lại.',
+    planFoot: 'Gói cá nhân (Pro, Max) có hạn mức 5 giờ và theo tuần, gói tổ chức (Team, Enterprise) có hạn mức 5 giờ. Rê chuột vào một tài khoản để đổi tên hoặc bấm Dùng.',
     mac: '{Mac}',
     macTitle: 'Xem RAM, CPU, ổ đĩa và giải phóng',
     measuring: 'đang đo…',

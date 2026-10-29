@@ -2,7 +2,8 @@
 /* the plan pill sits beside the Mac pill: the tightest limit at a glance, every limit in its popover */
 .plan-pill .mp-bar { width: 64px; }
 .mp-tip { position: absolute; top: -3px; right: -3px; width: 10px; height: 10px; border-radius: 50%; background: var(--amber); box-shadow: 0 0 0 2.5px var(--bg, #0F141C); }
-.pop-plan { width: 330px; }
+.pop-plan { width: 330px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }   /* (several accounts: it scrolls inside, never past the screen) */
+@media (max-width: 720px) { .pop-plan { max-height: calc(100dvh - 72px); } }
 .pop-plan .plan-card { display: grid; gap: 5px; }
 .plan-foot { margin: 6px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: .66rem; line-height: 1.45; color: var(--faint); }
 .pop-acts { display: grid; gap: 6px; }
@@ -10,3 +11,89 @@
 .pop-acts .tb-btn { width: 100%; justify-content: flex-start; }
 @media (max-width: 1100px) { .plan-pill .mp-label { display: none; } }
 @media (max-width: 900px) { .plan-pill .mp-bar, .mac-pill .mp-bar { display: none; } }
+/* adding a Claude account (mac-drawer.js renderAdd): a dashed button, then a step at a time inside the card */
+.plan-add { margin-top: 4px; min-width: 0; }
+.pa-step, .pa-step > *, .pa-steps li, .pa-form label { min-width: 0; }   /* (grid items: never wider than the card) */
+.plan-add-btn { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; justify-content: center; gap: 7px; height: 34px; border-radius: 9px; border: 1px dashed var(--accent-line); color: var(--accent-hi); font-size: .76rem; font-weight: 700; cursor: pointer; transition: background .15s, border-color .15s; }
+.plan-add-btn:hover { background: var(--accent-soft); border-style: solid; }
+.plan-add-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.plan-add-btn svg { width: 14px; height: 14px; }
+.pa-step { display: grid; gap: 8px; padding: 11px 12px; border-radius: 11px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line-2); font-size: .74rem; line-height: 1.45; }
+.pa-step > b { font-size: .8rem; color: var(--ink); }
+.pa-step p { margin: 0; color: var(--muted); }
+.pa-form { display: grid; gap: 8px; }
+.pa-form label { display: grid; gap: 4px; color: var(--muted); font-size: .7rem; font-weight: 600; }
+.pa-form input { height: 34px; padding: 0 10px; border-radius: 8px; background: var(--card); border: 1px solid var(--line-2); color: var(--ink); font-size: .8rem; outline: none; }
+.pa-form input:focus { border-color: var(--accent-line); box-shadow: 0 0 0 3px var(--accent-soft); }
+.pa-acts { display: flex; justify-content: flex-end; gap: 6px; }
+.pa-steps { margin: 0; padding-left: 18px; display: grid; gap: 7px; color: var(--muted); }
+.pa-steps li::marker { color: var(--accent-hi); font-weight: 700; }
+.pa-code { display: flex; align-items: center; gap: 6px; margin-top: 5px; padding: 6px 6px 6px 9px; border-radius: 8px; background: #0B1018; border: 1px solid var(--line-2); }
+.pa-code code { flex: 1; min-width: 0; white-space: pre-wrap; word-break: break-all; font: 600 .7rem/1.45 var(--mono); color: #CFE3FF; }   /* (wrapped: the whole command in view) */
+.pa-copy { all: unset; flex: none; align-self: flex-start; padding: 4px 8px; border-radius: 6px; background: var(--card-2); border: 1px solid var(--line-2); color: var(--ink); font-size: .66rem; font-weight: 700; cursor: pointer; }
+.pa-copy:hover { background: var(--card-3); }
+.pa-copy:focus-visible { outline: 2px solid var(--accent); }
+.pa-wait { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .72rem; }
+.pa-spin { width: 13px; height: 13px; flex: none; border-radius: 50%; border: 2px solid rgba(255, 255, 255, .15); border-top-color: var(--accent); animation: st-spin .8s linear infinite; }
+.pa-done { display: flex; align-items: center; gap: 7px; color: var(--green-ink); }
+.pa-done svg { width: 15px; height: 15px; color: var(--green); }
+.pa-note { color: #FFB3B3; font-size: .68rem; }
+@media (prefers-reduced-motion: reduce) { .pa-spin { animation: none; } }
+/* (signing in without a terminal: name suggestions, the browser step, the code box, more for later) */
+.pa-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.pa-chip { all: unset; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line-2); background: rgba(255, 255, 255, .04); color: var(--muted); font: 600 .68rem/1.2 var(--mono); cursor: pointer; }
+.pa-chip:hover { color: var(--ink); border-color: var(--accent-line); }
+.pa-chip:focus-visible { outline: 2px solid var(--accent); }
+.pa-browser { display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px; border-radius: 9px; background: var(--accent-soft); border: 1px solid rgba(239, 138, 95, .25); }
+.pa-browser svg { width: 18px; height: 18px; margin: 3px 0 0 6px; color: var(--accent-hi); }
+.pa-browser p { color: var(--ink); }
+.pa-links { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pa-links .pa-copy { padding: 7px 10px; }
+.pa-hint { font-size: .68rem; color: var(--faint) !important; }
+.pa-code-ask summary, .pa-more summary { cursor: pointer; color: var(--muted); font-size: .7rem; font-weight: 600; }
+.pa-code-ask summary:hover, .pa-more summary:hover { color: var(--ink); }
+.pa-code-ask[open] summary, .pa-more[open] summary { margin-bottom: 6px; }
+.pa-more { display: grid; gap: 6px; }
+.pa-more p { margin: 4px 0 0; }
+.pa-row { grid-template-columns: minmax(0, 1fr) auto; align-items: center; }
+/* each account in the card (mac-drawer.js acctBlock): its name (click to rename), its plan, a badge (in use / out until),
+   and "Use" when hovering anywhere over it (always shown on touch screens) */
+.acct-block { display: grid; gap: 4px; min-width: 0; }
+.plan-other.acct-head { align-items: center; min-height: 26px; }
+.plan-other.acct-head--main { margin-top: 0; padding-top: 0; border-top: 0; }
+.acct-name { all: unset; flex: 0 1 auto; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
+.acct-name b { overflow: hidden; text-overflow: ellipsis; }
+.acct-name:hover { background: rgba(255, 255, 255, .06); }
+.acct-name:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.acct-pen { flex: none; width: 11px; height: 11px; color: var(--faint); opacity: 0; transition: opacity .15s; }
+.acct-block:hover .acct-pen, .acct-name:focus-visible .acct-pen { opacity: 1; }
+.plan-other .acct-meta { flex: 1 1 0; min-width: 0; }   /* (the plan gives way first, then the name) */
+.acct-head.is-editing .acct-meta, .acct-head.is-editing .acct-end { display: none; }
+.plan-other .acct-end { flex: none; display: inline-flex; align-items: center; gap: 6px; overflow: visible; font-size: inherit; color: inherit; }
+.is-stream .plan-other .acct-end { filter: none; }
+.acct-badge { font-style: normal; font-size: .62rem; font-weight: 700; line-height: 1; padding: 4px 8px; border-radius: 999px; white-space: nowrap; }
+.acct-badge--on { color: var(--accent-hi); background: var(--accent-soft); }
+.acct-badge--out { color: var(--amber); background: var(--amber-soft); }
+.acct-use { all: unset; box-sizing: border-box; font-size: .66rem; font-weight: 700; line-height: 1; padding: 4px 11px; border-radius: 999px; border: 1px solid var(--accent-line); color: var(--accent-hi); cursor: pointer; opacity: 0; transition: opacity .15s, background .15s; }
+.acct-block:hover .acct-use, .acct-use:focus-visible { opacity: 1; }
+.acct-use:hover { background: var(--accent-soft); }
+.acct-use:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
+.acct-use:disabled { opacity: .5; cursor: progress; }
+@media (hover: none) { .acct-pen, .acct-use { opacity: 1; } }
+/* renaming in place */
+.acct-rename { display: grid; gap: 3px; flex: 1 1 auto; min-width: 0; }
+.acct-rename input { box-sizing: border-box; width: 100%; height: 26px; padding: 0 8px; border-radius: 7px; border: 1px solid var(--accent-line); background: #0B1018; color: var(--ink); font: inherit; font-size: .74rem; font-weight: 700; outline: none; }
+.acct-rename input:focus { box-shadow: 0 0 0 3px var(--accent-soft); }
+.plan-other .acct-rename small { font-size: .6rem; color: var(--faint); white-space: normal; }
+/* switching by itself when one runs out */
+.acct-auto { display: grid; gap: 5px; margin-top: 8px; padding-top: 9px; border-top: 1px solid var(--line); min-width: 0; }
+.acct-switch { all: unset; display: inline-flex; align-items: center; gap: 9px; cursor: pointer; font-size: .74rem; font-weight: 700; color: var(--ink); border-radius: 8px; }
+.acct-switch:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 3px; }
+.acct-switch:disabled { cursor: default; opacity: .55; }
+.acct-knob { position: relative; flex: none; width: 30px; height: 17px; border-radius: 999px; background: rgba(255, 255, 255, .14); transition: background .18s; }
+.acct-knob::after { content: ''; position: absolute; top: 2px; left: 2px; width: 13px; height: 13px; border-radius: 50%; background: #fff; transition: transform .18s; }
+.acct-switch[aria-checked="true"] .acct-knob { background: var(--accent); }
+.acct-switch[aria-checked="true"] .acct-knob::after { transform: translateX(13px); }
+.acct-auto-sub { font-size: .64rem; line-height: 1.45; color: var(--muted); }
+.acct-warn { font-size: .64rem; line-height: 1.45; color: var(--amber); }
+@media (prefers-reduced-motion: reduce) { .acct-knob, .acct-knob::after, .acct-use, .acct-pen { transition: none; } }

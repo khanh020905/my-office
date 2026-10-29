@@ -4,9 +4,9 @@ import { $, STATIC, rand, replay } from '../core/env.js';
 import { CHAIR_IDLE, chairs } from '../world/desks.js';
 import { sessions, subs, workers } from '../people/workers.js';
 import { setTrophies } from '../life/trophies.js';
-import { addFeed, queueFeed, queueUi, renderFeed } from '../ui/activity.js';
+import { addFeed, queueFeed, queueUi, renderFeed, toast } from '../ui/activity.js';
 import { closeSession, drM } from '../ui/session-drawer.js';
-import { limitWarned, liveWindows, renderLimits, renderMac } from '../ui/mac-drawer.js';
+import { acctLogin, acctSwitched, limitWarned, liveWindows, loadMac, renderLimits, renderMac } from '../ui/mac-drawer.js';
 import { DEMO_TODOS, onTodos } from '../ui/whiteboard.js';
 import { TOKEN, freeDesk, removeSession, setConn, upsertSession } from '../net/live.js';
 import { onEvent } from '../life/incidents.js';
@@ -20,17 +20,17 @@ function demoProjects() {
   const d = (k) => tr(`demo.tasks.${k}`);
   return [
     { name: 'shop-api', dir: '~/projects/shop-api', tasks: [
-      { prompt: d('cart.prompt'), steps: [['read', 'src/routes/cart.ts'], ['grep', 'paginate'], ['edit', 'src/routes/cart.ts'], ['bash', d('cart.test')], ['edit', 'src/routes/cart.test.ts'], ['bash', d('cart.retest')]], wait: d('cart.wait') },
-      { prompt: d('shipping.prompt'), steps: [['grep', 'shippingFee'], ['read', 'src/lib/shipping.ts'], ['edit', 'src/lib/shipping.ts'], ['bash', d('shipping.test')]], deploy: 'v2.4.1' } ] },
+      { prompt: d('cart.prompt'), steps: [['read', 'src/routes/cart.ts'], ['grep', 'paginate'], ['edit', 'src/routes/cart.ts'], ['test', d('cart.test'), 'fail', 'npm test'], ['edit', 'src/routes/cart.test.ts'], ['test', d('cart.retest'), 'ok', 'npm test']], wait: d('cart.wait') },
+      { prompt: d('shipping.prompt'), steps: [['grep', 'shippingFee'], ['read', 'src/lib/shipping.ts'], ['edit', 'src/lib/shipping.ts'], ['test', d('shipping.test'), null, 'vitest']], deploy: 'v2.4.1' } ] },
     { name: 'landing-page', dir: '~/projects/landing-page', tasks: [
       { prompt: d('hero.prompt'), steps: [['read', 'app/page.tsx'], ['read', 'components/Hero.tsx'], ['edit', 'components/Hero.tsx'], ['write', 'components/HeroArt.tsx'], ['bash', d('hero.build')], ['fetch', 'dribbble.com']], sub: ['general-purpose', d('hero.sub')] },
       { prompt: d('images.prompt'), steps: [['glob', 'public/**/*.png'], ['bash', d('images.webp')], ['edit', 'next.config.ts'], ['bash', d('images.lighthouse')]] } ] },
     { name: 'data-pipeline', dir: '~/projects/data-pipeline', tasks: [
-      { prompt: d('orders.prompt'), steps: [['read', 'etl/orders.py'], ['edit', 'etl/orders.py'], ['bash', d('orders.pytest')], ['web', 'pandas drop_duplicates subset']], sub: ['Explore', d('orders.sub')] },
+      { prompt: d('orders.prompt'), steps: [['read', 'etl/orders.py'], ['edit', 'etl/orders.py'], ['test', d('orders.pytest'), null, 'pytest'], ['web', 'pandas drop_duplicates subset']], sub: ['Explore', d('orders.sub')] },
       { prompt: d('schedule.prompt'), steps: [['read', 'airflow/dags/daily.py'], ['edit', 'airflow/dags/daily.py'], ['bash', d('schedule.check')]], wait: d('schedule.wait') } ] },
     { name: 'mobile-app', dir: '~/projects/mobile-app', tasks: [
       { prompt: d('login.prompt'), steps: [['read', 'src/screens/Login.tsx'], ['web', 'expo auth session google'], ['edit', 'src/screens/Login.tsx'], ['bash', d('login.typecheck')]] },
-      { prompt: d('keyboard.prompt'), steps: [['grep', 'KeyboardAvoidingView'], ['edit', 'src/components/Form.tsx'], ['bash', d('keyboard.uiTest')]] } ] },
+      { prompt: d('keyboard.prompt'), steps: [['grep', 'KeyboardAvoidingView'], ['edit', 'src/components/Form.tsx'], ['test', d('keyboard.uiTest'), null, 'playwright']] } ] },
     { name: 'docs-site', dir: '~/projects/docs-site', tasks: [
       { prompt: d('install.prompt'), steps: [['read', 'docs/intro.md'], ['write', 'docs/install.md'], ['bash', d('install.build')]], deploy: 'docs' } ] },
     { name: 'infra', dir: '~/projects/infra', tasks: [
@@ -49,12 +49,12 @@ function demoEmit(s, type, label = '', extra = {}) {
   if (type === 'prompt') state.stats.prompts = (state.stats.prompts || 0) + 1;
   if (type === 'read' || type === 'grep' || type === 'glob') state.stats.read = (state.stats.read || 0) + 1;
   if (type === 'edit' || type === 'write') state.stats.edit = (state.stats.edit || 0) + 1;
-  if (type === 'bash') state.stats.cmd = (state.stats.cmd || 0) + 1;
+  if (type === 'bash' || type === 'test') state.stats.cmd = (state.stats.cmd || 0) + 1;
   if (type === 'deploy') state.stats.deploy = (state.stats.deploy || 0) + 1;
   const log = demoLog.get(extra.agent || s.id) || []; demoLog.set(extra.agent || s.id, log);
   if (type === 'prompt') log.push({ role: 'user', text: label, ts: now });
   else if (type === 'stop') log.push({ role: 'claude', text: demoReply(demoSeq % REPLY_KEYS.length), ts: now });
-  else if (!['wait', 'substart', 'substop'].includes(type)) log.push({ role: 'tool', type, label, ts: now });
+  else if (!['wait', 'substart', 'substop', 'testok', 'testfail', 'commit', 'push'].includes(type)) log.push({ role: 'tool', type: type === 'test' ? 'bash' : type, label, ts: now });
   upsertSession({ ...s, subs: s.subs.map((x) => ({ ...x })) });
   onEvent(e);
 }
@@ -63,7 +63,7 @@ function demoRun(s, task, at = 0) {
   const step = () => rand(1500, 3200);
   let t = at;
   later(t, () => { s.status = 'work'; s.taskStart = Date.now(); s.lastPrompt = task.prompt; demoEmit(s, 'prompt', task.prompt); });
-  task.steps.forEach(([type, label], i) => {
+  task.steps.forEach(([type, label, outcome, runner], i) => {
     t += step();
     if (task.wait && i === Math.floor(task.steps.length / 2)) {
       later(t, () => { s.status = 'wait'; demoEmit(s, 'wait', task.wait); });
@@ -81,8 +81,21 @@ function demoRun(s, task, at = 0) {
       t += rand(1500, 2500);
       later(t, () => { s.subs = s.subs.filter((y) => y.id !== id); demoEmit(s, 'substop', kind, { agent: id }); });
     }
-    later(t, () => demoEmit(s, type, label));
+    if (type === 'test') {   // the run at the test board, then its result (mostly green; the first run of a new test red)
+      later(t, () => demoEmit(s, 'test', label, { runner }));
+      t += rand(3500, 6500);
+      const ok = outcome ? outcome === 'ok' : Math.random() < 0.85;
+      later(t, () => demoEmit(s, ok ? 'testok' : 'testfail', runner));
+    } else later(t, () => demoEmit(s, type, label));
   });
+  // most tasks end in a commit (a letter in the lobby's post box); every third one is pushed (the postman comes)
+  if (Math.random() < 0.6) {
+    t += step();
+    later(t, () => {
+      demoEmit(s, 'commit', task.prompt); s.commits = (s.commits || 0) + 1;
+      if (s.commits % 3 === 0) later(rand(4000, 9000), () => demoEmit(s, 'push', 'main', { branch: 'main', repo: s.name }));
+    });
+  }
   if (task.deploy) { t += step(); later(t, () => demoEmit(s, 'deploy', task.deploy)); }
   if (s.usage && s.usage.ctx > 150000) { t += step(); later(t, () => { demoEmit(s, 'compact', 'auto'); }); t += 4800; later(t, () => { s.usage.ctx = 42000; upsertSession({ ...s }); }); }
   t += step();
@@ -96,6 +109,7 @@ function demoLoop(s, p, first) {
   const go = (delay) => { const task = p.tasks[k++ % p.tasks.length]; const end = demoRun(s, task, delay); demoTimers.push(setTimeout(() => go(Math.random() < 0.22 ? rand(70000, 150000) : rand(6000, 16000)), end + 50)); };
   go(first ? rand(300, 2500) : rand(4000, 14000));
 }
+const demoAuto = { hours: 0, last: null };
 export function demoMac() {
   const GBb = 1024 ** 3, now = Math.round(Date.now() / 1000), list = [...sessions.values()];
   const claude = list.map((s, i) => ({ pid: 52000 + i, start: now - 3600 * (i + 1), name: s.name, dir: s.dir, busy: s.status !== 'rest', idle: s.status === 'rest' ? Math.round((Date.now() - s.lastAt) / 1000) + 3600 * i : 0, mem: (260 + i * 90) * 1024 ** 2, remote: i === 0 }));
@@ -104,7 +118,10 @@ export function demoMac() {
     owner: owner ? { sid: owner.id, name: owner.name, alive: true } : null };
   const lost = { pid: 41007, start: now - 9 * 3600, label: 'vite', ports: [5173], dir: '~/projects/old-prototype', up: 9 * 3600, cpu: 2, mem: 0.7 * GBb, owner: { sid: 'demo-gone', name: 'old-prototype', alive: false } };
   const M = (k) => tr(`demo.mac.${k}`);
+  const fmtD = (sec) => tr('time.hourMin', { h: Math.floor(sec / 3600), m: Math.floor((sec % 3600) / 60) });
   const tips = [
+    ...claude.filter((c) => !c.busy && c.idle > 2700).map((c) => ({ id: `kill:${c.pid}`, action: 'kill', target: c.pid, start: c.start, gain: c.mem, level: 'mid',
+      title: tr('server.sys.closeSession', { name: c.name }), detail: tr('server.sys.sessionDetail', { time: fmtD(c.idle), size: `${Math.round(c.mem / 1024 ** 2)} MB` }), verb: tr('common.close') })),
     { id: 'kill:41001', action: 'kill', target: 41001, start: dev.start, gain: dev.mem, level: 'high', title: M('devTitle'), detail: M('devDetail'), verb: M('stop') },
     { id: 'kill:41007', action: 'kill', target: 41007, start: lost.start, gain: lost.mem, level: 'high', title: M('lostTitle'), detail: M('lostDetail'), verb: M('stop') },
     { id: 'quit:Google Chrome', action: 'quit', target: 'Google Chrome', gain: 4.8 * GBb, level: 'mid', title: M('chromeTitle'), detail: M('chromeDetail'), verb: M('quit') },
@@ -113,6 +130,9 @@ export function demoMac() {
   return { at: Date.now(), mem: { used: 12.6 * GBb, total: 16 * GBb, pressure: 'warn', swapUsed: 3.1 * GBb, swapTotal: 6 * GBb }, cpu: { percent: 42 + Math.round(Math.random() * 10), cores: 10, load: 4.2 },
     disk: { used: 301 * GBb, total: 460 * GBb, free: 159 * GBb }, tight: true, diskTight: false, devServers: [dev, lost], claude, orphans: [],
     apps: [{ name: 'Google Chrome', mem: 4.8 * GBb, cpu: 31, count: 22, quit: true }, { name: 'Slack', mem: 1.2 * GBb, cpu: 3, count: 6, quit: true }, { name: 'Spotify', mem: 0.6 * GBb, cpu: 2, count: 5, quit: true }, { name: 'Claude Code', mem: 2.1 * GBb, cpu: 14, count: 6, quit: false }],
+    ide: { name: 'Claude Code', mem: 2.1 * GBb, windows: 2, ui: { mem: 0.9 * GBb, n: 6 }, ts: { mem: 0, n: 0 }, ext: { mem: 0.6 * GBb, n: 2 }, other: 0.6 * GBb, chats: claude.length, idleChats: claude.filter((c) => !c.busy).length },
+    held: 15.2 * GBb, rules: { sessionIdle: 2700, devIdle: 7200, pressure: 'warn' }, auto: demoAuto,
+    trend: Array.from({ length: 31 }, (_, i) => ({ t: Date.now() - (30 - i) * 60e3, used: (11.4 + Math.sin(i / 4) * 0.5 + i * 0.04) * GBb, total: 16 * GBb, swap: (2.2 + i * 0.03) * GBb })),
     tips, cleanups: [{ id: 'claude-tmp', title: M('tmpTitle'), detail: M('tmpCleanup'), size: 8.4 * GBb }, { id: 'next-cache', title: M('nextTitle'), detail: M('nextDetail'), size: 0.7 * GBb }, { id: 'npm-cache', title: M('npmTitle'), detail: M('npmDetail'), size: 0.3 * GBb }], cleanupsAt: Date.now() };
 }
 // Replies in the demo conversation: what Claude usually writes (lists, code, tables), so the reader can be judged.
@@ -185,7 +205,10 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'perm') onPerm(d.p);
   else if (d.k === 'permDone') { perms.delete(d.id); renderPerms(); }
   else if (d.k === 'todos') { state.todos = d.todos || []; onTodos(); }
+  else if (d.k === 'acctlogin') acctLogin(d);   // (adding an account: a step of its sign-in)
+  else if (d.k === 'acctswitch') acctSwitched(d);   // (new sessions moved to another account)
   else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); if (!drM.hidden) renderMac(); }
+  else if (d.k === 'sysauto') { if (!quiet) { toast(d.message, 8000); loadMac(); } }   // (idle sessions closed on the drawer's timer)
   else if (d.k === 'trophies') setTrophies(d.t, quiet ? [] : d.earned || []);
   else if (d.k === 'vi') relabel(d.from, d.to);
 }

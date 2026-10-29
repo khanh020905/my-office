@@ -10,10 +10,11 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { execFile } from 'node:child_process';
-import { sysSnapshot, sysAction, scanCleanups, trackOwners, setI18n } from './system.mjs';
+import { execFile, spawn } from 'node:child_process';
+import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
+import { testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
@@ -149,6 +150,22 @@ async function toVi(text) {
   });
   return text;
 }
+/* ---------- images a session touched: the feed shows them, a click opens them (GET /api/image?id=) ----------
+   Only files a session read, wrote or edited with an image's extension, looked up by an id (never a path sent by the
+   page); the last 400 remembered across restarts (data/images.json). */
+const IMG_EXT = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp', avif: 'image/avif', bmp: 'image/bmp', svg: 'image/svg+xml' };
+const IMG_FILE = path.join(DATA_DIR, 'images.json');
+const images = (() => { try { return new Map(Object.entries(JSON.parse(fs.readFileSync(IMG_FILE, 'utf8')))); } catch { return new Map(); } })();
+let imgSave = null;
+function imageId(file) {
+  if (!file || typeof file !== 'string' || !IMG_EXT[path.extname(file).slice(1).toLowerCase()]) return null;
+  const abs = path.resolve(file), id = crypto.createHash('sha1').update(abs).digest('hex').slice(0, 16);
+  if (images.get(id) === abs) return id;
+  images.set(id, abs);
+  while (images.size > 400) images.delete(images.keys().next().value);
+  clearTimeout(imgSave); imgSave = setTimeout(() => fsp.mkdir(DATA_DIR, { recursive: true }).then(() => fsp.writeFile(IMG_FILE, JSON.stringify(Object.fromEntries(images)))).catch(() => {}), 2000);
+  return id;
+}
 async function classifyVi(name, input) {
   const c = classify(name, input);
   if (c.tr) c.label = await toVi(c.label);
@@ -159,13 +176,13 @@ async function classifyVi(name, input) {
 function classify(name = '', input = {}) {
   const i = input || {};
   switch (name) {
-    case 'Read': return { type: 'read', label: base(i.file_path) };
+    case 'Read': return { type: 'read', label: base(i.file_path), file: i.file_path };
     case 'NotebookRead': return { type: 'read', label: base(i.notebook_path) };
     case 'Grep': return { type: 'grep', label: clip(redact(oneLine(i.pattern)), 40) };
     case 'Glob': return { type: 'glob', label: clip(oneLine(i.pattern), 40) };
-    case 'Edit': case 'MultiEdit': return { type: 'edit', label: base(i.file_path) };
+    case 'Edit': case 'MultiEdit': return { type: 'edit', label: base(i.file_path), file: i.file_path };
     case 'NotebookEdit': return { type: 'edit', label: base(i.notebook_path) };
-    case 'Write': return { type: 'write', label: base(i.file_path) };
+    case 'Write': return { type: 'write', label: base(i.file_path), file: i.file_path };
     case 'Bash': return { type: 'bash', label: bashLabel(i), tr: !!i.description };
     case 'WebSearch': return { type: 'web', label: clip(redact(oneLine(i.query)), 48) };
     case 'WebFetch': return { type: 'fetch', label: host(i.url) };
@@ -211,6 +228,7 @@ const trophies = createTrophies({ dataDir: DATA_DIR, claudeDir: CLAUDE_DIR, toda
 const sessionsIn = (root) => [...sessions.values()].filter((s) => s.cwd && git.repoOf(s.cwd)?.root === root).sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
 function gitEvent(r, type, label) {
   const s = sessionsIn(r.root)[0]; if (!s) return;
+  if (type === 'commit') { rollDay(); stats.commit = (stats.commit || 0) + 1; dirty = true; }   // (today's letters in the lobby's post box)
   const e = { id: ++seq, ts: Date.now(), sess: s.id, name: s.name, type, label, repo: r.name, branch: r.branch, url: r.ciUrl || undefined };
   pushFeed(e); broadcast({ k: 'ev', e, s: pub(s), stats });
 }
@@ -224,7 +242,7 @@ const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
 setInterval(() => { if (clients.size) pollGit(); }, 20_000).unref();
 setInterval(() => { if (clients.size) git.pollCi(); }, 120_000).unref();
 
-function rollDay() { if (stats.day !== today()) stats = { day: today(), read: 0, edit: 0, cmd: 0, web: 0, prompts: 0, deploy: 0 }; }
+function rollDay() { if (stats.day !== today()) stats = { day: today(), read: 0, edit: 0, cmd: 0, web: 0, prompts: 0, deploy: 0, commit: 0 }; }
 
 function newSession(key) {
   return { id: crypto.randomUUID(), key, sid: null, pid: null, name: '', cwd: '', link: null, desk: freeDesk(), status: 'rest', busy: false,
@@ -240,9 +258,10 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
+  dayFirst: s.dayFirst || null,
   git: gitOf(s),
   usage: s.usage?.model ? { cost: Math.round(s.usage.cost * 100) / 100, ...liveCtx(s), model: s.usage.model, out: s.usage.out } : null });
-function gitOf(s) { const r = s.cwd && git.repoOf(s.cwd); return r ? { repo: r.name, branch: r.branch, dirty: r.dirty, ahead: r.ahead, ci: r.ci, ciName: r.ciName, ciUrl: r.ciUrl } : null; }
+function gitOf(s) { const r = s.cwd && git.repoOf(s.cwd); return r ? { repo: r.name, branch: r.branch, dirty: r.dirty, ahead: r.ahead, ci: r.ci, ciName: r.ciName, ciUrl: r.ciUrl, born: r.born || null } : null; }
 // context: exact from the status line while it reports (last 15 min), else estimated from the transcript
 const liveCtx = (s) => (s.live?.ctxMax && s.live.ctx != null && Date.now() - s.live.at < 15 * 60e3 ? { ctx: s.live.ctx, ctxMax: s.live.ctxMax, exact: true } : { ctx: s.usage.ctx, ctxMax: ctxMax(s.usage) });
 
@@ -608,6 +627,7 @@ async function onHook(p) {
   }
   const now = Date.now();
   s.lastEventAt = now;
+  { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
   const agent = p.agent_id || null;
   if (agent && ev !== 'SubagentStop') ensureSub(s, agent, p.agent_type, now).seenAt = now;
@@ -637,9 +657,12 @@ async function onHook(p) {
     }
     case 'PreToolUse': {
       const c = await classifyVi(p.tool_name, p.tool_input);
+      const runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);   // a test run: the test board lights up for it
+      if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
       else { const x = s.subs[agent]; x.last = { type: c.type, label: c.label }; x.steps++; }
-      e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent });
+      const img = imageId(c.file);
+      e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent, ...(c.runner ? { runner: c.runner } : {}), ...(img ? { img } : {}) });
       if (agent) toFeed = false;
       break;
     }
@@ -650,13 +673,16 @@ async function onHook(p) {
       if (p.tool_name === 'Bash' && /\bgit\b/.test(String(p.tool_input?.command || ''))) setTimeout(pollGit, 1200);   // a commit or push shows up at once
       const m = p.tool_name === 'Bash' && DEPLOY_RE.exec(String(p.tool_input?.command || ''));
       if (m) { stats.deploy++; dirty = true; trophies.bump('deploy'); e = mk('deploy', m[1]); }
+      const runner = !e && p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
+      if (runner) { e = mk('testok', runner, { agent, quiet: !!agent }); if (agent) toFeed = false; }
       break;
     }
     case 'PostToolUseFailure': {
       if (!agent) s.inTool = false;
       if (s.status === 'wait') s.status = 'work';
-      const c = await classifyVi(p.tool_name, p.tool_input);
-      e = mk('fail', c.label || p.tool_name || '', { agent, quiet: !!agent });
+      const c = await classifyVi(p.tool_name, p.tool_input), runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
+      // (a failing test run is the test board's red lamp, not a failure that counts towards an incident)
+      e = runner ? mk('testfail', runner, { agent, quiet: !!agent }) : mk('fail', c.label || p.tool_name || '', { agent, quiet: !!agent });
       if (agent) toFeed = false;
       break;
     }
@@ -691,10 +717,13 @@ async function onHook(p) {
       s.lastReply = clip(redact(oneLine(typeof p.last_assistant_message === 'string' ? p.last_assistant_message : await lastReplyOf(s))), 240);
       e = mk('stop', clip(s.lastReply, 90));
       break;
-    case 'StopFailure':
+    case 'StopFailure': {
       s.status = 'rest';
-      e = mk('fail', tr('server.event.modelError'));
+      // out of usage: that account takes no new session until it resets; with switching on, the next one takes over
+      const out = p.error === 'rate_limit' ? limitHit(acctOf(s)) : null;
+      e = mk('fail', !out ? tr('server.event.modelError') : out.to ? tr('server.event.limitSwitch', { to: out.to }) : tr('server.event.limitHit'));
       break;
+    }
     case 'PreCompact':
       e = mk('compact', p.trigger || '');
       break;
@@ -778,6 +807,27 @@ function readJson(req, max = 64_000) {
 }
 const json = (res, code, obj) => res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(JSON.stringify(obj));
 const ACTION_LOG = path.join(DATA_DIR, 'actions.log');
+/* ---------- closing idle Claude sessions on a timer (the Mac drawer's switch; off unless turned on) ----------
+   Every 5 minutes: the sessions idle longer than the chosen hours, never one that is working, waiting for an answer
+   from you, or driven from a phone (Remote Control). The same checks as the drawer's buttons (system.mjs, closeIdle). */
+const autoLast = [];   // the last closings: { at, names, n, size }
+async function autoCloseIdle() {
+  const hours = prefs.autoClose();
+  if (!hours) return;
+  const snap = await sysSnapshot().catch(() => null);
+  if (!snap) return;
+  const waiting = new Set([...sessions.values()].filter((s) => s.pid && (s.status === 'wait' || [...pending.values()].some((p) => p.sess === s.id))).map((s) => s.pid));
+  const items = snap.claude.filter((c) => !c.busy && !c.remote && c.idle >= hours * 3600 && !waiting.has(c.pid)).map((c) => ({ target: c.pid, start: c.start }));
+  if (!items.length) return;
+  const r = await sysAction({ action: 'closeIdle', items }).catch(() => null);
+  if (!r?.closed?.length) return;
+  const size = sysBytes(r.closed.reduce((a, c) => a + c.mem, 0)), names = r.closed.map((c) => c.name).join(', ');
+  const message = tr('server.sys.result.autoClosed', { n: r.closed.length, hours, names, size });
+  autoLast.unshift({ at: Date.now(), n: r.closed.length, names, size }); autoLast.length = Math.min(autoLast.length, 5);
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} auto-close ${hours}h -> ${names}\n`).catch(() => {});
+  broadcast({ k: 'sysauto', message });
+}
+setInterval(() => { autoCloseIdle().catch(() => {}); }, 5 * 60_000).unref();
 function lanUrl(withToken = true) {
   const nets = os.networkInterfaces();
   const order = ['en0', 'en1', ...Object.keys(nets)];
@@ -957,17 +1007,17 @@ function setLimits(windows, source, account = planLimits?.account || null) {
   const sig = (l) => JSON.stringify(l?.windows?.map((w) => [w.key, w.pct, w.resetsAt]) || null);
   const moved = sig(planLimits) !== sig(next);
   planLimits = next;
-  if (moved) broadcast({ k: 'limits', limits: limitsOut(), note: '' });
+  if (moved) { broadcast({ k: 'limits', limits: limitsOut(), note: '' }); repick(); }
   fsp.writeFile(LIMITS_FILE, JSON.stringify(planLimits)).catch(() => {});
 }
 // A window's label is words: "5 h", "Week", "Opus (week)" (weekOf: the model). Written when a reading arrives and again
 // each time the limits are sent, so a reading saved before a language switch reads in the new language.
 const winLabel = (w) => clip(String(w.key === 'session' ? tr('server.limits.fiveHour') : w.key === 'weekly' ? tr('server.limits.week') : w.weekOf ? tr('server.limits.modelWeek', { model: w.weekOf }) : w.label), 30);
 function limitsOut() {
-  const l = planLimits, more = othersOut();
-  if (!l) return more.length ? { windows: [], others: more } : l;
+  const l = planLimits, more = othersOut(), main = { label: acctLabel(''), until: blockedUntil(l?.windows, hits.get('')), auto: autoOut() };
+  if (!l) return more.length ? { windows: [], others: more, ...main } : l;
   return { ...l, windows: Array.isArray(l.windows) ? l.windows.map((w) => ({ ...w, label: winLabel(w) })) : l.windows,
-    five: l.five && { ...l.five, label: tr('server.limits.fiveHour') }, seven: l.seven && { ...l.seven, label: tr('server.limits.week') }, others: more };
+    five: l.five && { ...l.five, label: tr('server.limits.fiveHour') }, seven: l.seven && { ...l.seven, label: tr('server.limits.week') }, others: more, ...main };
 }
 function onStatus(p) {
   if (!p || typeof p !== 'object') return;
@@ -1059,6 +1109,15 @@ setInterval(() => { if (clients.size) { fetchPlanUsage(); for (const d of otherD
    ~/.claude-* folders that are logged in (their .claude.json has an account), plus any listed in OFFICE_CLAUDE_DIRS.
    Each one's usage is read the same way as the main account's, on its own schedule; a session belongs to the account
    whose folder its transcript is in (Claude Code writes it there even when projects/ is shared by a link). */
+// (switching accounts, further down: kept up here because the first scan below already reads them)
+const hits = new Map();   // account ('' = the main one) -> until when a session was told it is out of usage
+const NOW_FILE = path.join(DATA_DIR, 'account-now'), SWITCH_FILE = path.join(DATA_DIR, 'claude-switch.sh');
+const FULL_PCT = 98;   // a limit this used: no new session on that account
+// what an account's folder takes from the main one, by a link (when the main one has it): a session on any account has
+// the same history (resume), memory, settings, skills and plugins
+const SHARED = ['projects', 'sessions', 'ide', 'plugins', 'skills', 'agents', 'commands', 'output-styles', 'file-history', 'todos', 'plans', 'settings.json', 'CLAUDE.md', 'keybindings.json'];
+let nowDir = '', modelAt = 0, modelNow = '', editorsNow = [], switchAlias = '';
+try { nowDir = fs.readFileSync(NOW_FILE, 'utf8').split('\n')[0].trim(); } catch { /* the main account */ }
 let otherDirs = [];
 const others = new Map();   // folder -> { at, windows, account, note, wait, backoff }
 const accName = (d) => clip(path.basename(d).replace(/^\.claude-?/, '') || path.basename(d), 16);
@@ -1068,11 +1127,15 @@ function scanAccounts() {
   for (const d of String(process.env.OFFICE_CLAUDE_DIRS || '').split(path.delimiter).filter(Boolean)) found.add(path.resolve(d.replace(/^~(?=$|[\\/])/, home)));
   try { for (const e of fs.readdirSync(home, { withFileTypes: true })) if (/^\.claude-./.test(e.name) && (e.isDirectory() || e.isSymbolicLink())) found.add(path.join(home, e.name)); } catch { /* no home */ }
   const next = [...found].filter((d) => path.resolve(d) !== path.resolve(CLAUDE_DIR) && loggedIn(d)).sort();
-  if (next.join('|') !== otherDirs.join('|')) { otherDirs = next; for (const d of others.keys()) if (!next.includes(d)) others.delete(d); for (const d of next) fetchOtherUsage(d, true); }
+  if (next.join('|') !== otherDirs.join('|')) {
+    otherDirs = next; for (const d of others.keys()) if (!next.includes(d)) others.delete(d); for (const d of next) fetchOtherUsage(d, true);
+    broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });   // (a new login shows at once, before its usage is read)
+    repick();
+  }
 }
 function othersOut() {
-  return otherDirs.map((d) => { const o = others.get(d) || {};
-    return { name: accName(d), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
+  return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
+    return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
 }
 const otherBusy = new Map();
 function fetchOtherUsage(dir, force = false) {
@@ -1088,13 +1151,102 @@ function fetchOtherUsage(dir, force = false) {
       if (!r.ok) { o.note = r.status === 401 ? ['server.usage.expired'] : ['server.usage.httpError', { status: r.status }]; return; }
       o.backoff = 0; o.note = null; o.windows = usageWindows(await r.json()); o.at = Date.now(); o.account = loginAccount(login, path.join(dir, '.claude.json'));
     } catch { o.note = ['server.usage.offline']; }
-  })().finally(() => { otherBusy.delete(dir); broadcast({ k: 'limits', limits: limitsOut(), note: noteText() }); });
+  })().finally(() => { otherBusy.delete(dir); broadcast({ k: 'limits', limits: limitsOut(), note: noteText() }); repick(); });
   otherBusy.set(dir, job);
   return job;
 }
 // the account a session belongs to, by its transcript's folder ('' for the main one)
 const acctOf = (s) => { const t = s.transcript || ''; const d = otherDirs.find((x) => t.startsWith(x + path.sep)); return d ? accName(d) : ''; };
 scanAccounts();
+setInterval(scanAccounts, 60_000).unref();   // (a login made in a terminal shows up without a restart)
+
+/* ---------- adding an account (the plan card's "Add a Claude account") ----------
+   prepareAccount(name): a config folder of its own (~/.claude-<name>), the office's hooks and status line in its
+   settings.json (the CLI's own install, --settings: the same entries as the main account's), and the command that opens
+   Claude Code with it, to log in. Then the office looks for that login every few seconds for a while. */
+const slugOf = (name) => String(name || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 20).replace(/-+$/, '');
+/* Claude Code's CLI: on the PATH, else the usual install places and the editors' extensions (VS Code, Cursor, Windsurf,
+   Antigravity…: the newest), where it often is when Claude Code came with an editor and was never put on the PATH */
+let claudeBin = null;
+function findClaude() {
+  if (claudeBin && fs.existsSync(claudeBin.file)) return claudeBin;
+  const home = os.homedir(), exe = process.platform === 'win32' ? 'claude.exe' : 'claude', isFile = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
+  if (process.env.OFFICE_CLAUDE_BIN && isFile(process.env.OFFICE_CLAUDE_BIN)) return (claudeBin = { file: process.env.OFFICE_CLAUDE_BIN, onPath: false });
+  for (const d of String(process.env.PATH || '').split(path.delimiter)) if (d && isFile(path.join(d, exe))) return (claudeBin = { file: path.join(d, exe), onPath: true });
+  for (const f of [path.join(home, '.local', 'bin', exe), path.join(home, '.claude', 'local', exe), '/opt/homebrew/bin/claude', '/usr/local/bin/claude', path.join(home, '.npm-global', 'bin', exe), path.join(home, '.bun', 'bin', exe)]) if (isFile(f)) return (claudeBin = { file: f, onPath: false });
+  const ver = (f) => (/claude-code-(\d+)\.(\d+)\.(\d+)/.exec(f) || [0, 0, 0, 0]).slice(1).reduce((a, n) => a * 1000 + Number(n), 0), found = [];
+  for (const ide of ['.vscode', '.vscode-insiders', '.cursor', '.windsurf', '.antigravity', '.antigravity-ide', '.kiro', '.trae', '.positron']) {
+    try { for (const e of fs.readdirSync(path.join(home, ide, 'extensions'))) if (/^anthropic\.claude-code-/.test(e)) found.push(path.join(home, ide, 'extensions', e, 'resources', 'native-binary', exe)); } catch { /* not installed */ }
+  }
+  const best = found.filter(isFile).sort((a, b) => ver(b) - ver(a))[0];
+  return (claudeBin = best ? { file: best, onPath: false } : null);
+}
+// the command that starts Claude Code with an account's folder (for working with it later): `claude` when the PATH has it
+function accountCmd(slug) {
+  const bin = findClaude(), cli = !bin || bin.onPath ? 'claude' : `"${bin.file}"`;
+  return process.platform === 'win32'
+    ? { run: `$env:CLAUDE_CONFIG_DIR="$HOME\\.claude-${slug}"; ${bin && !bin.onPath ? `& ${cli}` : cli}`, alias: `function claude-${slug} { $env:CLAUDE_CONFIG_DIR="$HOME\\.claude-${slug}"; ${bin && !bin.onPath ? `& ${cli}` : cli} @args }` }
+    : { run: `CLAUDE_CONFIG_DIR="$HOME/.claude-${slug}" ${cli}`, alias: `alias claude-${slug}='CLAUDE_CONFIG_DIR="$HOME/.claude-${slug}" ${cli}'` };
+}
+/* Logging an account in without a terminal: Claude Code's own `claude auth login`, with the account's folder as its
+   CLAUDE_CONFIG_DIR. It opens the sign-in page through a little BROWSER script that also hands the office the page's
+   address ("open it again", "copy the link" for a private window) and finishes by itself when the browser comes back to
+   it; a code from the page's fallback goes to its stdin. Each step goes to the page as { k: 'acctlogin' }. */
+const logins = new Map();   // slug -> { child, state: 'waiting' | 'done' | 'failed' | 'cancelled', url, note }
+function browserScript() {
+  const f = path.join(DATA_DIR, 'open-login.sh');
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(f, '#!/bin/sh\n[ -n "$OFFICE_LOGIN_URL_FILE" ] && printf \'%s\\n\' "$1" > "$OFFICE_LOGIN_URL_FILE"\nif command -v open >/dev/null 2>&1; then exec open "$1"; else exec xdg-open "$1"; fi\n', { mode: 0o755 });
+  return f;
+}
+const pushLogin = (L) => broadcast({ k: 'acctlogin', name: L.slug, state: L.state, url: L.url || '', note: L.note || '' });
+function startLogin(slug) {
+  const was = logins.get(slug);
+  if (was?.state === 'waiting') return was;
+  const bin = findClaude();
+  if (!bin) return { slug, state: 'failed', note: tr('server.account.noCli') };
+  const urlFile = path.join(DATA_DIR, `login-${slug}.url`), env = { ...process.env, CLAUDE_CONFIG_DIR: path.join(os.homedir(), `.claude-${slug}`) };
+  try { fs.rmSync(urlFile, { force: true }); } catch { /* none */ }
+  if (process.platform !== 'win32') Object.assign(env, { BROWSER: browserScript(), OFFICE_LOGIN_URL_FILE: urlFile });
+  const L = { slug, state: 'waiting', url: '', note: '' };
+  try { L.child = spawn(bin.file, ['auth', 'login', '--claudeai'], { env, stdio: ['pipe', 'pipe', 'pipe'] }); } catch { return { slug, state: 'failed', note: tr('server.account.noCli') }; }
+  logins.set(slug, L);
+  let out = '';
+  const seen = (d) => { out = (out + d).slice(-4000); const m = !L.url && /visit:\s*(https:\/\/\S+)/.exec(out); if (m) { L.url = m[1]; pushLogin(L); } };
+  L.child.stdout.on('data', seen); L.child.stderr.on('data', seen); L.child.stdin.on('error', () => {});
+  const look = setInterval(() => { try { const u = fs.readFileSync(urlFile, 'utf8').trim(); if (u && u !== L.url) { L.url = u; pushLogin(L); } } catch { /* not yet */ } }, 500);
+  const stop = setTimeout(() => L.child.kill(), 15 * 60e3);
+  L.child.on('error', () => { L.state = 'failed'; L.note = tr('server.account.noCli'); });
+  L.child.on('exit', (code) => {
+    clearInterval(look); clearTimeout(stop);
+    if (L.state === 'waiting') { L.state = code === 0 ? 'done' : 'failed'; if (code !== 0) L.note = clip(oneLine(out.trim().split('\n').filter(Boolean).pop() || ''), 140); }
+    scanAccounts(); pushLogin(L);
+  });
+  watchLogins();
+  return L;
+}
+let watchUntil = 0, watchTimer = null;
+function watchLogins() {   // every 4 s for 15 minutes: the new account appears in the card as soon as it has logged in
+  watchUntil = Date.now() + 15 * 60e3;
+  if (watchTimer) return;
+  watchTimer = setInterval(() => { scanAccounts(); if (Date.now() > watchUntil) { clearInterval(watchTimer); watchTimer = null; } }, 4000);
+  watchTimer.unref();
+}
+async function prepareAccount(name) {
+  const slug = slugOf(name);
+  if (!slug) return { ok: false, message: tr('server.account.badName') };
+  const dir = path.join(os.homedir(), `.claude-${slug}`), settings = path.join(dir, 'settings.json');
+  if (path.resolve(dir) === path.resolve(CLAUDE_DIR)) return { ok: false, message: tr('server.account.isMain') };
+  await fsp.mkdir(dir, { recursive: true });
+  let ownStatus = false;   // (a status line of its own there already: left alone)
+  try { ownStatus = !!JSON.parse(await fsp.readFile(settings, 'utf8')).statusLine; } catch { /* a new folder */ }
+  const res = await new Promise((resolve) => execFile(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', settings, ...(ownStatus ? ['--no-status'] : [])],
+    { timeout: 20000, env: { ...process.env, OFFICE_PORT: String(PORT) } }, (err) => resolve(!err)));
+  if (!res) return { ok: false, message: tr('server.account.installFailed') };
+  const done = loggedIn(dir), L = done ? null : startLogin(slug);
+  watchLogins();
+  return { ok: true, name: slug, dir: `~/.claude-${slug}`, loggedIn: done, login: L && { state: L.state, url: L.url || '', note: L.note || '' }, win: process.platform === 'win32', ...accountCmd(slug) };
+}
 setInterval(scanAccounts, 60_000).unref();
 let accountMtime = 0;
 setInterval(() => {   // /login to another account rewrites ~/.claude.json: notice within 15 s
@@ -1111,6 +1263,143 @@ setInterval(() => {   // /login to another account rewrites ~/.claude.json: noti
 }, 15_000).unref();
 let usageSoon = 0;
 const usageAfterTurn = () => { clearTimeout(usageSoon); usageSoon = setTimeout(fetchPlanUsage, 15_000); };
+
+/* ---------- the accounts' names, and which account new sessions start on ----------
+   A name: the user's own, for the plan card (prefs accountNames, by the account's folder name; '' = the main one).
+   Which account: the one the user picked in the card (prefs accountPick, the main one by default), and with switching
+   on (prefs autoSwitch) the next one with room when it runs out, back to the picked one once it resets. The editors'
+   Claude Code extension starts the CLI through a little script of the office's (the editor's
+   claudeCode.claudeProcessWrapper), which sets CLAUDE_CONFIG_DIR to that account's folder (data/account-now; empty: the
+   main one). The other accounts' folders take the main one's projects, settings, skills… by links (SHARED), so a
+   session on any account has the same history, memory and settings. A running session stays on its account (Claude
+   Code reads its folder once, at start): when it runs out, closing and reopening it continues it on the one picked. */
+// (declared as functions: the first scan of the accounts, further up, already calls them)
+function acctLabel(slug) { return clip(String(prefs.get('accountNames')?.[slug] || ''), 24); }
+function acctShown(slug) { return acctLabel(slug) || slug || tr('server.account.main'); }
+function mainModel() {   // the model the sessions use (settings.json "model"): its own week counts too
+  if (Date.now() - modelAt > 60e3) { modelAt = Date.now(); try { modelNow = String(JSON.parse(fs.readFileSync(path.join(CLAUDE_DIR, 'settings.json'), 'utf8')).model || '').toLowerCase(); } catch { modelNow = ''; } }
+  return modelNow;
+}
+// until when an account can't take a new session: a limit nearly used up (5 hours, the week, the week of the model in
+// use), or a session just told it is out; 0: it has room
+function blockedUntil(windows, hit = 0) {
+  const now = Date.now(), model = mainModel();
+  let until = hit > now ? hit : 0;
+  for (const w of windows || []) {
+    if (!(w.pct >= FULL_PCT) || (w.resetsAt && w.resetsAt <= now)) continue;
+    if (w.key === 'session' || w.key === 'weekly' || (w.weekOf && model.includes(String(w.weekOf).toLowerCase()))) until = Math.max(until, w.resetsAt || now + 15 * 60e3);
+  }
+  return until;
+}
+function dirOfSlug(slug) { return otherDirs.find((d) => accName(d) === slug) || ''; }
+function nowSlug() { const d = nowDir && otherDirs.find((x) => path.resolve(x) === path.resolve(nowDir)); return d ? accName(d) : ''; }
+function pickSlug() { const p = String(prefs.get('accountPick') || ''); return p && dirOfSlug(p) ? p : ''; }
+function switching() { return !!prefs.get('autoSwitch') || !!pickSlug(); }
+function writeNow(dir) {
+  nowDir = dir;
+  try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(NOW_FILE, `${dir}\n`); } catch { /* read-only data: the script keeps the last one */ }
+}
+// the picked account first, then the others top to bottom (the main one, then the rest); with switching on, the first of
+// them with room (none: stay)
+function repick(why = 'auto') {
+  if (!switching()) { if (nowDir) writeNow(''); return; }
+  const all = [{ slug: '', dir: '', until: blockedUntil(planLimits?.windows, hits.get('')) },
+    ...otherDirs.map((d) => ({ slug: accName(d), dir: d, until: blockedUntil(others.get(d)?.windows, hits.get(accName(d))) }))];
+  const p = pickSlug(), list = [...all.filter((a) => a.slug === p), ...all.filter((a) => a.slug !== p)];
+  const cur = all.find((a) => a.dir === nowDir), next = !prefs.get('autoSwitch') ? list[0] : list.find((a) => !a.until) || cur || list[0];
+  if (next.dir === nowDir && fs.existsSync(NOW_FILE)) return;
+  if (next.dir) shareWithMain(next.dir);
+  writeNow(next.dir);
+  if (cur !== next) broadcast({ k: 'acctswitch', why, from: cur ? acctShown(cur.slug) : '', to: acctShown(next.slug), until: cur?.until || 0 });
+  broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
+}
+setInterval(repick, 60_000).unref();   // (a reset time passing frees an account without a new reading)
+// a session was told "out of usage": its account waits for the latest reset among its limits that are nearly used up
+// (a few minutes when none is: a short rate limit), and is read again at once
+function limitHit(slug) {
+  const dir = dirOfSlug(slug), ws = slug ? others.get(dir)?.windows : planLimits?.windows, now = Date.now();
+  hits.set(slug, Math.max(0, ...(ws || []).filter((w) => w.pct >= 90 && w.resetsAt > now).map((w) => w.resetsAt)) || now + 5 * 60e3);
+  if (slug && dir) fetchOtherUsage(dir, true); else if (!slug) fetchPlanUsage(true);
+  repick();
+  const to = nowSlug();
+  return { to: prefs.get('autoSwitch') && to !== slug ? acctShown(to) : '' };
+}
+// an account's folder takes the main one's things by links; what it has of its own stays (only the office's own hooks
+// file, from adding the account, gives way to the main settings, which carry the same hooks)
+function shareWithMain(dir) {
+  if (!otherDirs.includes(dir)) return;
+  const officeOnly = (f) => { try {
+    const own = JSON.parse(fs.readFileSync(f, 'utf8')), main = fs.readFileSync(path.join(CLAUDE_DIR, 'settings.json'), 'utf8');
+    return Object.keys(own).every((k) => ['hooks', 'statusLine', '$schema'].includes(k)) && main.includes(`:${PORT}/event`);
+  } catch { return false; } };
+  for (const n of SHARED) {
+    const from = path.join(CLAUDE_DIR, n), to = path.join(dir, n);
+    if (!fs.existsSync(from)) continue;
+    try {
+      let st = null; try { st = fs.lstatSync(to); } catch { /* not there */ }
+      if (st?.isSymbolicLink()) continue;
+      if (st && n === 'settings.json' && officeOnly(to)) fs.renameSync(to, path.join(dir, 'settings.office-bak.json'));
+      else if (st && st.isDirectory() && !fs.readdirSync(to).length) fs.rmdirSync(to);
+      else if (st) continue;
+      fs.symlinkSync(from, to);
+    } catch { /* left as it is */ }
+  }
+  // the main account's own MCP servers (its .claude.json stays per account: it holds the login)
+  try {
+    const servers = JSON.parse(fs.readFileSync(ACCOUNT_FILE, 'utf8')).mcpServers, f = path.join(dir, '.claude.json'), acc = JSON.parse(fs.readFileSync(f, 'utf8'));
+    const merged = { ...(servers || {}), ...(acc.mcpServers || {}) };
+    if (servers && JSON.stringify(merged) !== JSON.stringify(acc.mcpServers || {})) { acc.mcpServers = merged; fs.writeFileSync(`${f}.office-tmp`, JSON.stringify(acc, null, 2), { mode: 0o600 }); fs.renameSync(`${f}.office-tmp`, f); }
+  } catch { /* not logged in yet, or busy */ }
+}
+// the script each new Claude Code goes through: the account picked, else what it would have used
+function switchScript() {
+  const q = (s) => `'${s.replace(/'/g, `'\\''`)}'`;
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  fs.writeFileSync(SWITCH_FILE, `#!/bin/sh\n# My Office: Claude Code started on the account the office picked (the plan card). The editor passes the claude\n# program first (claudeCode.claudeProcessWrapper). A CLAUDE_CONFIG_DIR set already is kept.\nif [ -z "$CLAUDE_CONFIG_DIR" ] && [ -r ${q(NOW_FILE)} ]; then\n  d=$(head -n 1 ${q(NOW_FILE)})\n  if [ -n "$d" ] && [ -d "$d" ]; then CLAUDE_CONFIG_DIR=$d; export CLAUDE_CONFIG_DIR; fi\nfi\nexec "$@"\n`);
+  fs.chmodSync(SWITCH_FILE, 0o755);
+  return SWITCH_FILE;
+}
+// the editors that have Claude Code's extension, and their user settings
+const EDITORS = [['.vscode', 'Code', 'VS Code'], ['.vscode-insiders', 'Code - Insiders', 'VS Code Insiders'], ['.cursor', 'Cursor'], ['.windsurf', 'Windsurf'], ['.antigravity', 'Antigravity'], ['.antigravity-ide', 'Antigravity IDE'], ['.kiro', 'Kiro'], ['.trae', 'Trae'], ['.positron', 'Positron']];
+const WRAP_KEY = 'claudeCode.claudeProcessWrapper';
+function editorSettings() {
+  const home = os.homedir(), base = process.platform === 'darwin' ? path.join(home, 'Library', 'Application Support') : path.join(home, '.config');
+  return EDITORS.filter(([dot]) => { try { return fs.readdirSync(path.join(home, dot, 'extensions')).some((e) => /^anthropic\.claude-code-/.test(e)); } catch { return false; } })
+    .map(([, app, shown]) => ({ app: shown || app, file: path.join(base, app, 'User', 'settings.json') }));
+}
+// on: the office's script as each editor's wrapper (a wrapper of the user's own is left alone); off: taken out again.
+// -> [{ app, ok, other }] (ok false: a settings file the office can't read, e.g. with comments: the card shows the way by hand)
+function setEditorWrapper(on) {
+  if (process.platform === 'win32') return [];
+  const script = on ? switchScript() : SWITCH_FILE;
+  return editorSettings().map(({ app, file }) => {
+    let cfg = {}, real = file;
+    try { real = fs.realpathSync(file); const t = fs.readFileSync(real, 'utf8'); cfg = t.trim() ? JSON.parse(t) : {}; } catch (e) { if (e.code !== 'ENOENT') return { app, ok: false }; }
+    const cur = cfg[WRAP_KEY];
+    if (on ? cur === script : cur !== script) return { app, ok: true };
+    if (on && cur) return { app, ok: false, other: true };
+    if (on) cfg[WRAP_KEY] = script; else delete cfg[WRAP_KEY];
+    try { fs.mkdirSync(path.dirname(real), { recursive: true }); fs.writeFileSync(`${real}.office-tmp`, `${JSON.stringify(cfg, null, 4)}\n`); fs.renameSync(`${real}.office-tmp`, real); } catch { return { app, ok: false }; }
+    return { app, ok: true };
+  });
+}
+function autoOut() {
+  return { on: !!prefs.get('autoSwitch'), pick: pickSlug(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
+}
+// the card's switch and "use this one": the editors' script goes in while either is in use, and out again after
+function setSwitch({ auto, pick } = {}) {
+  if (auto !== undefined) prefs.set('autoSwitch', auto || undefined);
+  if (pick !== undefined) prefs.set('accountPick', pick || undefined);
+  const on = switching();
+  editorsNow = setEditorWrapper(on);
+  const bin = on && findClaude();
+  switchAlias = bin ? `alias claude='${SWITCH_FILE} "${bin.file}"'` : '';
+  if (on && prefs.get('autoSwitch')) for (const d of otherDirs) shareWithMain(d);
+  repick(pick !== undefined ? 'pick' : 'auto');
+  broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
+  return { ok: true, ...autoOut() };
+}
+if (switching()) setSwitch();   // (the script written again, in case the office moved)
 
 /* ---------- bring a session's own window to the front ----------
    Walk up from the session's claude process to the app that hosts it (the IDE, Terminal, iTerm…) and `open -a` it,
@@ -1220,6 +1509,17 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/sys/auto') {   // close idle sessions on a timer: { hours: 0 | 2 | 4 | 8 }
+    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
+    readJson(req).then((b) => {
+      if (!b || !prefs.setAutoClose(Number(b.hours))) { json(res, 400, { ok: false, message: tr('server.badRequest') }); return; }
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${req.socket.remoteAddress} auto-close ${prefs.autoClose()}h\n`).catch(() => {});
+      json(res, 200, { ok: true, hours: prefs.autoClose() });
+      autoCloseIdle().catch(() => {});
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/sys/action') {
     const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
@@ -1239,6 +1539,32 @@ const server = http.createServer((req, res) => {
       const r = await openWindow(s);
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} open ${s?.name || '?'} -> ${r.ok ? r.app : r.message}\n`).catch(() => {});
       json(res, 200, r);
+    });
+    return;
+  }
+  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto))?$/.test(url.pathname)) {   // (this computer only, from this page)
+    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
+    readJson(req).then(async (b) => {
+      if (url.pathname === '/api/accounts') { json(res, 200, await prepareAccount(b?.name)); return; }
+      if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ auto: !!b?.on })); return; }
+      if (/\/(rename|use)$/.test(url.pathname)) {   // ('' = the main account)
+        const which = b?.name ? slugOf(b.name) : '';
+        if (which && !dirOfSlug(which)) { json(res, 404, { ok: false }); return; }
+        if (url.pathname.endsWith('/use')) { json(res, 200, setSwitch({ pick: which })); return; }
+        const label = clip(oneLine(b?.label), 24), names = { ...(prefs.get('accountNames') || {}) };
+        if (label && label !== which) names[which] = label; else delete names[which];
+        prefs.set('accountNames', Object.keys(names).length ? names : undefined);
+        broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
+        json(res, 200, { ok: true, label: acctLabel(which) });
+        return;
+      }
+      const slug = slugOf(b?.name), L = logins.get(slug);
+      if (url.pathname === '/api/accounts/login') { const n = startLogin(slug); json(res, 200, { ok: n.state === 'waiting', state: n.state, url: n.url || '', note: n.note || '' }); return; }   // (again, after a failure)
+      if (!L || L.state !== 'waiting') { json(res, 200, { ok: false }); return; }
+      if (url.pathname === '/api/accounts/code') L.child.stdin.write(`${String(b?.code || '').trim().slice(0, 400)}\n`);
+      else { L.state = 'cancelled'; L.child.kill(); }
+      json(res, 200, { ok: true });
     });
     return;
   }
@@ -1269,6 +1595,16 @@ const server = http.createServer((req, res) => {
   if (!authorized(req, url)) {
     if (url.pathname === '/' || url.pathname === '/index.html') res.writeHead(303, { Location: '/pin' }).end();
     else json(res, 401, { ok: false, message: tr('server.pin.needed') });
+    return;
+  }
+  if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
+    const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
+    if (!type) { res.writeHead(404).end(); return; }
+    fsp.stat(file).then((st) => {
+      if (!st.isFile() || st.size > 40e6) { res.writeHead(404).end(); return; }
+      res.writeHead(200, { 'Content-Type': type, 'Content-Length': st.size, 'Cache-Control': 'private, max-age=30', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'; sandbox" });
+      fs.createReadStream(file).on('error', () => res.destroy()).pipe(res);
+    }).catch(() => { res.writeHead(404).end(); });
     return;
   }
   if (url.pathname === '/stream') {
@@ -1314,7 +1650,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/sys') {
-    sysSnapshot().then((snap) => json(res, 200, snap)).catch((err) => json(res, 500, { error: String(err.message || err) }));
+    sysSnapshot().then((snap) => json(res, 200, { ...snap, auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
   }
   if (url.pathname === '/' || url.pathname === '/index.html') {
@@ -1344,5 +1680,6 @@ server.listen(PORT, HOST, () => {
   scanSessions();
   scanCleanups().catch(() => {});   // macOS paths; elsewhere there may be nothing to scan
   trackOwners();
+  startTrend();
   console.log(tr('server.console.listening', { port: PORT, phone: HOST === '127.0.0.1' ? tr('server.console.lanOff') : lanUrl(false) || tr('server.console.noLan') }));
 });

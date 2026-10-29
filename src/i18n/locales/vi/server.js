@@ -1,4 +1,12 @@
 export default {
+  account: {
+    noCli: 'Không tìm thấy Claude Code trên máy này.',
+    badName: 'Tên chỉ gồm chữ và số, ví dụ cong-ty.',
+    isMain: 'Tên này trùng thư mục của tài khoản chính.',
+    installFailed: 'Không nối được thư mục mới vào văn phòng.',
+    onMac: 'Chỉ thêm tài khoản được trên chính máy này.',
+    main: 'tài khoản chính',
+  },
   forbidden: 'Không được phép.',
   badRequest: 'Yêu cầu không hợp lệ.',
   cmd: {
@@ -34,6 +42,8 @@ export default {
   event: {
     needYou: 'cần bạn xác nhận',
     modelError: 'lỗi khi gọi model',
+    limitHit: 'hết lượt Claude',
+    limitSwitch: 'hết lượt Claude · phiên mới dùng {to}, mở lại phiên này để chạy tiếp',
   },
   originApp: 'Ứng dụng Claude',
   note: {
@@ -156,6 +166,9 @@ export default {
       noItem: 'Mục này không còn trong danh sách dọn.',
       cleaned: 'Đã dọn, giải phóng khoảng {size}.',
       unknown: 'Không rõ thao tác.',
+      closedIdle: 'Đã đóng {n} session rảnh, trả lại khoảng {size}. Lịch sử vẫn còn, mở lại bằng /resume.',
+      closedSome: 'Đã đóng {n} session, còn {left} session chưa chịu tắt.',
+      autoClosed: 'Tự đóng {n} session rảnh quá {hours} giờ ({names}), trả lại khoảng {size}. Lịch sử vẫn còn, mở lại bằng /resume.',
     },
   },
 };

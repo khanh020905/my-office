@@ -6,7 +6,7 @@
   #btn-replay .lbl, .replay-chip { display: none; }
 }
 @media (max-width: 440px) { .tb-brand > span:not(.logo):not(.demo-chip) { display: none; } }
-@media (max-width: 440px) { .topbar { padding: 0 6px; } .tb-btn { padding: 0 7px; } .tb-brand .demo-chip { margin-left: 2px; padding: 3px 6px; } }
+@media (max-width: 440px) { .topbar { padding: 0 6px; } .tb-btn { padding: 0 7px; } .mac-pill { gap: 7px; } .mp-swap { display: none; } .tb-brand .demo-chip { margin-left: 2px; padding: 3px 6px; } }
 @media (max-width: 720px) {
   .demo-more { display: none; }
   /* chips shrink to their icon on a phone; the card that opens says the name */
@@ -22,8 +22,7 @@
   #app { grid-template-columns: 300px minmax(0, 1fr) 330px; }
 }
 @media (max-width: 1560px) {
-  .seg-btn span, .tb-btn .lbl { display: none; }
-  .seg-btn { padding: 0 12px; }
+  .tb-btn .lbl { display: none; }
 }
 @media (max-width: 1100px) {
   #app { grid-template-columns: minmax(0, 1fr) 320px; grid-template-areas: "top top" "stage right"; }
@@ -45,12 +44,10 @@
   .stage-wrap { padding-bottom: 132px; }
   #stage { bottom: calc(132px + env(safe-area-inset-bottom, 0px)); }
   .toolbar { bottom: calc(144px + env(safe-area-inset-bottom, 0px)); padding: 6px; gap: 6px; }
-  .tb-zoom, .tb-sep { display: none; }
-  .seg-btn { height: 36px; padding: 0 10px; }
-  .tb-full { width: 36px; height: 36px; }
+  .tb-zoom { display: none; }
   .drawer, .drawer--wide { top: 7%; width: 100%; border-left: none; border-top: 1px solid var(--line-2); border-radius: 18px 18px 0 0; animation: sheet-in .25s ease-out; padding-bottom: env(safe-area-inset-bottom, 0px); }
   @keyframes sheet-in { from { transform: translateY(24px); opacity: 0; } }
-  .meters { grid-template-columns: 1fr; }
+  .meters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .toast { bottom: calc(196px + env(safe-area-inset-bottom, 0px)); }
   .tag { font-size: 10px; padding: 4px 8px 4px 6px; }
   .bubble { max-width: 160px; font-size: 11px; }
