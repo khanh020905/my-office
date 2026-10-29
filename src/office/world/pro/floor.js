@@ -165,8 +165,7 @@ function buildProFloor() {
     const b = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 14), mat(c, { roughness: 0.95 })); b.scale.set(1.1, 0.62, 1.05); b.position.set(x, 0.26, z); b.castShadow = b.receiveShadow = true; scene.add(b);
     const top = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10), mat(tint(c, 0.15), { roughness: 0.95 })); top.scale.set(1, 0.5, 1); top.position.set(x - 0.05, 0.5, z - 0.12); top.castShadow = true; scene.add(top);
   }
-  { // foosball: a cabinet with walls and goals, eight rods through the long sides, a handle on its owner's side,
-    // little players hanging into a recessed pitch
+  { // foosball: a cabinet with walls and goals and a recessed pitch
     const fb = new THREE.Group(); fb.position.set(10.35, 0, 6.85); scene.add(fb); PRO_FX.foosball = fb;
     const body = mat('#8A5A3C', { roughness: 0.55 }), rim = mat('#4A3426', { roughness: 0.5 });
     const L = 1.2, W = 0.7, top = 0.92;
@@ -177,19 +176,8 @@ function buildProFloor() {
     for (const sx of [-1, 1]) { put(fb, rbox(0.05, 0.12, W, rim, 0.01), sx * (L / 2 - 0.025), top + 0.03, 0); put(fb, rbox(0.03, 0.07, 0.2, '#111317', 0.004), sx * (L / 2 - 0.05), top - 0.02, 0); }
     for (const sx of [-1, 1]) for (const sz of [-1, 1]) put(fb, rbox(0.09, top - 0.2, 0.09, rim, 0.01), sx * (L / 2 - 0.08), (top - 0.2) / 2, sz * (W / 2 - 0.08));
     put(fb, rbox(L - 0.2, 0.05, 0.05, rim, 0.01), 0, 0.18, 0);
-    const xs = [-0.47, -0.33, -0.19, -0.06, 0.06, 0.19, 0.33, 0.47], men = [1, 2, 3, 5, 5, 3, 2, 1];
-    xs.forEach((x, i) => {
-      const red = [0, 1, 3, 5].includes(i), team = red ? '#D64550' : '#3F7CC4', side = red ? -1 : 1;
-      const rod = cyl(0.008, 0.008, W + 0.1, metal, 6); rod.rotation.x = Math.PI / 2; put(fb, rod, x, top + 0.02, side * 0.02);
-      put(fb, cyl(0.02, 0.02, 0.07, '#15171B', 10), x, top + 0.02, side * (W / 2 + 0.1)).rotation.x = Math.PI / 2;   // grip
-      const n = men[i];
-      for (let k = 0; k < n; k++) {
-        const z = n === 1 ? 0 : (k - (n - 1) / 2) * (0.5 / (n - 1));
-        put(fb, rbox(0.03, 0.07, 0.035, team, 0.008), x, top - 0.02, z);
-        put(fb, new THREE.Mesh(new THREE.SphereGeometry(0.016, 8, 6), mat('#F2D3B3')), x, top + 0.035, z);
-      }
-    });
-    put(fb, new THREE.Mesh(new THREE.SphereGeometry(0.018, 10, 8), mat('#FFFFFF', { roughness: 0.4 })), 0.12, top - 0.05, 0.08); }
+    // (the rods with their little players, and the ball: people/foosball.js, which plays with them)
+  }
 
   /* server room: a precision cooler (its screen shows the Mac's CPU and the room temperature), a fire extinguisher */
   put(scene, rbox(0.7, 1.9, 0.44, mat('#E8EBEE', { roughness: 0.5 }), 0.04), -7.58, 0.95, 0.3);

@@ -7,12 +7,12 @@ export default {
   // where people go for each kind of work
   station: {
     dining: 'dining room', board: 'whiteboard', library: 'library', desk: 'desk', server: 'server room', globe: 'window',
-    coffee: 'coffee corner', meeting: 'meeting room', director: "director's office", wc: 'restroom',
+    coffee: 'coffee corner', meeting: 'meeting room', director: "director's office", wc: 'restroom', tests: 'test board', post: 'post box',
   },
   // streamer mode: what a label becomes when it could show a path, command, prompt or URL
   generic: {
     prompt: 'a new task', read: 'a file', grep: 'something', glob: 'a folder', skill: 'a skill', edit: 'a file', write: 'a file',
-    bash: 'run a command', web: 'something', fetch: 'a web page', mcp: 'a tool', wait: 'an action', fail: 'an action', deploy: 'a new version',
+    bash: 'run a command', web: 'something', fetch: 'a web page', mcp: 'a tool', wait: 'an action', fail: 'an action', deploy: 'a new version', test: 'the tests',
   },
   // one line per event, for the feed and the drawer (the first letter is capitalised where it starts a line)
   verb: {
@@ -49,6 +49,9 @@ export default {
     end: 'session closed',
     substart: 'subagent {label} joins the meeting room',
     substop: 'subagent {label} reports back',
+    test: 'run the tests: {label} 🧪',
+    testok: 'tests pass ✅ ({label})',
+    testfail: 'tests fail ❌ ({label})',
     use: 'use {label}',
   },
   // speech bubbles over the characters
@@ -63,5 +66,7 @@ export default {
     agent: 'Handing off to {label}',
     deploy: 'Deploying {label}',
     plan: 'Updating the to-do list',
+    testok: ['All green! ✅', 'Tests pass 🎉', 'Not a single failure!'],
+    testfail: ['Red. Let me look…', 'One test broke, on it', 'Huh, why is that red 🤔'],
   },
 };

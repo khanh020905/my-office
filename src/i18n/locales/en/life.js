@@ -52,4 +52,6 @@ export default {
     left: 'Thổ năng sinh bạch ngọc',
     right: 'Địa khả xuất hoàng kim',
   },
+  tests: { title: 'TEST BOARD', running: 'running…', pass: 'pass', fail: 'fail', idle: 'no run yet' },
+  post: { plate: { one: 'Today: 1 letter', other: 'Today: {n} letters' }, sign: 'POST' },
 };

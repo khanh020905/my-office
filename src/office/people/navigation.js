@@ -1,6 +1,6 @@
 // The walking graph, desk spots and stations people go to.
 import { HQ, PRO, V2, randInt } from '../core/env.js';
-import { DEPTS, LAY, inside } from '../world/layout.js';
+import { DEPTS, inside } from '../world/layout.js';
 import { DZ, LIFT_X } from '../world/entrance.js';
 import { DESKS, PODS, TEAM_SIZE, dLocal } from '../world/desks.js';
 import { MEET, MEET_SEATS } from '../world/furniture/meeting.js';
@@ -149,22 +149,31 @@ export let DOOR_IN;
 export let DOOR_OUT;
 // A free spot at the station; when every spot is taken, a place to wait a step back toward the room, at least 0.95 m
 // from everyone (two people never share a spot: their heads would merge).
-export function allocate(name, w) {
+/* a station's place for w: their own, or a free one. All taken: a clear spot in the same room (its nearest path node is
+   one of the station's own, on floor the walking grid says is clear, about a metre from anyone), nearest the station
+   first, facing it. `orNull`: when the room is full that gives null, and the caller has it done from the desk instead
+   (a crowd round the server racks, someone pushed through the glass into the next room: never). */
+export function allocate(name, w, orNull = false) {
   const list = STATIONS[name], mine = list.find((s) => s.by === w) || list.find((s) => !s.by);
   if (mine) return mine;
   const cx = list.reduce((a, s) => a + s.x, 0) / list.length, cz = list.reduce((a, s) => a + s.z, 0) / list.length;
-  const tx = LAY.center[0] - cx, tz = LAY.center[1] - cz, len = Math.hypot(tx, tz) || 1, dx = tx / len, dz = tz / len, r0 = Math.max(...list.map((s) => Math.hypot(s.x - cx, s.z - cz)));
   const others = [...workers.values(), ...subs.values(), ...npcs].filter((o) => o !== w).map((o) => (o.spot ? [o.spot.x, o.spot.z] : [o.pos.x, o.pos.y]));
-  let best = null, room = -1;   // if nowhere is clear, the free-est place found
-  for (let ring = 1; ring <= 4; ring++) for (const k of [0, -1, 1, -2, 2, -3, 3]) {
-    const x = cx + dx * (r0 + ring * 1.0) - dz * k * 1.0, z = cz + dz * (r0 + ring * 1.0) + dx * k * 1.0;
-    if (!inside(x, z) || (fp.grid && blocked(x, z, 0.3))) continue;   // not in a desk or a wall
+  if (!fp.grid) fp.grid = buildGrid();   // (the furniture and the walls, once)
+  const rooms = new Set(list.map((s) => s.node)), P = new V2(), cand = [];
+  for (let i = -5; i <= 5; i++) for (let j = -5; j <= 5; j++) cand.push([cx + i * 0.55, cz + j * 0.55, Math.hypot(i, j)]);
+  cand.sort((a, b) => a[2] - b[2]);
+  let best = null, room = -1;   // (if nowhere is quite clear: the free-est place found)
+  for (const [x, z] of cand) {
+    if (!inside(x, z) || blocked(x, z, 0.32) || list.some((s) => Math.hypot(s.x - x, s.z - z) < 0.75)) continue;
+    const node = nearestNode(P.set(x, z));
+    if (!rooms.has(node)) continue;   // (another room)
     const near = Math.min(Infinity, ...others.map(([ox, oz]) => Math.hypot(ox - x, oz - z)));
-    const spot = { x, z, face: Math.atan2(cx - x, cz - z), node: PRO ? nearestNode(new V2(x, z)) : list[0].node };
-    if (near >= 0.95) return spot;
+    const spot = { x, z, face: Math.atan2(cx - x, cz - z), node };
+    if (near >= 0.9) return spot;
     if (near > room) { room = near; best = spot; }
   }
-  return best || list[randInt(0, list.length - 1)];
+  if (orNull) return null;
+  return best && room > 0.6 ? best : list[randInt(0, list.length - 1)];
 }
 
 export function setup() {
@@ -172,7 +181,7 @@ export function setup() {
   NODES = PRO ? {
     O: [-7.5, 3.3], I: [-6.3, 3.3], LB: [-5.0, 3.3], SVo: [-3.1, -1.55], SVi: [-4.2, -1.55], WCo: [-4.9, 4.7], WCi: [-4.9, 6.2],
     ST1: [-6.05, 6.1], ST2: [-6.05, 7.4], WCs: [-6.05, 8.5],
-    L0: [-3.1, -2.3], DRi: [-3.1, -3.9], DRc: [-5.4, -3.9], DRs: [-3.85, -6.7],
+    L0: [-3.1, -2.3], DRi: [-3.1, -3.9], DRc: [-5.4, -3.9], DRs: [-3.85, -6.7], DRw: [-4.05, -4.45],   // (DRw: round the accountant's desk, people/accountant.js)
     MTd: [2.35, -2.3], MTi: [2.35, -3.75], MF2: [1.35, -3.75], MF1: [0.2, -3.75], MF0: [-0.95, -3.75], MTf: [-2.05, -3.75],
     MTw: [-2.05, -7.45], MB0: [-0.95, -7.45], MB1: [0.2, -7.45], MB2: [1.35, -7.45], MTb: [2.5, -7.45],
     LBd: [3.8, -2.3], LBi: [3.8, -3.8], LBf: [6.25, -3.45], LBm: [4.6, -5.6], CE: [7.4, -2.3],
@@ -191,7 +200,7 @@ export function setup() {
     ['L1', 'P0b0'], ['P0b0', 'P0b1'], ['P0b1', 'M1'], ['M1', 'P1b0'], ['P1b0', 'P1b1'], ['P1b1', 'R1'],
     ['L2', 'P0f0'], ['P0f0', 'P0f1'], ['P0f1', 'M2'], ['M2', 'P1f0'], ['P1f0', 'P1f1'], ['P1f1', 'R2'],
     ['L3', 'P2b0'], ['P2b0', 'P2b1'], ['P2b1', 'R3'], ['L4', 'P2f0'], ['P2f0', 'P2f1'], ['P2f1', 'R4'],
-    ['L0', 'DRi'], ['DRi', 'DRc'], ['DRi', 'DRs'], ['L0', 'MTd'], ['MTd', 'MTi'], ['MTi', 'MF2'], ['MF2', 'MF1'], ['MF1', 'MF0'], ['MF0', 'MTf'], ['MTf', 'MTw'],
+    ['L0', 'DRi'], ['DRi', 'DRc'], ['DRi', 'DRw'], ['DRw', 'DRs'], ['L0', 'MTd'], ['MTd', 'MTi'], ['MTi', 'MF2'], ['MF2', 'MF1'], ['MF1', 'MF0'], ['MF0', 'MTf'], ['MTf', 'MTw'],
     ['MTw', 'MB0'], ['MB0', 'MB1'], ['MB1', 'MB2'], ['MB2', 'MTb'], ['MTb', 'MTi'], ['MTd', 'LBd'], ['LBd', 'LBi'], ['LBi', 'LBf'], ['LBi', 'LBm'], ['LBd', 'CE'], ['CE', 'R1'],
     ['CE', 'PA1'], ['PA1', 'PA2'], ['PA1', 'PA3'], ['PA2', 'PA4'], ['PA3', 'PA4'], ['PA1', 'PA5'], ['PA3', 'PA6'], ['PA5', 'PA6'],
     ['PA5', 'LG1'], ['LG1', 'LG2'], ['LG1', 'LGs'], ['LGs', 'LG3'], ['LG3', 'R3'], ['LG2', 'LGr'], ...(HQ ? wingGraph().edges : [])]

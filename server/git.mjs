@@ -23,7 +23,7 @@ const CI_ON = process.env.OFFICE_CI !== '0';
  */
 export function createGit({ onRepo, onCommit, onPush, onCi }) {
   const roots = new Map();   // folder -> its repository root, '' when it is not in one
-  const repos = new Map();   // root -> { root, name, branch, dirty, ahead, head, upstream, ci, ciName, ciUrl }
+  const repos = new Map();   // root -> { root, name, branch, dirty, ahead, head, upstream, ci, ciName, ciUrl, born }
   let polling = null, ciPolling = null;
 
   async function rootOf(cwd) {
@@ -50,6 +50,8 @@ export function createGit({ onRepo, onCommit, onPush, onCi }) {
     for (const root of live) {
       const now = await read(root); if (!now) continue;
       const was = repos.get(root), cur = { ...(was || { ci: null, ciName: '', ciUrl: '' }), ...now, root, name: path.basename(root) };
+      // its birthday, once: the oldest root commit's date (the office's monthly party, people/hr.js)
+      if (cur.born === undefined) cur.born = (((await run('git', ['log', '--max-parents=0', '--reverse', '--format=%as'], root)) || '').trim().split('\n')[0]) || null;
       repos.set(root, cur);
       if (was?.head && now.head && now.head !== was.head) {
         const subject = ((await run('git', ['log', '-1', '--pretty=%s'], root)) || '').trim();

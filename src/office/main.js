@@ -34,6 +34,7 @@ import * as worldPropsStringLights from './world/props/string-lights.js';
 import * as worldPropsCat from './world/props/cat.js';
 import * as worldPropsVacuum from './world/props/vacuum.js';
 import * as worldPropsBins from './world/props/bins.js';
+import * as worldPropsShredder from './world/props/shredder.js';
 import * as worldPropsDevServers from './world/props/dev-servers.js';
 import * as worldPropsSwitches from './world/props/switches.js';
 import * as interactRings from './interact/rings.js';
@@ -48,6 +49,11 @@ import * as peopleGatherings from './people/gatherings.js';
 import * as peopleOutings from './people/outings.js';
 import * as peopleStaff from './people/staff.js';
 import * as peopleTeatime from './people/teatime.js';
+import * as peopleAccountant from './people/accountant.js';
+import * as peopleRounds from './people/rounds.js';
+import * as peopleGuard from './people/guard.js';
+import * as peopleHr from './people/hr.js';
+import * as peopleFoosball from './people/foosball.js';
 import * as lifeTrophies from './life/trophies.js';
 import * as lifeSeasons from './life/seasons.js';
 import * as lifeRain from './life/rain.js';
@@ -55,6 +61,8 @@ import * as lifeWeather from './life/weather.js';
 import * as lifeNap from './life/nap.js';
 import * as lifeQuota from './life/quota.js';
 import * as lifeAltar from './life/altar.js';
+import * as lifeTests from './life/tests.js';
+import * as lifePost from './life/post.js';
 import * as uiLite from './ui/lite.js';
 import * as worldRoomUpdate from './world/room-update.js';
 import * as uiActivity from './ui/activity.js';
@@ -120,6 +128,7 @@ const MODULES = [
   worldPropsCat,
   worldPropsVacuum,
   worldPropsBins,
+  worldPropsShredder,
   worldPropsDevServers,
   worldPropsSwitches,
   interactRings,
@@ -134,6 +143,11 @@ const MODULES = [
   peopleOutings,
   peopleStaff,
   peopleTeatime,
+  peopleAccountant,
+  peopleRounds,
+  peopleGuard,
+  peopleHr,
+  peopleFoosball,
   lifeTrophies,
   lifeSeasons,
   lifeRain,
@@ -141,6 +155,8 @@ const MODULES = [
   lifeNap,
   lifeQuota,
   lifeAltar,
+  lifeTests,
+  lifePost,
   uiLite,
   worldRoomUpdate,
   uiActivity,

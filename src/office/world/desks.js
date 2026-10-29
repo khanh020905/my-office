@@ -109,8 +109,7 @@ export function setup() {
       put(mon, new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.27), scr), 0, 0.33, -0.017).rotation.y = Math.PI;
       put(g, rbox(0.4, 0.58, 0.55, pedM, 0.02), 0.45, 0.29, 0.04);
       for (const y of [0.18, 0.36, 0.52]) put(g, rbox(0.1, 0.015, 0.02, metal, 0.004), 0.45, y, -0.24);
-    } else if (i % 3 === 0) potPlant(-0.58, -0.18, 0.32, i % 2 ? 'snake' : 'bush', 0.775, g);
-    else put(g, rbox(0.26, 0.03, 0.33, '#FBFBF7', 0.01), -0.52, 0.79, 0.08).rotation.y = 0.2;
+    } else if (i % 3 === 0) potPlant(-0.58, -0.18, 0.32, i % 2 ? 'snake' : 'bush', 0.775, g);   // (the in-tray at the front left: shredder.js)
     if (i % 3 === 2) {
       put(g, cyl(0.08, 0.09, 0.03, metal, 12), 0.6, 0.79, -0.2);
       put(g, cyl(0.015, 0.015, 0.34, metal, 6), 0.6, 0.96, -0.2);

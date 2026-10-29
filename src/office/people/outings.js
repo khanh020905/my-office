@@ -1,9 +1,12 @@
 // Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it;
-// now and then someone resting pops down to the convenience store across the street and comes back with a drink. Down
-// in the lift (or out of the door), along the pavements and over the zebras when the green man shows (the city's walk
-// network, street-life.js), into the shop, back up the same way. Work coming in calls them back at a run. And coming and
-// going: home late by the street (their own scooter from the row on the pavement, a GrabBike, a Xanh SM bike or taxi),
-// back the same way in the morning. Only with the city outside; one trip out at a time, several comings and goings.
+// now and then someone resting pops down to the convenience store across the street and comes back with what that chain
+// is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down
+// to the Circle K for a cup of noodles. Down in the lift (or out of the door), along the pavements and over the zebras
+// when the green man shows (the city's walk network, street-life.js), in through the shop's sliding door to the till,
+// back up the same way. Work coming in calls them back at a run. And coming and going: home late by the street (their
+// own scooter from the row on the pavement, a GrabBike, a Xanh SM bike or taxi; on a scooter after work, sometimes past
+// the WinMart+ for the shopping first), back the same way in the morning. Only with the city outside; one trip out at a
+// time, several comings and goings.
 import * as THREE from 'three';
 import { state } from '../core/state.js';
 import { PRO, V2, officeNow, rand, replay } from '../core/env.js';
@@ -14,10 +17,11 @@ import { THEME, THEMES } from '../world/backdrops/index.js';
 import { DESK_SPOTS, DOOR_IN, DOOR_OUT, STATIONS, allocate } from './navigation.js';
 import { showMeal } from './breaks.js';
 import { later } from './errands.js';
-import { hash, sessions, streetHooks, workers } from './workers.js';
+import { clockHooks, hash, sessions, streetHooks, workers } from './workers.js';
+import { guardPost } from './guard.js';
 import { ANIM_AT, verb } from '../ui/event-text.js';
 import { sfx } from '../audio/sfx.js';
-import { queueUi } from '../ui/activity.js';
+import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
 let run = null;     // the outing under way: { kind: 'shop' | 'lunch', w, stage, … }
@@ -61,23 +65,26 @@ function goUp(w, R, to, cb) {
     if (!live(R, 'up')) return;
     w.offstage = false; w.pos.set(DOOR_OUT.x, DOOR_OUT.z); w.face = w.faceTarget = Math.PI / 2; w.spot = DOOR_OUT;
     liftArrive(w);
-    w.goTo(to(), () => !R.dead && cb());
+    const go = () => !R.dead && w.goTo(to(), () => !R.dead && cb());
+    if (R.kind === 'come' && clockHooks.in) clockHooks.in(w, go); else go();   // (the morning: clocked in on the way, people/hr.js)
   });
 }
 function done(R) {
   R.dead = true; trips.delete(R);
-  if (run === R) { run = null; lookAt = state.sim + rand(300, 720); }
+  if (run === R) { run = null; lookAt = state.sim + (R.night ? rand(600, 900) : rand(300, 720)); }
   const w = R.w;
   if (w) { w.outing = null; w.chore = null; w.hurry = false; w.street = false; w.offstage = false; }
 }
-// back at the desk: on with whatever came in, or (still resting) the drink, then a nap
-function resume(w, drink) {
+// back at the desk: on with whatever came in, or (still resting) what they brought back, eaten or drunk at the desk (the
+// shopping goes under it), then a nap
+function resume(w, item) {
   const s = sessions.get(w.id);
   w.station = 'desk';
   if (s?.status === 'wait') { w.anim = 'hand'; w.say('wait', tr('people.needsApproval'), 'wait'); }
   else if (s?.bg?.length) { w.anim = 'think'; w.say('bash', tr('people.bgWait', { desc: s.bg[0].desc })); }
   else if (s?.status === 'work') { w.anim = ANIM_AT.desk; if (s.last) w.say(s.last.type, s.last.label || verb(s.last)); }
-  else if (drink) { w.anim = 'coffee'; w.restAt = state.sim + rand(25, 45); w.dwellUntil = state.sim + 2; }
+  else if (item && w.P.held[item]) { w.anim = 'coffee'; w.restAt = state.sim + (item === 'cup' ? rand(25, 45) : rand(40, 75)); w.dwellUntil = state.sim + 2; }
+  else if (item) { w.carry = null; w.anim = 'tidy'; w.restAt = state.sim + 3; w.dwellUntil = state.sim + 2; }
   else { w.anim = 'sleep'; w.hush(); }
 }
 // the city went away, a replay began, they left: called off. Whoever is out is back at their place at once (on the
@@ -107,38 +114,76 @@ function begin(R, w) {
 /* ---------- to the convenience store ---------- */
 // the length of a walk from P along pts
 const lengthOf = (P, pts) => pts.reduce((a, p, k) => a + Math.hypot(p.x - (k ? pts[k - 1].x : P.x), p.z - (k ? pts[k - 1].z : P.z)), 0);
-function shopTrip(w, S) {
-  // the nearest convenience store as you would walk it, from whichever side of the building is best
+// the chain behind a door (shops.js gives it; by the name on the sign otherwise)
+const CHAIN = { 'Circle K': 'circlek', GS25: 'gs25', '7-Eleven': 'seven', 'WinMart+': 'winmart', Ministop: 'ministop', 'Bách Hóa Xanh': 'bhx' };
+const keyOf = (d) => d.key || CHAIN[d.name] || '';
+// what each one sends you back with (twice in the list: twice as likely): the chain's own food more often than a drink
+const TAKE = { circlek: ['noodle', 'noodle', 'cup'], gs25: ['tok', 'tok', 'cup'], seven: ['onigiri', 'bun', 'cup'], ministop: ['cone', 'chicken'], winmart: ['cup', 'cup', 'grocery'], bhx: ['cup', 'grocery'] };
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
+// the drink's band (and the shopping bag) in the shop's colour
+function tint(w, item, d) {
+  if (item === 'cup') w.P.cupBand.material.color.set(d.accent);
+  if (item === 'grocery') w.P.groceryBand.material.color.set(d.accent);
+}
+/* In through the sliding door (it opens as they come), along the aisle to the till, pay (the QR code's beep), then paid().
+   A shop without an inside to walk (an older shops.js): a while inside, unseen. stage: the trip's stage meanwhile. */
+function intoStore(w, S, R, stage, d, secs, paid) {
+  if (!d.till) { w.offstage = true; later(secs + 2, () => live(R, stage) && paid()); return; }
+  d.pass?.();
+  walk(w, S, [...(d.inside || []), d.till], () => {
+    if (!live(R, stage)) return;
+    w.faceTarget = d.till.face; w.anim = 'tidy';
+    later(1.4, () => live(R, stage) && sfx.play('beep'));
+    later(secs, () => live(R, stage) && paid());
+  }, d.till.face);
+}
+// back along the aisle, the door slides open, out onto the pavement in front of it: then()
+function outOfStore(w, S, R, stage, d, then) {
+  w.anim = 'idle';
+  if (!d.till || w.offstage) { w.offstage = false; then(); return; }
+  walk(w, S, [...(d.inside || [])].reverse(), () => {
+    if (!live(R, stage)) return;
+    d.pass?.(); walk(w, S, [{ x: d.x, z: d.z }], () => live(R, stage) && then());
+  });
+}
+// what they say on the way, and on the way back: the chain's food, the late-night noodles
+const line = (R, when) => tr(R.night ? `people.out.night.${when}` : `people.out.${when}.${R.item}`, { shop: R.shop });
+/** o: { key: one chain only, night: late-night noodles (a 24-hour store, Circle K if there is one near) } */
+function shopTrip(w, S, { key = '', night = false } = {}) {
+  // the nearest open convenience store as you would walk it, from whichever side of the building is best
   let best = null;
   const from = indoors();
-  for (const door of S.doors()) for (const ex of S.exits(from.x, from.z)) {
-    const r = S.route(ex, door), len = r && lengthOf(ex, r) + ex.d;
-    if (r && len < 80 && (!best || len < best.len)) best = { door, ex, r, len };
+  for (const door of S.doors()) {
+    if (door.open === false || (key && keyOf(door) !== key) || (night && door.h24 === false)) continue;
+    for (const ex of S.exits(from.x, from.z)) {
+      const r = S.route(ex, door), len = r && lengthOf(ex, r) + ex.d, score = len + (night && keyOf(door) !== 'circlek' ? 30 : 0);
+      if (r && len < 80 && (!best || score < best.score)) best = { door, ex, r, score };
+    }
   }
   if (!best) return false;
-  const R = { kind: 'shop', stage: 'go', exit: best.ex, shop: best.door.name };
+  const d = best.door, item = night ? 'noodle' : pick(TAKE[keyOf(d)] || ['cup']);
+  const R = { kind: 'shop', stage: 'go', exit: best.ex, shop: d.name, door: d, item, night };
   begin(R, w);
-  w.P.cupBand.material.color.set(best.door.accent);
   w.hush(); w.anim = 'wake'; w.afterAt = state.sim + 1.6;   // a stretch first
   w.after = () => {
     if (!live(R, 'go')) return;
-    w.anim = 'idle'; say(w, tr('people.out.shop', { shop: best.door.name }));
+    w.anim = 'idle'; say(w, line(R, 'go'));
     goDown(w, R, () => {
       R.stage = 'street'; outside(w, S, best.ex);
       walk(w, S, best.r, () => {
         if (!live(R, 'street')) return;
-        R.stage = 'in'; w.offstage = true;   // inside: a look round the fridges, the till
-        later(rand(7, 13), () => live(R, 'in') && leaveShop(R, S));
-      }, best.door.face);
+        R.stage = 'in';
+        intoStore(w, S, R, 'in', d, rand(5, 9), () => leaveShop(R, S));
+      }, d.face);
     });
   };
   return true;
 }
 function leaveShop(R, S) {
   const w = R.w;
-  R.stage = 'back'; w.offstage = false; w.carry = 'cup';
-  say(w, tr(R.recalled ? 'people.out.recall' : 'people.out.back'));
-  walk(w, S, S.route(here(w), R.exit), () => live(R, 'back') && goUp(w, R, () => w.homeSpot(), () => { done(R); resume(w, true); }));
+  R.stage = 'back'; w.carry = R.item; tint(w, R.item, R.door);
+  say(w, R.recalled ? tr('people.out.recall') : line(R, 'got'));
+  outOfStore(w, S, R, 'back', R.door, () => walk(w, S, S.route(here(w), R.exit), () => live(R, 'back') && goUp(w, R, () => w.homeSpot(), () => { done(R); resume(w, R.item); })));
 }
 // work came in while they were out: back at once, at a run
 function recall(R, S) {
@@ -165,8 +210,10 @@ function orderLunch(S, day) {
   const from = indoors(), ex = S.exits(from.x, from.z).find((e) => e.L);
   const rider = ex && S.callRider(ex.L, ex.s);
   if (!rider) return false;
-  state.lunchOrder = { day, here: false };
-  const R = run = { kind: 'lunch', stage: 'wait', exit: ex, rider, ordered: state.sim, since: 0 };
+  lunchDay = day;   // (once a day, ordered here or by goOut)
+  const seven = S.doors().some((d) => keyOf(d) === 'seven');   // (in Ho Chi Minh City the boxes come from the 7-Eleven)
+  state.lunchOrder = { day, here: false, seven };
+  const R = run = { kind: 'lunch', stage: 'wait', exit: ex, rider, ordered: state.sim, since: 0, seven };
   R.drop = () => abort(R);
   return true;
 }
@@ -182,7 +229,7 @@ function collect(R, S) {
   w.hush(); w.anim = 'wake'; w.afterAt = state.sim + 1.6;
   w.after = () => {
     if (!live(R, 'go')) return;
-    w.anim = 'idle'; say(w, tr('people.out.rider'));
+    w.anim = 'idle'; say(w, tr(R.seven ? 'people.out.rider7' : 'people.out.rider'));
     goDown(w, R, () => {
       R.stage = 'street'; outside(w, S, R.exit);
       const m = R.rider.stop();
@@ -206,7 +253,8 @@ function lay(R) {
   w.station = 'dining'; w.anim = 'tidy';
   later(1.1, () => {
     if (R.dead) return;
-    w.carry = null; showBags(w.spot); say(w, tr('people.out.lunch'));
+    w.carry = null; showBags(w.spot, R.seven); say(w, tr(R.seven ? 'people.out.lunch7' : 'people.out.lunch'));
+    if (R.seven) toast(tr('people.out.lunch7Toast'));
     state.lunchOrder.here = true;
     done(R);
     if (called(w)) { w.goTo(w.homeSpot(), () => !w.outing && resume(w, false)); return; }
@@ -215,9 +263,9 @@ function lay(R) {
   });
 }
 // two carrier bags left on the pantry table until one o'clock: in the middle, between the two places on that side (each
-// with its lunch box in front of it)
+// with its lunch box in front of it); 7-Eleven's with the chain's three stripes round them
 let bags = null;
-function showBags(sp) {
+function showBags(sp, seven = false) {
   const mate = STATIONS.dining.find((o) => o !== sp && Math.abs(o.z - sp.z) < 0.01 && Math.abs(Math.abs(o.x - sp.x) - 0.66) < 0.05);
   const mx = mate ? (sp.x + mate.x) / 2 : sp.x;
   if (!bags) {
@@ -226,9 +274,11 @@ function showBags(sp) {
     for (const [z, r] of [[-0.12, Math.PI / 2 + 0.2], [0.14, Math.PI / 2 - 0.15]]) {
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.2, 0.14), m); b.position.set(0, 0.1, z); b.rotation.y = r; b.castShadow = true; bags.add(b);
       const h = new THREE.Mesh(new THREE.TorusGeometry(0.05, 0.009, 6, 12, Math.PI), m); h.position.set(0, 0.2, z); h.rotation.y = r; bags.add(h);
+      ['#F58220', '#008163', '#EE2526'].forEach((c, k) => { const s = new THREE.Mesh(new THREE.BoxGeometry(0.222, 0.018, 0.142), mat(c, { roughness: 0.8 })); s.position.set(0, 0.07 + k * 0.02, z); s.rotation.y = r; s.userData.seven = true; bags.add(s); });
     }
     scene.add(bags);
   }
+  for (const o of bags.children) if (o.userData.seven) o.visible = seven;
   bags.position.set(mx + Math.sin(sp.face) * 0.62, 0.772, sp.z + Math.cos(sp.face) * 0.62); bags.rotation.y = sp.face; bags.visible = true;
   bags.userData.day = officeNow().toDateString();
 }
@@ -250,8 +300,8 @@ function bikeRow(S) {
   const ex = mainExit(S);
   if (!ex) return null;
   if (row?.ex.L === ex.L && row.ex.s === ex.s) return row;
-  const k = ex.L.axis === 'x' ? 0 : 1, lo = Math.min(ex.a[k], ex.b[k]) + 1.4, hi = Math.max(ex.a[k], ex.b[k]) - 1.4, spots = [];
-  for (let n = 0; n < 16; n++) { const s = ex.s + (n % 2 ? -1 : 1) * (1.6 + Math.floor(n / 2) * 2.0); if (s > lo && s < hi) spots.push({ s, by: null, id: -1, busy: false }); }
+  const k = ex.L.axis === 'x' ? 0 : 1, lo = Math.min(ex.a[k], ex.b[k]) + 1.4, hi = Math.max(ex.a[k], ex.b[k]) - 1.4, spots = [], booth = guardPost(ex);   // (none where the guard's booth stands, people/guard.js)
+  for (let n = 0; n < 16; n++) { const s = ex.s + (n % 2 ? -1 : 1) * (1.6 + Math.floor(n / 2) * 2.0); if (s > lo && s < hi && Math.abs(s - booth) > 1.35) spots.push({ s, by: null, id: -1, busy: false }); }
   for (const sp of row?.spots || []) if (sp.id >= 0) S.unparkBike(sp.id);
   row = { ex, spots, side: S.pavementSide + 0.75 };
   return row;
@@ -297,15 +347,38 @@ function goHome(w, gone) {
     T.stage = 'street'; outside(w, S, ex);
     if (way === 'bike') {   // to their scooter, on, and away
       const R = bikeRow(S), at = S.at(ex.L, T.spot.s, S.pavementSide);
-      walk(w, S, S.route(ex, at), () => {
+      const ride = () => walk(w, S, S.route(here(w), at), () => {
         if (!live(T, 'street')) return;
         S.unparkBike(T.spot.id); T.spot.by = null; T.spot.id = -1; T.spot.busy = false;
         S.depart(ex.L, T.spot.s, { livery: 'plain', paint: bikeColor(w), jacket: coatOf(w), side: R.side })?.release();
-        done(T); gone();
+        w.carry = null; done(T); gone();
       });
+      // after work, now and then, the shopping first: in at a WinMart+ or a Bách Hóa Xanh on the way, out with a bag
+      const d = groceryStop(S, ex, at);
+      if (!d) { ride(); return; }
+      T.stage = 'shop'; T.shop = d.name;
+      walk(w, S, S.route(ex, d), () => {
+        if (!live(T, 'shop')) return;
+        intoStore(w, S, T, 'shop', d, rand(4, 7), () => {
+          w.carry = 'grocery'; tint(w, 'grocery', d);
+          outOfStore(w, S, T, 'shop', d, () => { T.stage = 'street'; ride(); });
+        });
+      }, d.face);
     } else walk(w, S, S.route(ex, pickup(ex, T.rider.stop(), way === 'taxi' ? 0.25 : 0.55)), () => { if (live(T, 'street')) T.stage = 'wait'; });
   });
   return true;
+}
+// 17:00–19:30, three times in ten: an open WinMart+ or Bách Hóa Xanh within ~40 m on foot (there and back to the scooter)
+function groceryStop(S, ex, at) {
+  const d = officeNow(), m = d.getHours() * 60 + d.getMinutes();
+  if (m < 1020 || m >= 1170 || Math.random() > 0.3) return null;
+  let best = null;
+  for (const door of S.doors()) {
+    if (door.open === false || !['winmart', 'bhx'].includes(keyOf(door))) continue;
+    const a = S.route(ex, door), b = a && S.route(door, at), len = b && lengthOf(ex, a) + lengthOf(door, b);
+    if (b && lengthOf(ex, a) < 40 && len < 85 && (!best || len < best.len)) best = { door, len };
+  }
+  return best?.door || null;
 }
 // back in the morning (or for work): ride up, off, up to the desk; false: not by the street this time
 function arrive(w) {
@@ -359,8 +432,10 @@ export function whereabouts(w) {
   const R = w?.outing, T = (k, v) => tr(`people.where.${k}`, v);
   if (!w) return null;
   if (!R) return w.away ? { ic: 'home', text: T('home') } : null;
-  if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : T(R.stage === 'in' ? 'inShop' : R.stage === 'back' || R.stage === 'up' ? 'fromShop' : 'toShop', { shop: R.shop }) };
+  // (at the till: what they are buying there; on the way down late at night: the noodles)
+  if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;
+  if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
 }
 
@@ -386,20 +461,23 @@ export function updateOutings() {
   if (PRO && m >= 675 && m < 700 && lunchDay !== day && [...workers.values()].some(resting)) { lunchDay = day; orderLunch(S, day); return; }
   if (state.sim < lookAt) return;
   lookAt = state.sim + 20;
-  // a trip to the shop: in office hours, not over lunch, now and then, someone who has not been out for half an hour
-  if (m < 480 || m >= 1260 || (m >= 670 && m < 790) || Math.random() > 0.3) return;
-  const list = [...workers.values()].filter((w) => resting(w) && state.sim - (w.outAt ?? -1e9) > 1800);
-  if (list.length) shopTrip(list[Math.floor(Math.random() * list.length)], S);
+  // a trip to the shop: in office hours, not over lunch, now and then, someone who has not been out for half an hour;
+  // and 22:00–2:00, whoever is still there with their session open: noodles from the 24-hour store, every ten minutes at most
+  const night = m >= 1320 || m < 120;
+  if ((!night && (m < 480 || m >= 1260 || (m >= 670 && m < 790))) || Math.random() > (night ? 0.4 : 0.3)) return;
+  const list = [...workers.values()].filter((w) => resting(w) && state.sim - (w.outAt ?? -1e9) > (night ? 600 : 1800));
+  if (list.length) shopTrip(pick(list), S, { night });
 }
 
-/* for tests and screenshots (?debug): send someone resting out now ('shop'), or order the lunch ('lunch') */
-export function goOut(kind = 'shop') {
+/* for tests and screenshots (?debug): send someone resting out now ('shop', to one chain if `key` says: 'gs25'…; 'night':
+   the late-night noodles), or order the lunch ('lunch') */
+export function goOut(kind = 'shop', key = '') {
   const S = street(); if (!S || run) return false;
   if (kind === 'lunch') return orderLunch(S, officeNow().toDateString());
   const w = [...workers.values()].find(resting);
-  return !!w && shopTrip(w, S);
+  return !!w && shopTrip(w, S, { key, night: kind === 'night' });
 }
-export const outing = () => (run ? { kind: run.kind, stage: run.stage, id: run.w?.id ?? null } : null);
+export const outing = () => (run ? { kind: run.kind, stage: run.stage, id: run.w?.id ?? null, shop: run.shop ?? null, item: run.item ?? null } : null);
 
 export function setup() {
   streetHooks.home = goHome;

@@ -16,6 +16,9 @@ import { onTurnDone, unseenDone } from './your-turn.js';
 import { sfx } from '../audio/sfx.js';
 import { applaud } from '../people/gatherings.js';
 import { t as tr } from '../../i18n/index.js';
+import { shredAction } from '../world/props/shredder.js';
+import { onTest } from './tests.js';
+import { onCommit, onPush, postAction } from './post.js';
 
 /* ---------- incidents: three failures in five minutes turn the office red for a while ---------- */
 export const fails = [];
@@ -32,6 +35,8 @@ export function updateIncident(t) {
 }
 export function onEvent(e) {
   if (e.type === 'stop' || e.type === 'commit') printPage();   // every finished turn and every commit prints a page
+  if (e.type === 'test' || e.type === 'testok' || e.type === 'testfail') onTest(e);   // the test board's lamps (tests.js)
+  if (e.type === 'commit') onCommit(e); if (e.type === 'push') onPush(e);   // a letter in the post box; the postman (post.js)
   if (e.type === 'push' || e.type === 'deploy') applaud(e.sess);
   if (e.type === 'push') { launchRocket(); sfx.play('deploy'); toast(tr('incident.pushed', { name: dn(sessions.get(e.sess)) || e.repo, branch: state.streamer ? 'git' : e.branch || 'git' })); }
   if (e.type === 'cired') { sfx.play('siren'); toast(tr('incident.ciRed', { label: e.label || tr('incident.ciRedDefault'), repo: e.repo }), 6500); }
@@ -71,7 +76,8 @@ export function onEvent(e) {
   }
   if (e.type === 'deploy') { launchRocket(); toast(tr('incident.deployed', { name: dn(s), label: e.label })); }
   if (e.type === 'wait' || e.type === 'ask') notifyWait(s, e);
-  w.push(a);
+  if (e.type === 'commit') a = postAction(w, a) || a;   // (the letter down to the post box, post.js)
+  w.push(e.type === 'compact' ? shredAction(w, a) : a);   // (compaction: the stack to the shredder, shredder.js)
 }
 
 export function setup() {

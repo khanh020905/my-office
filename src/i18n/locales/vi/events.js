@@ -2,11 +2,11 @@ export default {
   status: { work: 'đang làm', wait: 'chờ duyệt', rest: 'đang nghỉ' },
   station: {
     dining: 'phòng ăn', board: 'bảng trắng', library: 'thư viện', desk: 'bàn làm việc', server: 'phòng máy', globe: 'cửa sổ',
-    coffee: 'góc cà phê', meeting: 'phòng họp', director: 'phòng giám đốc', wc: 'nhà vệ sinh',
+    coffee: 'góc cà phê', meeting: 'phòng họp', director: 'phòng giám đốc', wc: 'nhà vệ sinh', tests: 'bảng đèn test', post: 'hộp thư',
   },
   generic: {
     prompt: 'việc mới', read: 'một file', grep: 'trong code', glob: 'thư mục', skill: 'một kỹ năng', edit: 'một file', write: 'một file',
-    bash: 'chạy một lệnh', web: 'trên web', fetch: 'một trang web', mcp: 'một công cụ', wait: 'một thao tác', fail: 'một thao tác', deploy: 'bản mới',
+    bash: 'chạy một lệnh', web: 'trên web', fetch: 'một trang web', mcp: 'một công cụ', wait: 'một thao tác', fail: 'một thao tác', deploy: 'bản mới', test: 'bộ test',
   },
   verb: {
     prompt: 'nhận việc: “{label}”',
@@ -42,6 +42,9 @@ export default {
     end: 'đóng session',
     substart: 'trợ lý {label} vào phòng họp',
     substop: 'trợ lý {label} báo cáo xong',
+    test: 'chạy test: {label} 🧪',
+    testok: 'test qua hết ✅ ({label})',
+    testfail: 'test lỗi ❌ ({label})',
     use: 'dùng {label}',
   },
   bubble: {
@@ -55,5 +58,7 @@ export default {
     agent: 'Giao việc cho {label}',
     deploy: 'Deploy {label}',
     plan: 'Cập nhật việc cần làm',
+    testok: ['Xanh hết! ✅', 'Test qua rồi 🎉', 'Không lỗi nào, ngon!'],
+    testfail: ['Đỏ rồi, xem lại chút…', 'Hỏng một test, sửa tiếp', 'Ơ, sao lại đỏ 🤔'],
   },
 };

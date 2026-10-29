@@ -377,3 +377,5 @@ export function setup() {
   cleaner.root.add(mopHand);
 }
 export const staff = () => ({ receptionist, cleaner, courier, delivery, strips });
+// for the other visitors (the postman, life/post.js): the class, the way up and back down, a line said
+export const staffKit = () => ({ Staff, arrive, depart, say });

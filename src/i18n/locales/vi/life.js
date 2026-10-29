@@ -49,4 +49,6 @@ export default {
     left: 'Thổ năng sinh bạch ngọc',
     right: 'Địa khả xuất hoàng kim',
   },
+  tests: { title: 'BẢNG ĐÈN TEST', running: 'đang chạy…', pass: 'qua', fail: 'lỗi', idle: 'chưa chạy' },
+  post: { plate: { one: 'Hôm nay: 1 thư', other: 'Hôm nay: {n} thư' }, sign: 'THƯ' },
 };

@@ -32,16 +32,20 @@ export const ACT = {
   push:    { station: null,      anim: 'celebrate', icon: '🚀', dwell: 2 },
   cired:   { station: null,      anim: 'sweat',   icon: '🚨', kind: 'fail', priority: true, dwell: 2.4 },
   cigreen: { station: null,      anim: 'celebrate', icon: '✅', dwell: 2 },
+  // a test run: watch it at the test board (life/tests.js), then a cheer or a puzzled look
+  test:    { station: 'tests',   anim: 'think',   icon: '🧪', dwell: 1.6 },
+  testok:  { station: 'tests',   anim: 'celebrate', icon: '✅', dwell: 2.2 },
+  testfail: { station: 'tests',  anim: 'sweat',   icon: '❌', kind: 'fail', dwell: 2.6 },
   start:   { icon: '🚪' }, end: { icon: '👋' }, substart: { icon: '👥' }, substop: { icon: '📋' },
 };
-export const ANIM_AT = { dining: 'eat', desk: 'type', server: 'console', library: 'read', globe: 'globe', board: 'board', coffee: 'coffee', director: 'think', brief: 'board', wc: 'idle' };
+export const ANIM_AT = { dining: 'eat', desk: 'type', server: 'console', library: 'read', globe: 'globe', board: 'board', coffee: 'coffee', director: 'think', brief: 'board', wc: 'idle', tests: 'think', post: 'idle' };
 // A session's state, translated when read: STATUS_LABEL[s.status] keeps working for every caller.
 const translated = (keys, prefix) => Object.defineProperties({}, Object.fromEntries(keys.map((k) => [k, { enumerable: true, get: () => tr(`${prefix}.${k}`) }])));
 // Where each station is, in words (the coffee corner is the dining room on the company floor).
 let STATION_LABEL;
 export const STATUS_LABEL = translated(['work', 'wait', 'rest'], 'events.status');
 // Streamer mode: the event types whose label is replaced by a generic phrase (events.generic.<type>).
-const GENERIC = new Set(['prompt', 'read', 'grep', 'glob', 'skill', 'edit', 'write', 'bash', 'web', 'fetch', 'mcp', 'wait', 'fail', 'deploy']);
+const GENERIC = new Set(['prompt', 'read', 'grep', 'glob', 'skill', 'edit', 'write', 'bash', 'web', 'fetch', 'mcp', 'wait', 'fail', 'deploy', 'test']);
 export const lbl = (e) => (state.streamer && GENERIC.has(e.type) ? tr(`events.generic.${e.type}`) : e.label || '');
 const V = (key, vars) => tr(`events.verb.${key}`, vars);
 export function verb(e) {
@@ -72,6 +76,9 @@ export function verb(e) {
     case 'push': return V('push', { target: state.streamer ? 'git' : label });
     case 'cired': return V('ciRed', { label: label || V('ciRedDefault') });
     case 'cigreen': return V('ciGreen', { label: label || V('ciGreenDefault') });
+    case 'test': return V('test', { label });
+    case 'testok': return V('testok', { label });
+    case 'testfail': return V('testfail', { label });
     case 'start': return V('start');
     case 'end': return V('end');
     case 'substart': return V('substart', { label });
@@ -92,6 +99,8 @@ export function bubbleText(e) {
     case 'agent': return B('agent', { label });
     case 'deploy': return B('deploy', { label });
     case 'plan': return B('plan');
+    case 'testok': return B('testok');
+    case 'testfail': return B('testfail');
     default: return state.streamer ? cap(verb(e)) : label || verb(e);
   }
 }
@@ -100,7 +109,7 @@ export function setup() {
   // On the company floor the director brings each new task to the desk (no trip to the board), and a boss briefs its
   // subagents at the meeting-room screen.
   if (PRO) { Object.assign(ACT.prompt, { station: 'desk', anim: 'think', dwell: 2.6 }); Object.assign(ACT.agent, { station: 'brief', anim: 'board' }); }
-  STATION_LABEL = translated(['dining', 'board', 'library', 'desk', 'server', 'globe', 'meeting', 'director', 'wc'], 'events.station');
+  STATION_LABEL = translated(['dining', 'board', 'library', 'desk', 'server', 'globe', 'meeting', 'director', 'wc', 'tests', 'post'], 'events.station');
   Object.defineProperties(STATION_LABEL, {
     coffee: { enumerable: true, get: () => tr(PRO ? 'events.station.dining' : 'events.station.coffee') },
     brief: { enumerable: true, get: () => tr('events.station.meeting') },

@@ -42,6 +42,16 @@ function getShadowTex() {
 const lighten = (c, k) => new THREE.Color(c).lerp(new THREE.Color('#ffffff'), k);
 const darken = (c, k) => new THREE.Color(c).multiplyScalar(k);
 const plainMat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
+// a wisp of steam over a hot mì ly (one, shared)
+let steam = null;
+function steamTex() {
+  if (steam) return steam;
+  const c = document.createElement('canvas'); c.width = c.height = 32;
+  const g = c.getContext('2d'), r = g.createRadialGradient(16, 16, 0, 16, 16, 16);
+  r.addColorStop(0, 'rgba(255,255,255,.9)'); r.addColorStop(1, 'rgba(255,255,255,0)');
+  g.fillStyle = r; g.fillRect(0, 0, 32, 32);
+  return (steam = new THREE.CanvasTexture(c));
+}
 
 // Hair shell: a sphere whose latitude range is squeezed so its rim follows a hairline ([front, side, back] angles from
 // the crown). The rim dips into rounded locks, each lock bulges so grooves catch the light, the grooves twist away from
@@ -319,6 +329,71 @@ export function makeChibi(cfg = {}, scale = 1) {
   add(cup, new THREE.CylinderGeometry(0.007, 0.007, 0.13, 6), plainMat('#2E8B57'), 0.012, 0.15, 0).rotation.z = -0.15;
   const band = add(cup, new THREE.CylinderGeometry(0.0525, 0.049, 0.035, 16), plainMat('#E21F26', { roughness: 0.9 }), 0, 0, 0);
   cup.visible = false; P.cup = cup; P.cupBand = band;
+  // the stores' own takeaways (outings.js picks one by the chain), held like the drink: Circle K's mì ly (the lid peeled
+  // back, chopsticks in, steaming), GS25's tokbokki (red rice cakes, a fish-cake skewer), 7-Eleven's onigiri and bánh
+  // bao, Ministop's soft-serve and fried chicken
+  P.held = { cup };
+  const hold = (k) => { const g = new THREE.Group(); g.position.set(0, -0.02, D.handR * 0.9); g.visible = false; P.armR.hand.add(g); P.held[k] = g; return g; };
+  const stick = plainMat('#D9B98A', { roughness: 0.8 }), paper = plainMat('#FBF8F1', { roughness: 0.75 });
+  {
+    const g = hold('noodle');
+    add(g, new THREE.CylinderGeometry(0.055, 0.042, 0.1, 14), paper, 0, -0.01, 0);
+    add(g, new THREE.CylinderGeometry(0.0555, 0.05, 0.04, 14), plainMat('#E3412B', { roughness: 0.7 }), 0, 0.004, 0);
+    add(g, new THREE.CylinderGeometry(0.05, 0.05, 0.006, 14), plainMat('#E8C27A', { roughness: 0.8 }), 0, 0.037, 0);
+    add(g, new THREE.CylinderGeometry(0.057, 0.057, 0.004, 14, 1, false, Math.PI / 2, Math.PI), plainMat('#F2D24B', { roughness: 0.5 }), 0, 0.041, 0).rotation.x = 1.15;
+    for (const x of [-0.009, 0.009]) add(g, new THREE.CylinderGeometry(0.0035, 0.0035, 0.19, 5), stick, x, 0.09, 0.012).rotation.z = x * 5;
+    const st = new THREE.Sprite(new THREE.SpriteMaterial({ map: steamTex(), transparent: true, depthWrite: false, opacity: 0.45 }));
+    st.position.y = 0.13; st.scale.setScalar(0.12); g.add(st); P.steam = st;
+  }
+  {
+    const g = hold('tok');
+    add(g, new THREE.CylinderGeometry(0.058, 0.044, 0.095, 14), paper, 0, -0.012, 0);
+    add(g, new THREE.CylinderGeometry(0.0585, 0.054, 0.03, 14), plainMat('#0068B7', { roughness: 0.8 }), 0, 0.018, 0);
+    add(g, new THREE.CylinderGeometry(0.052, 0.052, 0.012, 14), plainMat('#C8321F', { roughness: 0.4 }), 0, 0.03, 0);
+    for (const [x, z, r] of [[-0.02, 0.012, 0.3], [0.014, -0.014, -0.6], [0.022, 0.018, 1.2]]) add(g, new THREE.CylinderGeometry(0.009, 0.009, 0.042, 6), plainMat('#E0503A', { roughness: 0.4 }), x, 0.04, z).rotation.set(Math.PI / 2, r, 0);
+    add(g, new THREE.CylinderGeometry(0.0025, 0.0025, 0.2, 4), stick, -0.012, 0.1, 0).rotation.z = 0.12;
+    add(g, new THREE.BoxGeometry(0.05, 0.06, 0.008), plainMat('#D9A65B', { roughness: 0.8 }), -0.019, 0.155, 0).rotation.z = 0.12;
+  }
+  {
+    const g = hold('onigiri');
+    add(g, new THREE.CylinderGeometry(0.058, 0.058, 0.034, 3).rotateX(Math.PI / 2).rotateZ(Math.PI), plainMat('#F7F6F0', { roughness: 0.5 }), 0, 0.035, 0);
+    add(g, new THREE.BoxGeometry(0.05, 0.034, 0.037), plainMat('#1F2A22', { roughness: 0.7 }), 0, 0.016, 0);
+    add(g, new THREE.BoxGeometry(0.008, 0.07, 0.038), plainMat('#E2241B', { roughness: 0.6 }), 0, 0.04, 0);
+  }
+  {
+    const g = hold('bun'), dough = plainMat('#FBF5E8', { roughness: 0.9 });
+    add(g, new THREE.CylinderGeometry(0.05, 0.05, 0.004, 12), plainMat('#E3D5B5', { roughness: 0.9 }), 0, -0.01, 0);
+    add(g, new THREE.SphereGeometry(0.054, 12, 8), dough, 0, 0.026, 0, 1, 0.72, 1);
+    add(g, new THREE.ConeGeometry(0.017, 0.02, 8), dough, 0, 0.068, 0);
+  }
+  {
+    const g = hold('cone'), cream = plainMat('#FFF8EC', { roughness: 0.55 });
+    add(g, new THREE.ConeGeometry(0.034, 0.11, 10).rotateX(Math.PI), plainMat('#D49A55', { roughness: 0.8 }), 0, -0.02, 0);
+    add(g, new THREE.SphereGeometry(0.038, 10, 8), cream, 0, 0.045, 0, 1, 0.8, 1);
+    add(g, new THREE.ConeGeometry(0.03, 0.05, 10), cream, 0, 0.088, 0);
+  }
+  {
+    const g = hold('chicken');
+    add(g, new THREE.BoxGeometry(0.08, 0.09, 0.05), paper, 0, 0, 0);
+    add(g, new THREE.BoxGeometry(0.081, 0.024, 0.051), plainMat('#003894', { roughness: 0.8 }), 0, 0.022, 0);
+    add(g, new THREE.CapsuleGeometry(0.022, 0.03, 4, 8), plainMat('#B8702E', { roughness: 0.6 }), 0.008, 0.07, 0).rotation.z = 0.3;
+    add(g, new THREE.CylinderGeometry(0.006, 0.006, 0.03, 5), plainMat('#F4EEE2'), -0.006, 0.112, 0).rotation.z = 0.3;
+  }
+  {   // a commit on its way to the lobby's post box (life/post.js): a white envelope, a red and blue airmail edge
+    const g = hold('letter');
+    add(g, new THREE.BoxGeometry(0.12, 0.08, 0.006), plainMat('#FBFAF5', { roughness: 0.8 }), 0, 0.03, 0);
+    for (const [y, c] of [[0.068, '#D9342B'], [-0.008, '#2E5BBA']]) add(g, new THREE.BoxGeometry(0.12, 0.006, 0.007), plainMat(c), 0, y, 0);
+    add(g, new THREE.BoxGeometry(0.022, 0.026, 0.007), plainMat('#E8742A'), 0.042, 0.052, 0.001);   // the stamp
+    g.traverse((o) => { o.castShadow = false; });
+  }
+  {   // a slice of the month's birthday cake on a paper plate (people/hr.js)
+    const g = hold('cake');
+    add(g, new THREE.CylinderGeometry(0.075, 0.07, 0.006, 16), plainMat('#FBFAF5', { roughness: 0.8 }), 0, -0.012, 0);
+    add(g, new THREE.CylinderGeometry(0.055, 0.055, 0.045, 12, 1, false, 0, Math.PI / 2.2), plainMat('#F3B6C4', { roughness: 0.7 }), -0.012, 0.014, -0.012);
+    add(g, new THREE.CylinderGeometry(0.056, 0.056, 0.01, 12, 1, false, 0, Math.PI / 2.2), plainMat('#FFF6EC', { roughness: 0.6 }), -0.012, 0.041, -0.012);
+    add(g, new THREE.SphereGeometry(0.01, 8, 6), plainMat('#D8322F', { roughness: 0.4 }), 0.004, 0.05, 0.004);
+    g.traverse((o) => { o.castShadow = false; });
+  }
   // the team's lunch from the GrabFood rider: a white carrier bag, the boxes' lids showing, hanging from the left hand
   const bag = new THREE.Group(); bag.position.set(0, -0.02, 0); P.armL.hand.add(bag);
   const bagM = plainMat('#F4F3EE', { roughness: 0.75 });
@@ -326,9 +401,19 @@ export function makeChibi(cfg = {}, scale = 1) {
   add(bag, new THREE.BoxGeometry(0.24, 0.025, 0.13), plainMat('#FFFFFF', { roughness: 0.5 }), 0, -0.07, 0);
   for (const x of [-0.07, 0.07]) add(bag, new THREE.TorusGeometry(0.045, 0.008, 6, 12, Math.PI), bagM, x, -0.075, 0);
   bag.visible = false; P.bag = bag;
+  // going home past WinMart+ or Bách Hóa Xanh: a plastic bag, the shop's colour on it, greens and a carrot sticking out
+  const groc = new THREE.Group(); groc.position.set(0, -0.02, 0); P.armL.hand.add(groc);
+  const plastic = plainMat('#F6F6F2', { roughness: 0.45 });
+  add(groc, new THREE.BoxGeometry(0.22, 0.19, 0.13), plastic, 0, -0.18, 0);
+  for (const x of [-0.06, 0.06]) add(groc, new THREE.TorusGeometry(0.04, 0.008, 6, 12, Math.PI), plastic, x, -0.08, 0);
+  add(groc, new THREE.SphereGeometry(0.06, 8, 6), plainMat('#5BAA3A', { roughness: 0.8 }), -0.04, -0.07, 0, 1, 1.25, 0.75);
+  add(groc, new THREE.SphereGeometry(0.045, 8, 6), plainMat('#3E8A2C', { roughness: 0.8 }), 0.035, -0.08, 0.01, 1, 1.2, 0.8);
+  add(groc, new THREE.ConeGeometry(0.014, 0.1, 6).rotateX(Math.PI), plainMat('#E8742A', { roughness: 0.6 }), 0.07, -0.06, -0.02).rotation.z = -0.4;
+  const grocBand = add(groc, new THREE.BoxGeometry(0.222, 0.035, 0.132), plainMat('#E21B2A', { roughness: 0.8 }), 0, -0.2, 0);
+  groc.visible = false; P.grocery = groc; P.groceryBand = grocBand;
   const drop = new THREE.Mesh(sph(0.05, 12, 10), new THREE.MeshBasicMaterial({ color: '#7EC8F0', transparent: true, opacity: 0.85 }));
   drop.scale.set(0.8, 1.3, 0.8); drop.position.set(R * 1.0, D.hipY + D.headY + R * 0.5, 0.2); drop.visible = false; root.add(drop); P.drop = drop;
-  mergeRig(root, new Set([sh, drop, P.mouthSmile, P.mouthO, band]));
+  mergeRig(root, new Set([sh, drop, P.mouthSmile, P.mouthO, band, grocBand]));
   standIns(root, P);
   return { root, P };
 }
@@ -591,8 +676,9 @@ export function chibiPose(P, anim, ph, o = {}) {
   }
   // o.carry: a takeaway drink held in front of the chest (sipped instead of the mug), or a carrier bag hanging from the
   // left hand, that arm swinging less for the weight
-  if (o.carry === 'cup') { p.cup = true; if (anim === 'coffee') p.mug = false; else p.armR = reach(1, 0.1, shoulderY() - 0.32, 0.24); }
-  if (o.carry === 'bag') { p.bag = true; p.armL = [anim === 'walk' ? -Math.sin(ph * 9) * 0.14 : 0.06, -0.14, -0.12]; }
+  // (the stores' food is held, and eaten, the same way: P.held)
+  if (P.held[o.carry]) { p.held = o.carry; if (anim === 'coffee') p.mug = false; else p.armR = reach(1, 0.1, shoulderY() - 0.32, 0.24); }
+  if (o.carry === 'bag' || o.carry === 'grocery') { p[o.carry] = true; p.armL = [anim === 'walk' ? -Math.sin(ph * 9) * 0.14 : 0.06, -0.14, -0.12]; }
   // a parcel (staff.js puts the box on the chest): held in both hands in front
   if (o.carry === 'box') { p.armL = reach(-1, -0.19, shoulderY() - 0.4, 0.3); p.armR = reach(1, 0.19, shoulderY() - 0.4, 0.3); }
   if (o.wave) { p.armL = [-0.1, -2.5, -0.35 - Math.max(0, Math.sin(ph * 12)) * 0.6]; p.mouth = 'smile'; }
@@ -619,10 +705,12 @@ export function applyChibiPose(P, p, dt) {
   P.torso.scale.y = p.breathe;
   P.mouthSmile.visible = p.mouth === 'smile'; P.mouthO.visible = p.mouth === 'o';
   P.mug.rotation.set(-(P.armR.sh.rotation.x + P.armR.el.rotation.x + P.spine.rotation.x), 0, -P.armR.sh.rotation.z);
-  P.cup.rotation.copy(P.mug.rotation);
+  for (const k in P.held) { const g = P.held[k]; g.visible = p.held === k; if (g.visible) g.rotation.copy(P.mug.rotation); }
   P.bag.rotation.set(-(P.armL.sh.rotation.x + P.armL.el.rotation.x + P.spine.rotation.x), 0, -P.armL.sh.rotation.z);   // (hangs straight down)
+  P.grocery.rotation.copy(P.bag.rotation);
   P.book.visible = p.book; P.mug.visible = p.mug; P.drop.visible = p.drop; P.shadow.visible = p.shadow;
-  P.cup.visible = !!p.cup; P.bag.visible = !!p.bag;
+  P.bag.visible = !!p.bag; P.grocery.visible = !!p.grocery;
+  if (p.held === 'noodle') { const u = (performance.now() / 1600) % 1; P.steam.position.y = 0.12 + u * 0.12; P.steam.material.opacity = 0.5 * (1 - u) * Math.min(1, u * 6); P.steam.scale.setScalar(0.08 + u * 0.1); }
   if (p.drop) P.drop.position.y = P.D.hipY + P.D.headY + P.D.R * 0.6 - ((performance.now() / 1000) * 1.3 % 1) * 0.3;
   return p.y;
 }

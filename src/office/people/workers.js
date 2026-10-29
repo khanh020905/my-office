@@ -26,6 +26,10 @@ const ACCS = ['headphones', 'glasses', 'beanie', 'cap', null, null, null];
 // set by outings.js (with the city outside): home(w, gone) takes someone leaving out by the street (true if it does),
 // arrive(w) brings someone back the same way
 export const streetHooks = {};
+// the attendance terminal by the lift (people/hr.js): in(w, then) on the way in from the lift, out(w, then) on the way out,
+// newcomer(w) for a session's first walk in; each calls then() when done (straight away when there is nothing to do)
+export const clockHooks = {};
+const viaClock = (kind, w, then) => (clockHooks[kind] ? clockHooks[kind](w, then) : then());
 export function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 export const colorOf = (s) => (s.desk >= 0 ? PALETTE[s.desk] : PALETTE[hash(s.name) % PALETTE.length]);
 // What to call a session on screen: the chat's title (your rename, else Claude's), else its short name.
@@ -72,8 +76,8 @@ export function addWorker(s, walkIn) {
   const home = w.homeSpot();
   if (walkIn) {
     w.pos.set(DOOR_OUT.x, DOOR_OUT.z); w.face = w.faceTarget = Math.PI / 2; w.spot = DOOR_OUT;
-    w.dress(true); liftArrive(w);
-    w.goTo(home, () => { w.station = 'desk'; w.anim = 'type'; if (home === DESK_SPOTS[s.desk]) w.unpack(s.desk); else w.dress(false); });
+    w.dress(true); liftArrive(w); clockHooks.newcomer?.(w);
+    viaClock('in', w, () => w.goTo(home, () => { w.station = 'desk'; w.anim = 'type'; if (home === DESK_SPOTS[s.desk]) w.unpack(s.desk); else w.dress(false); }));
   } else if (w.lateRest(s)) {   // opened late at night: those who went home are not here
     w.away = true; w.station = 'away'; w.pos.set(DOOR_OUT.x, DOOR_OUT.z); w.spot = DOOR_OUT; w.dress(true); w.hush();
   } else {
@@ -274,8 +278,10 @@ export function setup() {
       if (this.want && (this.want.priority || state.sim >= this.dwellUntil)) {
         const a = this.want; this.want = null;
         if (!a.station || a.station === this.station) { this.apply(a); return; }
-        const spot = a.station === 'desk' ? this.homeSpot() : allocate(a.station, this);
+        let spot = a.station === 'desk' ? this.homeSpot() : allocate(a.station, this, true);
+        if (!spot) { if (a.anim === ANIM_AT[a.station]) a.anim = ANIM_AT.desk; a.station = 'desk'; spot = this.homeSpot(); }   // (that room is full: from their own desk)
         this.goTo(spot, () => { this.station = a.station; this.apply(a); });
+        a.go?.(this);   // (on the way: something in hand, say; life/post.js)
         return;
       }
       if (this.sub || !s) return;
@@ -360,7 +366,7 @@ export function setup() {
       e.stage = 'back';
       if (!e.spot) { done(); return; }
       // their seat, unless someone sat down in it meanwhile
-      const home = b.spot && b.spot.by && b.spot.by !== this ? (b.station === 'desk' ? this.homeSpot() : allocate(b.station, this)) : b.spot || this.homeSpot();
+      const home = b.spot && b.spot.by && b.spot.by !== this ? (b.station === 'desk' ? this.homeSpot() : allocate(b.station, this, true) || this.homeSpot()) : b.spot || this.homeSpot();
       this.goTo(home, done);
     }
     /* First person, E next to someone asleep: they stir, stretch, sit up to see who it is, say something, and doze off
@@ -423,11 +429,11 @@ export function setup() {
     // down) or the door
     walkOut(gone) {
       const down = () => streetHooks.home?.(this, gone) || gone();   // (and with the city outside, out into the street)
-      const out = () => this.goTo(DOOR_IN, () => {
+      const out = () => viaClock('out', this, () => this.goTo(DOOR_IN, () => {
         if (!lift) { this.goTo(DOOR_OUT, down); return; }
         this.anim = 'idle'; this.faceTarget = DOOR_IN.face;   // press the button, wait for the car
         this.liftWait = () => this.goTo(DOOR_OUT, () => { this.faceTarget = Math.PI / 2; this.liftRide = down; });
-      });
+      }));
       const d = deskKit.indexOf(this);
       if (d < 0) { out(); return; }
       const pack = () => {   // back at the desk: coat on, bag on the back
@@ -459,7 +465,7 @@ export function setup() {
       this.pos.set(DOOR_OUT.x, DOOR_OUT.z); this.face = this.faceTarget = Math.PI / 2; this.spot = DOOR_OUT;
       this.dress(true); liftArrive(this);
       const home = this.homeSpot(), d = sessions.get(this.id)?.desk ?? -1;
-      this.goTo(home, () => { this.station = 'desk'; this.anim = 'type'; if (home === DESK_SPOTS[d]) this.unpack(d); else this.dress(false); });
+      viaClock('in', this, () => this.goTo(home, () => { this.station = 'desk'; this.anim = 'type'; if (home === DESK_SPOTS[d]) this.unpack(d); else this.dress(false); }));
     }
     remove() {
       { const k = deskKit.indexOf(this); if (k >= 0) deskKit[k] = null; }

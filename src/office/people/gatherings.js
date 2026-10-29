@@ -35,8 +35,9 @@ function reportOf(w) {
 /* One gathering at a time. Everyone free (and anyone napping, who wakes up) walks to a place at the table; the director,
    when free, stands at the end of it. Once the furthest has had time to arrive it starts: a meeting goes round the
    table, a party lights the cake and claps. Everyone keeps their place until the end, then goes back to what they were
-   doing. kind: 'meet' | 'party'. */
-function gather(kind, what = '') {
+   doing. kind: 'meet' | 'party'. o (a party): long (how long it lasts, seconds), host (who runs it and comes too: the HR
+   woman, people/hr.js), open (her first words), onStart(g) / onEnd(g). */
+function gather(kind, what = '', o = {}) {
   const lead = PRO && director && free(director) ? director : null;
   const spots = 12;
   const who = people().filter((w) => w !== director && (free(w) || asleep(w)))
@@ -44,7 +45,7 @@ function gather(kind, what = '') {
   if (!who.length && !lead) { if (kind === 'meet') toast(tr('people.meet.nobody')); return false; }
   const far = Math.max(3, ...who.map((w) => 1.4 + (dist(w, MEET.x, MEET.z) * 1.4) / 2.7));
   const g = gathering = { kind, start: state.sim + Math.min(13, far), end: 0, members: [] };
-  g.end = g.start + (kind === 'meet' ? 2 + who.length * 1.8 + 2.4 : 7);
+  g.end = g.start + (kind === 'meet' ? 2 + who.length * 1.8 + 2.4 : o.long || 7);
   const T = kind === 'meet' ? 'meet' : 'party';
   for (const w of who) {
     const spot = allocate('meeting', w); if ('by' in spot) spot.by = w;
@@ -56,19 +57,21 @@ function gather(kind, what = '') {
     const e = lead.errand({ gathering: g, spot: allocate('brief', lead), look: [MEET.x, MEET.z], type: T, anim: 'idle', wait: 0.4, hold: 0.3, at: () => null });
     e.until = g.end;
   }
-  const host = lead || who[0];
+  if (o.host) { const e = o.host.errand({ gathering: g, spot: allocate('brief', o.host), look: [MEET.x, MEET.z], type: T, anim: 'idle', wait: 0.2, hold: 0.3, at: () => null }); e.until = g.end; }
+  const host = o.host || lead || who[0];
   const here = (w) => w.chore?.gathering === g;
   later(g.start - state.sim, () => {
     if (gathering !== g) return;
-    if (here(host)) host.say(T, kind === 'meet' ? what || line('people.meet.open') : tr('people.party.open', { what }));
+    if (here(host)) host.say(T, kind === 'meet' ? what || line('people.meet.open') : o.open || tr('people.party.open', { what }));
+    o.onStart?.(g);
     if (kind === 'party') {
       showCake(true); sfx.play('clap'); if (!reduceMotion) confetti(MEET.x, 2.4, MEET.z);
       g.members.forEach((w, i) => later(0.8 + i * 0.45, () => { if (here(w) && w !== host) w.say('party', line('people.party.cheer')); }));
     } else g.members.forEach((w, i) => later(2 + i * 1.8, () => { if (here(w)) w.say('meet', reportOf(w)); }));
   });
   later(g.end - state.sim - 1.6, () => { if (gathering === g && here(host)) host.say(T, line(`people.${T}.close`)); if (kind === 'party') sfx.play('clap'); });
-  later(g.end - state.sim + 1.5, () => { if (gathering === g) gathering = null; if (kind === 'party') showCake(false); });
-  return true;
+  later(g.end - state.sim + 1.5, () => { if (gathering === g) gathering = null; if (kind === 'party') showCake(false); o.onEnd?.(g); });
+  return g;
 }
 export function ringBell(opener = '') {
   bellRing = 0.7; sfx.play('bell');
@@ -89,6 +92,9 @@ export function mondayStandup(force = false) {
 // just the ring, no meeting (life/quota.js: the plan's limit has reset, back to the desks)
 export function dingBell() { bellRing = 0.7; sfx.play('bell'); }
 // a new trophy (from life/trophies.js): a cake on the meeting table
+// the month's birthdays (people/hr.js): a long party round the cake, run by `host`
+export function birthday(o) { return !replay.on && !gathering && gather('party', '', o); }
+export const gatheringNow = () => gathering;
 export function celebrate(what) {
   if (replay.on || gathering) return;
   gather('party', what);

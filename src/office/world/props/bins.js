@@ -14,7 +14,7 @@ export function updateBins(dt, t) {
   for (const b of bins) {
     const s = byDesk.get(b.desk), w = s && workers.get(s.id), stomping = w && w.anim === 'stomp' && w.phase !== 'walk';
     if (t - binAt > 1 || stomping) {
-      const f = stomping ? 0 : s?.usage ? Math.min(1, s.usage.ctx / s.usage.ctxMax) : 0, n = Math.round(f * b.balls.length);
+      const f = stomping || w?.shred ? 0 : s?.usage ? Math.min(1, s.usage.ctx / s.usage.ctxMax) : 0, n = Math.round(f * b.balls.length);
       b.balls.forEach((x, k) => { x.visible = k < n; }); b.spill.forEach((x) => { x.visible = f > 0.85; });
     }
     b.squash += ((stomping ? 1 : 0) - b.squash) * Math.min(1, dt * 8);
@@ -25,7 +25,8 @@ export function updateBins(dt, t) {
 
 export function setup() {
   /* context waste bins: one beside each desk chair; crumpled paper fills with the desk's session context and spills
-     over past 85 %; on compaction the chibi stands up and stomps it flat */
+     over past 85 %; on compaction it is emptied along with the desk's stack (shredder.js), or, with no shredder to walk
+     to, the chibi stands up and stomps it flat */
   binM = mat('#7C8794', { roughness: 0.45, metalness: 0.35 }); paperBallM = mat('#F4F1EA', { roughness: 0.95 });
   bins = DESKS.map((d, i) => {
     const [bx, bz] = dLocal(d, 0.62, -0.72), g = new THREE.Group(); g.position.set(bx, 0, bz); scene.add(g);
