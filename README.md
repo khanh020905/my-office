@@ -187,8 +187,16 @@ Then open <http://localhost:4310>.
 - **The plan pill** shows your closest usage limit (5 hours, weekly, per model) and warns at 80% and 95%. With a second
   Claude Code login on the same machine (its own `CLAUDE_CONFIG_DIR`, such as `~/.claude-org2`), that account's limits
   show too, and its sessions wear a small badge with the account's name.
-- **The Mac pill** opens RAM, swap, CPU and disk, with suggestions: stop a forgotten dev server, close an idle session,
-  quit a heavy app, clear caches. Every action is checked first and logged.
+- **Several Claude accounts**: "Add a Claude account" in the plan card makes the account's folder and signs it in from
+  the browser, no terminal needed. Hover an account to rename it, or click "Use" to start new sessions on it. With
+  "Switch accounts when one runs out" on, new sessions move to the next account with usage left when one runs out, and
+  come back once it resets. It works through the editor's Claude Code extension (`claudeCode.claudeProcessWrapper`, set
+  and removed by the office) or a shell alias the card shows; the accounts share history, settings and memory by links
+  to `~/.claude`. Sessions already open keep their account. macOS and Linux.
+- **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
+  most) with one button to close every idle Claude session, and suggests the rest: stop a forgotten dev server, quit a
+  heavy app, clear caches. Idle sessions can also be closed on a timer (off by default). Every action is checked first
+  and logged.
 - **Each session** has a context bar and a waste bin that fills up with context. It also shows its cost at API prices:
   with a subscription, this is not your bill.
 
