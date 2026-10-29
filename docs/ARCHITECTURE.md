@@ -191,7 +191,7 @@ engine switches to demo mode and talks to no API.
 | `world/props/bins.js` | 41 | Context waste bins beside each desk. |
 | `world/props/cat.js` | 103 | The office cat. |
 | `world/props/dev-servers.js` | 85 | Mini servers for each running dev server, and forgotten ones. |
-| `world/props/game-tv.js` | 89 | The lounge TV (company floor): a 55" TV on a low walnut media unit against the back wall, facing the sofa, with a games console standing beside it, two controllers lying on top, a soundbar, a plant, and a glow on the wall behind it that takes the colour of the picture. |
+| `world/props/game-tv.js` | 94 | The lounge TV (company floor): a 55" TV on a low walnut media unit against the back wall, facing the sofa, with a games console standing beside it, two controllers lying on top, a soundbar, a plant, and a glow on the wall behind it that takes the colour of the picture. |
 | `world/props/neon.js` | 22 | The neon sign. |
 | `world/props/printer.js` | 25 | The printer that prints a page when a session finishes. |
 | `world/props/shredder.js` | 178 | Paper by context: an in-tray on every desk whose stack grows with its session's context window (loose sheets and a red flag past 85 %), and a paper shredder by the printer. |
