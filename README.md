@@ -85,6 +85,11 @@ Then open <http://localhost:4310>.
   their desks for a break: a tea at the pantry tables, a book, a chat. A board on the wall counts down to when it can be
   used again; when it resets the bell rings and they go back to their desks. Anyone whose session is still working keeps
   working. (`?limitout=30` shows it for half an hour.)
+- **Games on the lounge TV** (company floor): a 55" TV on a media unit, a console beside it, two controllers. Now
+  and then two people who are resting sit down on the sofa and play a match (football 3 v 3, a split-screen racer
+  through Saigon at sunset, a rooftop fighter, all pixel art made for the office): they cheer their goals, groan at
+  the other's, and get up when work comes in. Click the TV to call two free people over. In first person, press E at
+  the TV to sit down and play yourself, against a colleague who comes over or the console; a real gamepad works too.
 - **The week's rhythm**: Monday 9:00 the bell rings for the stand-up by itself and everyone free goes round the meeting
   table saying what they're on; Friday 16:00 there's milk tea and bánh tráng trộn in the pantry for whoever is resting.
 - **Staff who aren't sessions**: on the company floor a receptionist sits at the lobby reception from 7:45 to 18:15,
@@ -188,9 +193,9 @@ Then open <http://localhost:4310>.
   Claude Code login on the same machine (its own `CLAUDE_CONFIG_DIR`, such as `~/.claude-org2`), that account's limits
   show too, and its sessions wear a small badge with the account's name.
 - **Several Claude accounts**: "Add a Claude account" in the plan card makes the account's folder and signs it in from
-  the browser, no terminal needed. Hover an account to rename it, or click "Use" to start new sessions on it. With
-  "Switch accounts when one runs out" on, new sessions move to the next account with usage left when one runs out, and
-  come back once it resets. It works through the editor's Claude Code extension (`claudeCode.claudeProcessWrapper`, set
+  the browser, no terminal needed. Hover an account to rename it, click "Use" to start new sessions on it, or drag it by
+  its grip to set the order. With "Switch accounts when one runs out" on, new sessions move down that order when one
+  runs out, and come back to the top one once it resets. It works through the editor's Claude Code extension (`claudeCode.claudeProcessWrapper`, set
   and removed by the office) or a shell alias the card shows; the accounts share history, settings and memory by links
   to `~/.claude`. Sessions already open keep their account. macOS and Linux.
 - **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
