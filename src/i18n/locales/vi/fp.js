@@ -27,4 +27,17 @@ export default {
   banhmiDone: 'Một ổ bánh mì thịt nóng giòn, 20 nghìn 🥖',
   tea: 'Ngồi làm cốc trà đá',
   teaDone: 'Trà đá mát lạnh, 5 nghìn một cốc 🧊',
+  tv: {
+    you: 'Bạn',
+    cpu: 'Máy',
+    sat: 'Đã ngồi xuống sofa 🎮 ←/→ chọn game, Space để bắt đầu, Esc để đứng dậy. Có tay cầm thật thì cắm vào là chơi được.',
+    up: 'Đã đặt tay cầm xuống',
+    busy: '{a} và {b} đang chơi, chờ ván sau nhé',
+    noSeat: 'Sofa đang kín chỗ',
+    youWon: 'Bạn thắng! 🏆',
+    youLost: '{name} thắng rồi, gỡ lại không?',
+    menuHelp: 'đấu với {who} · Space bắt đầu · Esc đứng dậy',
+    keys: { football: 'phím mũi tên chạy · Space chuyền · K sút / xoạc', racing: 'xe tự chạy · ←→ lái · ↓ phanh · K nitro', fighting: '←→ đi · ↑ nhảy · ↓ đỡ · Space đấm · K đá (đầy thanh: chưởng)' },
+    game: { football: 'BÓNG ĐÁ', racing: 'ĐUA XE', fighting: 'ĐỐI KHÁNG' },
+  },
 };

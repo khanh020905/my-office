@@ -146,7 +146,7 @@ export function setup() {
     library: { name: tr('places.chip.libraryPro'), icon: 'book', at: [5.8, 2.85, -6.6], props: ['shelf'] },
     window: { name: tr('places.chip.window'), icon: 'globe', props: ['window'] },
     coffee: { name: tr('places.chip.dining'), icon: 'coffee', at: [11.3, 1.4, -3.0], props: ['coffee'] },
-    lounge: { name: tr('places.chip.lounge'), icon: 'sparkle', at: [11.2, 1.3, 6.2], props: ['sofa', 'foosball', 'arcade', 'aquarium'] },
+    lounge: { name: tr('places.chip.lounge'), icon: 'sparkle', at: [11.2, 1.3, 6.2], props: ['gametv', 'sofa', 'foosball', 'arcade', 'aquarium'] },
     deploy: { name: tr('places.chip.deploy'), icon: 'rocket', at: [ROCKET_HOME.x, 0.16, ROCKET_HOME.z + 0.7], props: ['rocket'] },
     server: { name: tr('places.chip.serverPro'), icon: 'server', at: [-5.8, 2.75, -1.0], props: ['racks', 'tv'], open: () => openMac() },
     door: { name: tr('places.chip.lobby'), icon: 'door', at: [-7.0, 3.2, DZ], props: ['door'] },

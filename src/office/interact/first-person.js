@@ -179,7 +179,7 @@ export function fpUpdate(dt) {
   if (fp.carry && fp.t > fp.carryUntil) fp.carry = null;   // (finished it)
   // own body
   const P = fp.P, D = P.D;
-  const pose = chibiPose(P, fp.moving ? 'walk' : 'idle', fp.t * (speed > 2.5 ? 1.5 : 1), { look: 0, carry: fp.carry, sit: !!fp.seat });
+  const pose = chibiPose(P, fp.moving ? 'walk' : fp.anim || 'idle', fp.t * (speed > 2.5 ? 1.5 : 1), { look: 0, carry: fp.carry, sit: !!fp.seat });   // (fp.anim: playing on the lounge TV)
   fp.avatar.position.set(fp.pos.x, (fp.seat ? fp.seat.y - SIT_H : ground) + applyChibiPose(P, pose, dt), fp.pos.y);
   fp.avatar.rotation.y += wrapAngle(fp.yaw - fp.avatar.rotation.y) * Math.min(1, dt * 12);
   // camera: eyes of the character, or over the shoulder

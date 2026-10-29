@@ -28,6 +28,7 @@ export default {
   director: { name: 'Phòng Giám đốc', hint: 'Giám đốc (là bạn) mang việc tới bàn, nhận báo cáo khi xong · kệ cúp các mốc' },
   wc: { name: 'Nhà vệ sinh', hint: 'Ai đang dùng' },
   foosball: { name: 'Bàn bi lắc', hint: 'Lắc thử một cái' },
+  gametv: { name: 'TV chơi game', hint: 'Gọi hai người rảnh ra chơi một trận (đi vào trong văn phòng thì tự ngồi chơi được)', score: '{game}: {a} {x}–{y} {b}', coming: '{a} và {b} đang ra sofa', called: '{a} và {b} ra chơi {game} 🎮', nobody: 'Chưa ai rảnh để chơi game', you: 'Bạn đang chơi mà' },
   season: {
     halloween: 'Bí ngô Halloween',
     noel: 'Cây thông Noel',

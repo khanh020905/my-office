@@ -39,7 +39,7 @@ function buildProFloor() {
   for (const [cx, cz] of PODS) { const c = floorZone(cx - 2.0, cx + 2.0, cz - 1.75, cz + 1.75, carpet, 1.2); c.position.y = 0.006; }
   rug(-5.4, -5.3, 3.6, 2.9, '#B9A486');                                                     // director
   rug(5.75, -5.4, 3.4, 2.4, '#9E4A3F');                                                     // library
-  rug(11.0, 4.2, 3.8, 3.2, '#D8C6A8');                                                      // lounge
+  rug(11.0, 2.55, 3.8, 3.1, '#D8C6A8');                                                     // lounge (TV to sofa)
 
   /* wall finishes, room by room */
   backPanel(-8, -2.6, '#6F5440', 0, 2.75); put(scene, rbox(5.4, 0.06, 0.06, '#4E3A2C', 0.02), -5.3, 2.78, -7.96);

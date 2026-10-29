@@ -4,7 +4,7 @@ import { PRO, rand, randInt, tint } from '../../core/env.js';
 import { scene } from '../../scene/renderer.js';
 import { canvasTex, cyl, mat, put, rbox, rug, toonMat } from '../../scene/blocks.js';
 import { potPlant, woodDark, woodMid } from '../terrace.js';
-import { LAY } from '../layout.js';
+import { LAY, sofaAt } from '../layout.js';
 
 /* wall clock (real time) */
 export const clockG = new THREE.Group();
@@ -85,10 +85,11 @@ export function setup() {
   if (!PRO) rug(-2.1, -4.8, 1.85, 1.8, '#CDBA98');
   sofaG = makeSofa(LAY.sofa[0], LAY.sofa[1], LAY.sofa[2], LAY.sofa[3], PRO ? '#5C6B7F' : '#E3D6BF', PRO ? ['#F2B33D', '#E8742A'] : ['#4E7D5B', '#E8742A']);
   // the round coffee table in front of the sofa (the cat naps on it)
-  put(scene, cyl(0.45, 0.45, 0.06, woodMid, 28), LAY.sofa[0], 0.44, LAY.sofa[1] + 1.05);
-  put(scene, cyl(0.06, 0.08, 0.42, woodDark, 10), LAY.sofa[0], 0.21, LAY.sofa[1] + 1.05);
-  put(scene, rbox(0.3, 0.05, 0.22, '#3D5A80', 0.01), LAY.sofa[0] - 0.1, 0.495, LAY.sofa[1] + 1.1).rotation.y = 0.4;
-  put(scene, cyl(0.055, 0.05, 0.1, '#FFFFFF'), LAY.sofa[0] + 0.2, 0.52, LAY.sofa[1] + 0.95);
+  const [tx, tz] = sofaAt(0, 1.05), [bx, bz] = sofaAt(-0.1, 1.1), [mx, mz] = sofaAt(0.2, 0.95);
+  put(scene, cyl(0.45, 0.45, 0.06, woodMid, 28), tx, 0.44, tz);
+  put(scene, cyl(0.06, 0.08, 0.42, woodDark, 10), tx, 0.21, tz);
+  put(scene, rbox(0.3, 0.05, 0.22, '#3D5A80', 0.01), bx, 0.495, bz).rotation.y = 0.4;
+  put(scene, cyl(0.055, 0.05, 0.1, '#FFFFFF'), mx, 0.52, mz);
    globeStand.position.set(LAY.globe[0], 0, LAY.globe[1]);
    scene.add(globeStand);
   put(globeStand, cyl(0.32, 0.38, 0.1, woodDark), 0, 0.05, 0);

@@ -29,6 +29,7 @@ import * as worldPropsAquarium from './world/props/aquarium.js';
 import * as worldPropsArcade from './world/props/arcade.js';
 import * as worldPropsPrinter from './world/props/printer.js';
 import * as worldPropsTv from './world/props/tv.js';
+import * as worldPropsGameTv from './world/props/game-tv.js';
 import * as worldPropsNeon from './world/props/neon.js';
 import * as worldPropsStringLights from './world/props/string-lights.js';
 import * as worldPropsCat from './world/props/cat.js';
@@ -54,6 +55,7 @@ import * as peopleRounds from './people/rounds.js';
 import * as peopleGuard from './people/guard.js';
 import * as peopleHr from './people/hr.js';
 import * as peopleFoosball from './people/foosball.js';
+import * as peopleGaming from './people/gaming.js';
 import * as lifeTrophies from './life/trophies.js';
 import * as lifeSeasons from './life/seasons.js';
 import * as lifeRain from './life/rain.js';
@@ -123,6 +125,7 @@ const MODULES = [
   worldPropsArcade,
   worldPropsPrinter,
   worldPropsTv,
+  worldPropsGameTv,
   worldPropsNeon,
   worldPropsStringLights,
   worldPropsCat,
@@ -148,6 +151,7 @@ const MODULES = [
   peopleGuard,
   peopleHr,
   peopleFoosball,
+  peopleGaming,
   lifeTrophies,
   lifeSeasons,
   lifeRain,

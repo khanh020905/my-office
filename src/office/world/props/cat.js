@@ -5,7 +5,7 @@ import { state } from '../../core/state.js';
 import { PRO, V2, el, rand, randInt, wrapAngle } from '../../core/env.js';
 import { scene } from '../../scene/renderer.js';
 import { canvasTex, cyl, mat, put } from '../../scene/blocks.js';
-import { LAY } from '../layout.js';
+import { sofaAt } from '../layout.js';
 import { NODES, nearestNode, route } from '../../people/navigation.js';
 import { sessions, workers } from '../../people/workers.js';
 import { fp } from '../../interact/first-person.js';
@@ -96,7 +96,7 @@ export function setup() {
     return { g, body, head, legs, segs, say, pos: PRO ? new V2(9.8, 6.4) : new V2(-0.9, 4.3), y: 0, face: 0, path: [], mode: 'sit', until: 4, target: null, hop: null, sayUntil: 0 };
   })();
   // where the cat naps (the coffee table in front of the sofa) and the spots it likes
-  SOFA = PRO ? { x: LAY.sofa[0] + 0.05, z: LAY.sofa[1] + 1.12, y: 0.46, via: { x: LAY.sofa[0] + 0.05, z: LAY.sofa[1] + 1.95 } } : { x: -2.1, z: -4.72, y: 0.46, via: { x: -2.1, z: -3.85 } };
+  SOFA = PRO ? { x: sofaAt(0.05, 1.12)[0], z: sofaAt(0.05, 1.12)[1], y: 0.46, via: { x: sofaAt(0.05, 1.95)[0], z: sofaAt(0.05, 1.95)[1] } } : { x: -2.1, z: -4.72, y: 0.46, via: { x: -2.1, z: -3.85 } };
   CAT_SPOTS = PRO ? [{ x: 9.8, z: 6.4 }, { x: -5.6, z: 4.0 }, { x: 11.6, z: -2.9 }, { x: 4.6, z: -5.4 }, { x: 2.4, z: 7.9 }, { x: -2.9, z: -1.7 }, { x: 11.3, z: 7.5 }, { x: -6.1, z: -4.4 }]
     : [{ x: 1.0, z: -3.9 }, { x: -6.1, z: 3.4 }, { x: 6.2, z: 0.6 }, { x: -0.9, z: 4.3 }, { x: 3.0, z: 4.4 }, { x: -6.2, z: -0.6 }, { x: 5.0, z: -2.8 }];
   heartTex = canvasTex(64, 64, (g) => { g.fillStyle = '#FF5C8A'; g.beginPath(); g.moveTo(32, 54); g.bezierCurveTo(6, 36, 6, 12, 22, 12); g.bezierCurveTo(28, 12, 32, 18, 32, 22); g.bezierCurveTo(32, 18, 36, 12, 42, 12); g.bezierCurveTo(58, 12, 58, 36, 32, 54); g.fill(); });

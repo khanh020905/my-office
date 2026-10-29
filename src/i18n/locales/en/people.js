@@ -32,6 +32,21 @@ export default {
     lose: 'Rematch later!',
     called: 'Work came in, rematch later!',
   },
+  tv: {
+    invite: ['Fancy a game? 🎮', 'Sofa, one match?', 'Just one round?'],
+    join: ["I'm in!", "I'll take blue 🎮", "OK, no crying when you lose"],
+    joinYou: ['Let me play! 🎮', "Take me on!", "Let's see what you've got"],
+    goal: ['Goooal! ⚽', 'Get in!', 'What a strike!', 'Celebration time 🙌'],
+    conceded: ['What?!', 'Keeper fell asleep 😩', "Doesn't count, lag!"],
+    ko: ['K.O.! 💥', 'Stay down!', 'Nice combo!'],
+    overtake: ['Passing! 🏎️', 'Bye bye!', 'Out of my way!'],
+    crash: ['Argh, crashed!', 'Who put that tree there 😤', 'Slipped!'],
+    close: ["It's tight!", 'Neck and neck!'],
+    win: ['Winner 😎', 'Too easy!', 'Call me the game king'],
+    lose: ['Rematch!', 'My controller is broken 😤', 'Again!'],
+    draw: ['A draw, one more!', 'No winner yet'],
+    called: 'Work came in, pause!',
+  },
   // clicked while napping: one line per click, in this order
   poke: {
     doneNamed: 'Finished “{done}”, let me rest a bit 😴',

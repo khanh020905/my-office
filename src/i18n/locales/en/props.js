@@ -29,6 +29,7 @@ export default {
   director: { name: "Director's office", hint: 'The director (you) carries prompts to desks and takes reports when work is done · trophy shelf' },
   wc: { name: 'Restroom', hint: 'Who is in there' },
   foosball: { name: 'Foosball table', hint: 'Give it a spin' },
+  gametv: { name: 'Games TV', hint: 'Call two free people over for a match (walk in to sit down and play yourself)', score: '{game}: {a} {x}–{y} {b}', coming: '{a} and {b} are heading to the sofa', called: '{a} and {b} are playing {game} 🎮', nobody: 'Nobody is free to play', you: "You're playing already" },
   season: {
     halloween: 'Halloween pumpkins',
     noel: 'Christmas tree',

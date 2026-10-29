@@ -28,6 +28,7 @@ import { updateRounds } from '../people/rounds.js';
 import { updateGuard } from '../people/guard.js';
 import { updateHr } from '../people/hr.js';
 import { updateFoosball } from '../people/foosball.js';
+import { updateGaming } from '../people/gaming.js';
 import { shadowStandIns } from '../people/chibi-rig.js';
 import { updateTips } from '../ui/tips.js';
 import { updatePlaces } from '../interact/place-chips.js';
@@ -126,6 +127,7 @@ export function loop(now = 0) {
   updateGuard(dt);
   updateHr();
   updateFoosball(dt);
+  updateGaming(dt);
   updateBoard(state.sim);
   updatePlaces(now);
   updateTeam();

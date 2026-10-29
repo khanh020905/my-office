@@ -42,6 +42,7 @@
 .fp-exit { all: unset; pointer-events: auto; position: absolute; right: 14px; top: 12px; height: 36px; display: inline-flex; align-items: center; gap: 6px; padding: 0 12px; border-radius: 10px; background: rgba(17, 23, 32, .86); border: 1px solid var(--line-2); font-size: .78rem; font-weight: 700; cursor: pointer; }
 .fp-exit:hover { background: var(--card-2); }
 .fp-near { all: unset; pointer-events: auto; position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: rgba(17, 23, 32, .9); border: 1px solid var(--green); color: var(--ink); font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; max-width: 80%; overflow: hidden; text-overflow: ellipsis; }
+.is-gaming .fp-near, .is-gaming .fp-cross, .is-gaming .fp-help { display: none !important; }   /* (on the sofa with a controller: the TV is the view) */
 .fp-near kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 8px; border-radius: 6px; background: var(--green); color: #06210F; font: 800 .72rem/1 inherit; }
 .fp-joy { display: none; pointer-events: auto; position: absolute; left: 22px; bottom: 96px; width: 116px; height: 116px; border-radius: 50%; background: rgba(17, 23, 32, .45); border: 1px solid var(--line-2); touch-action: none; }
 .fp-joy i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--accent); opacity: .9; }

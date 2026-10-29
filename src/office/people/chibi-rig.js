@@ -317,6 +317,16 @@ export function makeChibi(cfg = {}, scale = 1) {
   const coverM = plainMat('#C8553D'), pageM = plainMat('#FBF8F0');
   for (const sx of [-1, 1]) { const c = new THREE.Mesh(new THREE.BoxGeometry(0.18, 0.018, 0.25), coverM); c.position.x = sx * 0.09; c.rotation.z = -sx * 0.18; book.add(c); const p = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.018, 0.23), pageM); p.position.set(sx * 0.09, 0.015, 0); p.rotation.z = -sx * 0.18; book.add(p); }
   book.visible = false; P.book = book;
+  // a game controller held in both hands (the lounge TV: people/gaming.js): grips, two sticks, a touchpad, its light bar
+  const pad = new THREE.Group(); pad.position.set(0, D.shY - 0.3, 0.24); pad.rotation.x = -0.55; spine.add(pad);
+  { const body = plainMat('#F2F3F5', { roughness: 0.45 }), trim = plainMat('#1C1F25');
+    const box = (w, h, d, m, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); pad.add(o); return o; };
+    box(0.15, 0.03, 0.065, body, 0, 0, 0);
+    for (const sx of [-1, 1]) { const g = new THREE.Mesh(new THREE.CapsuleGeometry(0.022, 0.04, 4, 8), body); g.rotation.x = Math.PI / 2 + 0.35; g.rotation.z = -sx * 0.35; g.position.set(sx * 0.062, -0.006, 0.035); pad.add(g); }
+    for (const sx of [-1, 1]) box(0.018, 0.012, 0.018, trim, sx * 0.03, 0.02, 0.012);
+    box(0.05, 0.004, 0.028, trim, 0, 0.016, -0.014);
+    box(0.05, 0.004, 0.006, plainMat('#5FA8FF', { emissive: '#3A7BFF', emissiveIntensity: 0.8 }), 0, 0.012, -0.034); }
+  pad.visible = false; P.pad = pad;
   const mug = new THREE.Group(); mug.position.set(0, -0.02, D.handR * 0.9); P.armR.hand.add(mug);
   mug.add(new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.11, 16), plainMat('#FFFFFF')));
   const mh = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.01, 6, 12), plainMat('#FFFFFF')); mh.position.x = 0.064; mug.add(mh);
@@ -590,6 +600,14 @@ export function chibiPose(P, anim, ph, o = {}) {
       p.armL = reachW(-1, -0.11, y + j, z); p.armR = reachW(1, 0.11, y + j2, z);
       break;
     }
+    case 'gamepad': {   // a controller in both hands, thumbs busy, leaning into it, swaying with the game (people/gaming.js)
+      const m = Math.sin(ph * 0.53);
+      p.lean = (sit ? 0.1 : 0.06) + Math.max(0, m) * 0.12; p.tilt = Math.sin(ph * 0.9) * (sit ? 0.06 : 0.03); p.pad = true;
+      p.head = [-0.05, 0, Math.sin(ph * 0.9) * 0.05]; if (m > 0.88) p.mouth = 'o';
+      const y = p.y + D.hipY + D.shY - 0.3, z = 0.24 + (D.shY - 0.3) * Math.sin(p.lean), j = Math.sin(ph * 25) * 0.007, j2 = Math.sin(ph * 31 + 1) * 0.007;
+      p.armL = reach(-1, -0.085, y + j, z); p.armR = reach(1, 0.085, y + j2, z);
+      break;
+    }
     case 'read': {
       p.lean = 0.04; p.book = true; p.head = [0.3, 0, 0];
       const y = p.y + D.hipY + D.shY - 0.2, z = 0.27 + (D.shY - 0.2) * Math.sin(p.lean);
@@ -708,7 +726,7 @@ export function applyChibiPose(P, p, dt) {
   for (const k in P.held) { const g = P.held[k]; g.visible = p.held === k; if (g.visible) g.rotation.copy(P.mug.rotation); }
   P.bag.rotation.set(-(P.armL.sh.rotation.x + P.armL.el.rotation.x + P.spine.rotation.x), 0, -P.armL.sh.rotation.z);   // (hangs straight down)
   P.grocery.rotation.copy(P.bag.rotation);
-  P.book.visible = p.book; P.mug.visible = p.mug; P.drop.visible = p.drop; P.shadow.visible = p.shadow;
+  P.book.visible = p.book; P.pad.visible = !!p.pad; P.mug.visible = p.mug; P.drop.visible = p.drop; P.shadow.visible = p.shadow;
   P.bag.visible = !!p.bag; P.grocery.visible = !!p.grocery;
   if (p.held === 'noodle') { const u = (performance.now() / 1600) % 1; P.steam.position.y = 0.12 + u * 0.12; P.steam.material.opacity = 0.5 * (1 - u) * Math.min(1, u * 6); P.steam.scale.setScalar(0.08 + u * 0.1); }
   if (p.drop) P.drop.position.y = P.D.hipY + P.D.headY + P.D.R * 0.6 - ((performance.now() / 1000) * 1.3 % 1) * 0.3;

@@ -528,6 +528,43 @@ test('foosball: two who are resting play a game in the lounge, and work coming i
   expect(errors).toEqual([]);
 });
 
+// gaming.js adds its own hooks (?debug)
+type Tv = { on: boolean, kind: string | null, stage: string | null, npc: boolean, time: number | null, players: string[], me: boolean };
+type WinT = { __office?: DebugOffice & { tvGame: (k?: string) => boolean, tvPlay: () => void, tv: Tv, fp: { on: boolean } } };
+
+test('the lounge TV: two people resting play a match on the sofa, and in first person you sit down and play', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=10:40');
+  await page.waitForFunction(() => !!(window as unknown as WinT).__office?.tvGame, null, { timeout: 60_000 });
+  await page.evaluate(() => { const o = (window as unknown as WinT).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(3); });
+  const tv = () => page.evaluate(() => (window as unknown as WinT).__office!.tv);
+  await expect.poll(() => page.evaluate(() => (window as unknown as WinT).__office!.tvGame('racing')), { timeout: 90_000 }).toBe(true);
+  // both on the sofa, the TV on, the race running
+  await expect.poll(async () => (await tv()).stage, { timeout: 120_000 }).toBe('play');
+  expect((await tv()).on).toBe(true);
+  const t0 = (await tv()).time;
+  await expect.poll(async () => (await tv()).time, { timeout: 60_000 }).not.toBe(t0);   // (after the 3-2-1)
+  // work for one of them: the game ends where it stands, both get up, the TV goes back to standby
+  await page.evaluate(() => { const o = (window as unknown as WinT).__office!, id = o.tv.players[0], s = o.sessions.get(id) as object; o.upsert({ ...s, status: 'work' }); });
+  await expect.poll(async () => (await tv()).on, { timeout: 90_000 }).toBe(false);
+  // first person: E at the TV sits you down; pick a game, play, get up
+  await page.click('#btn-fp');
+  await page.evaluate(() => (window as unknown as WinT).__office!.tvPlay());
+  await expect.poll(async () => (await tv()).stage, { timeout: 10_000 }).toBe('menu');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await tv()).stage, { timeout: 10_000 }).toBe('play');
+  expect((await tv()).kind).toBe('racing');
+  await page.keyboard.down('ArrowLeft'); await page.waitForTimeout(800); await page.keyboard.up('ArrowLeft');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await tv()).me, { timeout: 10_000 }).toBe(false);
+  expect(await page.evaluate(() => (window as unknown as WinT).__office!.fp.on)).toBe(true);   // (Esc gets you up, it doesn't leave first person)
+  expect(errors).toEqual([]);
+});
+
 test('adding a Claude account: a folder of its own, connected to the office, signed in from the card', async ({ page }) => {
   test.setTimeout(420_000);   // (signing in, renaming, picking, then the page once more: ~5 min on a busy machine)
   const errors = watchErrors(page), dir = path.join(HOME_DIR, '.claude-cong-ty');

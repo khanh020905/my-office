@@ -27,4 +27,17 @@ export default {
   banhmiDone: 'A warm, crunchy bánh mì, 20,000 đồng 🥖',
   tea: 'Sit down for an iced tea',
   teaDone: 'Iced tea, 5,000 đồng a glass 🧊',
+  tv: {
+    you: 'You',
+    cpu: 'CPU',
+    sat: 'On the sofa 🎮 ←/→ pick a game, Space to start, Esc to get up. A real gamepad works too: just plug it in.',
+    up: 'Controller down',
+    busy: '{a} and {b} are playing, wait for the next one',
+    noSeat: 'The sofa is full',
+    youWon: 'You win! 🏆',
+    youLost: '{name} wins. Rematch?',
+    menuHelp: 'vs {who} · Space to start · Esc to get up',
+    keys: { football: 'arrows run · Space pass · K shoot / tackle', racing: 'it drives itself · ←→ steer · ↓ brake · K nitro', fighting: '←→ move · ↑ jump · ↓ block · Space punch · K kick (full bar: fireball)' },
+    game: { football: 'FOOTBALL', racing: 'RACING', fighting: 'FIGHTING' },
+  },
 };

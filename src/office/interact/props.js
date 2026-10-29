@@ -7,7 +7,7 @@ import { scene } from '../scene/renderer.js';
 import { lamps } from '../scene/lights.js';
 import { lampBulbs, mat } from '../scene/blocks.js';
 import { BULB_OFF, BULB_ON } from '../world/terrace.js';
-import { LAY } from '../world/layout.js';
+import { sofaAt } from '../world/layout.js';
 import { clockG, globe, globeStand, shelf, sofaG } from '../world/furniture/room-pieces.js';
 import { leds, rackG } from '../world/furniture/server-racks.js';
 import { ROCKET_HOME, rocket } from '../world/furniture/rocket.js';
@@ -22,6 +22,8 @@ import { AQ } from '../world/props/aquarium.js';
 import { ARC } from '../world/props/arcade.js';
 import { PRN, paper, printPage } from '../world/props/printer.js';
 import { tvG } from '../world/props/tv.js';
+import { GTV } from '../world/props/game-tv.js';
+import { tvClick } from '../people/gaming.js';
 import { neonG, neonM } from '../world/props/neon.js';
 import { SOFA, cat, catGo, petCat } from '../world/props/cat.js';
 import { vac } from '../world/props/vacuum.js';
@@ -131,7 +133,7 @@ function deskSession(i) { return [...sessions.values()].find((s) => s.desk === i
 function openDesk(i) { const s = deskSession(i); if (s) openSession(s.id); else openPlace('desks', PROPS.get('desk' + i)); }
 export function buildProps() {
   scene.updateMatrixWorld(true);
-  const R = ROCKET_HOME, S = LAY.sofa;
+  const R = ROCKET_HOME;
   const REG = PRO ? { window: [6.7, 0.9, -8.2, 8.7, 3.2, -7.6], meeting: [-2.55, 0, -7.5, 2.95, 1.45, -3.75] }
     : { window: [-1.6, 1.0, -6.1, 3.4, 3.7, -5.5], meeting: [3.7, 0, 0.85, 6.75, 1.3, 3.95] };
   prop('shelf', { name: tr('props.shelf.name'), hint: tr('props.shelf.hint'), place: 'library', meshes: meshesOf(shelf), bounce: shelf });
@@ -152,12 +154,13 @@ export function buildProps() {
   prop('vac', { name: tr('props.vac.name'), hint: tr('props.vac.hint'), meshes: meshesOf(vac.g), dyn: vac.g, act: () => { vacSpin = state.sim + 1.3; sfx.play('beep'); } });
   prop('clock', { name: tr('props.clock.name'), hint: tr('props.clock.hint'), meshes: meshesOf(clockG), bounce: clockG, act: cycleTime });
   prop('neon', { name: tr('props.neon.name'), hint: tr('props.neon.hint'), meshes: meshesOf(neonG), act: () => { neonFlicker = state.sim + 1.4; sfx.play('buzz'); } });
-  prop('sofa', { name: tr('props.sofa.name'), hint: tr('props.sofa.hint'), place: PRO ? 'lounge' : undefined, meshes: [...meshesOf(sofaG), ...meshesIn([S[0] - 0.5, 0, S[1] + 0.55, S[0] + 0.5, 0.6, S[1] + 1.55])], act: catToSofa });
+  prop('sofa', { name: tr('props.sofa.name'), hint: tr('props.sofa.hint'), place: PRO ? 'lounge' : undefined, meshes: [...meshesOf(sofaG), ...meshesIn([Math.min(sofaAt(-0.5, 0.55)[0], sofaAt(0.5, 1.55)[0]), 0, Math.min(sofaAt(-0.5, 0.55)[1], sofaAt(0.5, 1.55)[1]), Math.max(sofaAt(-0.5, 0.55)[0], sofaAt(0.5, 1.55)[0]), 0.6, Math.max(sofaAt(-0.5, 0.55)[1], sofaAt(0.5, 1.55)[1])])], act: catToSofa });
   if (PRO) {
     prop('trophies', { name: tr('props.trophies.name'), hint: tr('props.trophies.hint'), place: 'director', meshes: meshesOf(PRO_FX.trophyCab) });
     prop('director', { name: tr('props.director.name'), hint: tr('props.director.hint'), place: 'director', meshes: [...meshesOf(PRO_FX.execDesk), ...meshesIn([-7.1, 0, -8.05, -3.5, 1.3, -7.4])] });
     prop('wc', { name: tr('props.wc.name'), hint: tr('props.wc.hint'), place: 'wc', meshes: meshesIn([-8.0, 0, 5.4, -6.7, 2.0, 8.1]) });
     prop('foosball', { name: tr('props.foosball.name'), hint: tr('props.foosball.hint'), place: 'lounge', meshes: meshesOf(PRO_FX.foosball), bounce: PRO_FX.foosball, act: () => sfx.play('click') });
+    if (GTV) prop('gametv', { name: tr('props.gametv.name'), hint: tr('props.gametv.hint'), meshes: meshesOf(GTV.g), act: tvClick });
   }
   if (seasonProp) prop('season', { name: tr('props.season.' + SEASON), hint: tr('props.season.hint', { season: seasonName(SEASON) }), meshes: meshesOf(seasonProp),
     act: () => { if (!reduceMotion) confetti(SEASON_SPOT.centre[0], 2.6, SEASON_SPOT.centre[1]); sfx.play('pop'); } });

@@ -1,6 +1,6 @@
 // The walking graph, desk spots and stations people go to.
 import { HQ, PRO, V2, randInt } from '../core/env.js';
-import { DEPTS, inside } from '../world/layout.js';
+import { DEPTS, LAY, inside, sofaAt } from '../world/layout.js';
 import { DZ, LIFT_X } from '../world/entrance.js';
 import { DESKS, PODS, TEAM_SIZE, dLocal } from '../world/desks.js';
 import { MEET, MEET_SEATS } from '../world/furniture/meeting.js';
@@ -46,6 +46,12 @@ const ROW_NODES = [['T0', 'T1', 'T2'], ['U0', 'U1', 'U2'], ['V0', 'V1', 'V2']];
 export let DESK_SPOTS;
 export const spotAt = (x, z, face, node, sit = false, extra = {}) => ({ x, z, face, node, sit, by: null, ...extra });
 let DINING;
+/* the lounge sofa's two seats (company floor): it faces the TV on the back wall, so they come round its arm and sit down
+   from in front of it, between it and the coffee table (also the gamers' seats: people/gaming.js) */
+export const SOFA_SEATS = () => [-0.5, 0.5].map((lx) => {
+  const [x, z] = sofaAt(lx, 0.15), [ax, az] = sofaAt(lx, 0.65), [ex, ez] = sofaAt(lx * 2.1, 0.7);
+  return spotAt(x, z, LAY.sofa[3], x < LAY.sofa[0] ? 'LGs' : 'LGr', true, { via: [[ex, ez], [ax, az]] });
+}).sort((a, b) => a.x - b.x);
 export let STATIONS;
 // four chairs, then people stand around the table facing it: four between the chairs, eight a step further out
 function meetStanding() {
@@ -226,7 +232,7 @@ export function setup() {
     board: [spotAt(-2.75, 6.55, -Math.PI / 2, 'L3'), spotAt(-2.75, 7.95, -Math.PI / 2, 'L4')],
     globe: [spotAt(7.1, -6.2, faceTo(7.1, -6.2, 8.0, -6.55), 'LBm'), spotAt(7.6, -5.3, faceTo(7.6, -5.3, 8.0, -6.55), 'LBm')],
     server: [spotAt(-6.55, -2.52, -Math.PI / 2, 'SVi'), spotAt(-6.55, -1.47, -Math.PI / 2, 'SVi'), spotAt(-6.55, -0.42, -Math.PI / 2, 'SVi')],
-    coffee: [spotAt(10.5, 3.15, 0, 'LGs', true), spotAt(11.5, 3.15, 0, 'LGr', true), ...DINING, spotAt(11.45, -6.75, Math.PI, 'PA4'), spotAt(10.35, -6.75, Math.PI, 'PA2')],
+    coffee: [...SOFA_SEATS(), ...DINING, spotAt(11.45, -6.75, Math.PI, 'PA4'), spotAt(10.35, -6.75, Math.PI, 'PA2')],
     meeting: [...MEET_SEATS, spotAt(2.55, -4.7, -Math.PI / 2, 'MTi'), spotAt(2.6, -5.6, -Math.PI / 2, 'MTb'), spotAt(2.55, -6.5, -Math.PI / 2, 'MTb'), spotAt(-2.2, -6.6, Math.PI / 2, 'MTw'),
       spotAt(-2.2, -4.5, Math.PI / 2, 'MTf')],
     director: [spotAt(-5.95, -4.95, Math.PI, 'DRc', true), spotAt(-4.85, -4.95, Math.PI, 'DRc', true)],
