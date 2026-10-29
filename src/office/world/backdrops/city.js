@@ -5,7 +5,7 @@ import { HQ } from '../../core/env.js';
 import { canvasTex, mat } from '../../scene/blocks.js';
 import { BULB_OFF, GY, bollards, boxAt, cI, cPick, cR, colorize, cr, mergeAll, mergedTo, vmat } from '../terrace.js';
 import { buildStreetLife } from './street-life.js';
-import { buildShops, officeMiddle } from './shops.js';
+import { SHOPS, SHOP_CEIL, SHOP_W, buildShops, officeMiddle, shopDepth } from './shops.js';
 
 export let dotTex;
 export let poolTex;
@@ -100,6 +100,7 @@ export function buildCity(G) {
   buildingMats.push(shopM);
 
   const parts = FACADES.map(() => []), roofs = [], clutter = [], shops = [], fronts = [], greens = [], slabs = [], lanes = [], beaconPos = [];
+  const lowers = [];   // each building's lower block (its ground floor), by building
   const parks = [], solids = [];   // whole blocks left as parks, and every building's footprint (for the street life)
   const trees = [], plazas = [];   // the parks' trees ([x, z, size]) and paved squares ([x0, x1, z0, z1]), for the street life too
   // The parks near the office, nearest first (the order street-life.js puts them in): the third and fourth have a paved
@@ -178,6 +179,7 @@ export function buildCity(G) {
     const offU = cI(0, 30), offV = cI(0, 63);
     const n1 = floors >= 8 && Math.min(w, d) > 5.5 ? Math.max(3, Math.round(floors * cR(0.4, 0.62))) : floors;
     addBox(style, cx, cz, w, d, 0, n1 * FH, tint, offU, offV);
+    const lower = { style, idx: parts[style].length - 1, x0, x1, z0, z1, h: n1 * FH, tint, offU, offV }, bid = lowers.push(lower) - 1;   // (a shop may be cut into it: notch())
     let tx = cx, tz = cz, tw = w, td = d;
     if (n1 < floors) {
       rooftop(cx, cz, w, d, n1 * FH, 0);
@@ -194,10 +196,10 @@ export function buildCity(G) {
         for (let k = 0; k < uv.count; k++) uv.setX(k, (i + uv.getX(k)) / SHOP_N);
         g = place(g);
       }
-      fronts.push({ ...front, len, plain: g });
+      fronts.push({ ...front, len, plain: g, bid });
     };
-    if (faces.px) shop(d, (g) => g.rotateY(Math.PI / 2).translate(x1 + 0.03, GY + FH * 0.41, cz), { dir: 'px', x: x1, z: cz });
-    if (faces.pz) shop(w, (g) => g.translate(cx, GY + FH * 0.41, z1 + 0.03), { dir: 'pz', x: cx, z: z1 });
+    if (faces.px) shop(d, (g) => g.rotateY(Math.PI / 2).translate(x1 + 0.03, GY + FH * 0.41, cz), { dir: 'px', x: x1, z: cz, deep: w });
+    if (faces.pz) shop(w, (g) => g.translate(cx, GY + FH * 0.41, z1 + 0.03), { dir: 'pz', x: cx, z: z1, deep: d });
   }
   function fillBlock(x0, x1, z0, z1) {
     slabs.push(boxAt(x1 - x0, 0.12, z1 - z0, (x0 + x1) / 2, GY + 0.06, (z0 + z1) / 2, '#8D939B'));
@@ -221,7 +223,22 @@ export function buildCity(G) {
     if (inSB((x0 + x1) / 2, (z0 + z1) / 2)) continue;
     fillBlock(x0, x1, z0, z1);
   }
-  const [mx, mz] = officeMiddle(), nearest = fronts.filter((f) => f.len >= 7.5).sort((a, b) => Math.hypot(a.x - mx, a.z - mz) - Math.hypot(b.x - mx, b.z - mz)).slice(0, 3);
+  // the shops: the long street fronts nearest the office, one to a building (two on a corner would cut into each other)
+  const [mx, mz] = officeMiddle(), nearest = [], used = new Set();
+  for (const f of fronts.filter((f) => f.len >= 7.5 && f.deep >= 6).sort((a, b) => Math.hypot(a.x - mx, a.z - mz) - Math.hypot(b.x - mx, b.z - mz))) {
+    if (used.has(f.bid)) continue;
+    used.add(f.bid); nearest.push(f);
+    if (nearest.length === SHOPS) break;
+  }
+  // each shop's room cut out of its building's ground floor: the block rebuilt round it (above it, beside it, behind it)
+  for (const f of nearest) {
+    const B = lowers[f.bid], D = shopDepth(f.deep), H = SHOP_CEIL, half = SHOP_W / 2;
+    parts[B.style][B.idx] = null;
+    const piece = (a, b, c, d, y0, h) => { if (b - a > 0.05 && d - c > 0.05 && h > 0.05) addBox(B.style, (a + b) / 2, (c + d) / 2, b - a, d - c, y0, h, B.tint, B.offU, B.offV); };
+    piece(B.x0, B.x1, B.z0, B.z1, H, B.h - H);
+    if (f.dir === 'px') { const nx = B.x1 - D; piece(B.x0, nx, B.z0, B.z1, 0, H); piece(nx, B.x1, B.z0, f.z - half, 0, H); piece(nx, B.x1, f.z + half, B.z1, 0, H); }
+    else { const nz = B.z1 - D; piece(B.x0, B.x1, B.z0, nz, 0, H); piece(B.x0, f.x - half, nz, B.z1, 0, H); piece(f.x + half, B.x1, nz, B.z1, 0, H); }
+  }
   const stores = buildShops(G, nearest);
   for (const f of fronts) if (f.plain && !f.store) shops.push(f.plain);
   slabs.push(boxAt(SB.x1 - SB.x0, 0.12, SB.z1 - SB.z0, (SB.x0 + SB.x1) / 2, GY + 0.06, (SB.z0 + SB.z1) / 2, '#8D939B'));
@@ -243,9 +260,9 @@ export function buildCity(G) {
   for (const z of ZS) for (let x = xMin + 4, k = 0; x < xMax; x += 9, k++) { if (!inSB(x, z)) { if (k % 2) lamp(x, z - STREET_W / 2 - 0.5, 0, 1); else lamp(x, z + STREET_W / 2 + 0.5, 0, -1); } }
 
   /* traffic, the lights, the bus stop and people on the pavements (street-life.js) */
-  const life = buildStreetLife(G, { XS, ZS, STREET_W, SB, shops: nearest, parks, solids, trees, plazas, faces: fronts });
+  const life = buildStreetLife(G, { XS, ZS, STREET_W, SB, shops: nearest, parks, solids, trees, plazas, faces: fronts, inShop: stores.walk });
   lanes.push(...life.marks);
-  FACADES.forEach((_, i) => mergedTo(G, parts[i], styleMats[i]));
+  FACADES.forEach((_, i) => mergedTo(G, parts[i].filter(Boolean), styleMats[i]));
   mergedTo(G, roofs, vmat({ roughness: 0.9 }));
   mergedTo(G, clutter, vmat({ roughness: 0.7, metalness: 0.15 }));
   mergedTo(G, greens, vmat({ roughness: 0.95 }));
@@ -262,12 +279,12 @@ export function buildCity(G) {
   G.add(beacons);
 
   function updateCity(dt, t) {
-    life.update(dt, t); stores.update();
+    life.update(dt, t); stores.update(dt, t);
     beacons.material.opacity = (t % 1.6) < 0.25 ? 1 : 0.18;
   }
   function setCityNight(on) { street.material.color.set(on ? '#1B1F27' : '#5B616A'); for (const m of buildingMats) m.emissiveIntensity = on ? 0.9 : 0; slabMesh.material.color.setScalar(on ? 0.33 : 1); poolMesh.visible = on; life.night(on); stores.night(on); }
   // street: for people from the office going out (outings.js): the way on foot, the GrabFood rider, the shops' doors
-  return { update: updateCity, night: setCityNight, street: { ...life.street, doors: stores.doors } };
+  return { update: updateCity, night: setCityNight, street: { ...life.street, doors: stores.doors, shop: stores.shop } };
 }
 
 export function setup() {

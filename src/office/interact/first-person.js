@@ -20,7 +20,7 @@ import { t as tr } from '../../i18n/index.js';
 
 export let fp;
 let FPB;
-const CELL = 0.1;
+const CELL = 0.1, SIT_H = 0.49;   // (the chair seat the rig sits on: on a stool its feet hang this far below the seat)
 export function buildGrid() {
   const W = Math.ceil((FPB.x1 - FPB.x0) / CELL), H = Math.ceil((FPB.z1 - FPB.z0) / CELL);
   const grid = new Uint8Array(W * H), box = new THREE.Box3();
@@ -75,14 +75,34 @@ export function toStreet() {
   });
 }
 function toOffice(now = false) {
-  const go = () => { street()?.setWalker(null); fp.street = false; fp.carry = null; setNear(null); fp.pos.set(DOOR_IN.x + 0.7, DOOR_IN.z); fp.yaw = Math.PI / 2; };
+  const go = () => { street()?.setWalker(null); street()?.shop?.feel(null); fp.street = false; fp.carry = null; fp.seat = null; setNear(null); fp.pos.set(DOOR_IN.x + 0.7, DOOR_IN.z); fp.yaw = Math.PI / 2; };
   if (now) go(); else through(go);
 }
-// what you can do out there, within reach: the way back in, a shop's door, the cart, the stall
+/* ---------- in a shop (shops.js): take things from the fridges and the chain's corner, pay at the till by QR, sit at the
+   window counter ---------- */
+const vnd = (k) => `${(k * 1000).toLocaleString('vi-VN')}đ`;
+const itemName = (it) => tr(`fp.items.${it.id}`);
+function shopLabel(o) {
+  if (o.kind === 'seat') return tr('fp.sit');
+  if (o.kind !== 'pay') return tr('fp.take', { item: itemName(o.item), price: vnd(o.item.price) });
+  if (fp.basket.length) return tr('fp.pay', { n: fp.basket.length, total: vnd(fp.basket.reduce((a, it) => a + it.price, 0)) });
+  return o.item ? tr('fp.order', { item: itemName(o.item), price: vnd(o.item.price) }) : tr('fp.payEmpty');
+}
+function shopAct(o) {
+  if (o.kind === 'seat') { fp.seat = o.seatAt; fp.pos.set(o.seatAt.x, o.seatAt.z); fp.yaw = o.seatAt.yaw; fp.pitch = -0.05; toast(tr('fp.sitDone')); return; }
+  if (o.kind !== 'pay' || (!fp.basket.length && o.item)) { fp.basket.push(o.item); toast(tr('fp.added', { item: itemName(o.item) })); sfx.play('pop'); return; }
+  if (!fp.basket.length) { toast(tr('fp.emptyBasket')); return; }
+  const total = fp.basket.reduce((a, it) => a + it.price, 0), last = fp.basket[fp.basket.length - 1];
+  sfx.play('beep'); toast(tr('fp.paid', { total: vnd(total), shop: o.store.name }));
+  fp.carry = last.carry; fp.carryUntil = fp.t + 120; fp.P.cupBand.material.color.set(o.store.accent); fp.basket = [];
+}
+// what you can do out there, within reach: the way back in, a shop shut for the night, what is in the shop you are in,
+// the cart, the stall
 function streetNear(S) {
   const fx = Math.sin(fp.yaw), fz = Math.cos(fp.yaw), list = [];
   const ex = wayOut(S); if (ex) list.push({ outside: true, x: ex.x, z: ex.z, label: tr('fp.toOffice'), act: () => toOffice() });   // (each: `outside`)
-  for (const d of S.doors()) list.push({ outside: true, x: d.x, z: d.z, label: tr('fp.shop', { shop: d.name }), act: () => { fp.carry = 'cup'; fp.carryUntil = fp.t + 90; fp.P.cupBand.material.color.set(d.accent); toast(tr('fp.bought', { shop: d.name })); sfx.play('coin'); } });
+  for (const d of S.doors()) if (!d.open) list.push({ outside: true, x: d.x, z: d.z, label: tr('fp.closed', { shop: d.name, at: d.opens }), act: () => sfx.play('click') });
+  for (const o of S.shop?.spots() || []) list.push({ outside: true, x: o.x, z: o.z, label: shopLabel(o), act: () => shopAct(o) });
   for (const p of S.spots()) list.push({ outside: true, x: p.x, z: p.z, label: tr(`fp.${p.kind}`), act: () => { if (p.kind === 'banhmi') { fp.carry = 'bag'; fp.carryUntil = fp.t + 60; } toast(tr(`fp.${p.kind}Done`)); sfx.play('coin'); } });
   let best = null, bd = 1.8;
   for (const o of list) {
@@ -140,6 +160,8 @@ export function fpUpdate(dt) {
   fp.yaw -= ((k.has('ArrowRight') ? 1 : 0) - (k.has('ArrowLeft') ? 1 : 0)) * dt * 2.2;
   if (fp.joy) { f -= fp.joy.y; s += fp.joy.x; }
   const len = Math.hypot(f, s); if (len > 1) { f /= len; s /= len; }
+  if (fp.seat && len > 0.1) fp.seat = null;   // (up off the stool)
+  if (fp.seat) { f = 0; s = 0; }
   const speed = k.has('ShiftLeft') || k.has('ShiftRight') ? 3.6 : 2.0;
   const fx = Math.sin(fp.yaw), fz = Math.cos(fp.yaw);            // forward; right is (-fz, fx)
   const vx = (fx * f - fz * s) * speed * dt, vz = (fz * f + fx * s) * speed * dt;
@@ -150,17 +172,18 @@ export function fpUpdate(dt) {
   if (stuck || !hit(fp.pos.x + vx, fp.pos.y)) fp.pos.x += vx;
   if (stuck || !hit(fp.pos.x, fp.pos.y + vz)) fp.pos.y += vz;
   fp.moving = Math.hypot(vx, vz) > 1e-5; fp.t += dt;
+  S?.shop?.feel([fp.pos.x, fp.pos.y]);
   // the ground: the office floor, or the street (the pavement, a step down onto the road); on the road the traffic stops
   const ground = S ? S.groundAt(fp.pos.x, fp.pos.y) : 0;
   S?.setWalker(S && ground < S.pavement - 0.05 ? [fp.pos.x, fp.pos.y] : null);
   if (fp.carry && fp.t > fp.carryUntil) fp.carry = null;   // (finished it)
   // own body
   const P = fp.P, D = P.D;
-  const pose = chibiPose(P, fp.moving ? 'walk' : 'idle', fp.t * (speed > 2.5 ? 1.5 : 1), { look: 0, carry: fp.carry });
-  fp.avatar.position.set(fp.pos.x, ground + applyChibiPose(P, pose, dt), fp.pos.y);
+  const pose = chibiPose(P, fp.moving ? 'walk' : 'idle', fp.t * (speed > 2.5 ? 1.5 : 1), { look: 0, carry: fp.carry, sit: !!fp.seat });
+  fp.avatar.position.set(fp.pos.x, (fp.seat ? fp.seat.y - SIT_H : ground) + applyChibiPose(P, pose, dt), fp.pos.y);
   fp.avatar.rotation.y += wrapAngle(fp.yaw - fp.avatar.rotation.y) * Math.min(1, dt * 12);
   // camera: eyes of the character, or over the shoulder
-  const eyeY = ground + D.hipY + D.headY + (fp.moving ? Math.sin(fp.t * 9) * 0.025 : 0);
+  const eyeY = (fp.seat ? fp.seat.y - SIT_H + D.hipY + D.sitY + D.headY : ground + D.hipY + D.headY) + (fp.moving ? Math.sin(fp.t * 9) * 0.025 : 0);
   const dir = new THREE.Vector3(Math.sin(fp.yaw) * Math.cos(fp.pitch), Math.sin(fp.pitch), Math.cos(fp.yaw) * Math.cos(fp.pitch));
   if (fp.third) {
     const tgt = new THREE.Vector3(fp.pos.x, eyeY - 0.1, fp.pos.y);
@@ -200,7 +223,7 @@ export function setup() {
   // The walkable area is the room plus the terrace. Obstacles come from the scene itself: every static mesh whose box
   // spans knee-to-chest height blocks the 10 cm cells under it (built once, on first use).
   fp = { on: false, third: false, yaw: Math.PI / 2, pitch: -0.06, pos: new V2(DOOR_IN.x + 0.7, DOOR_IN.z), keys: new Set(),
-    drag: null, joy: null, grid: null, avatar: null, P: null, near: null, moving: false, t: 0, street: false, carry: null, carryUntil: 0 };
+    drag: null, joy: null, grid: null, avatar: null, P: null, near: null, moving: false, t: 0, street: false, carry: null, carryUntil: 0, basket: [], seat: null };
   fade = el('div', 'fp-fade'); $('stage-wrap').append(fade);
   FPB = HQ ? { x0: -7.85, x1: 15.3, z0: -7.85, z1: 28.3 } : PRO ? { x0: -7.85, x1: 15.3, z0: -7.85, z1: 11.3 } : { x0: -7.85, x1: 11.7, z0: -5.85, z1: 10.3 };
   $('btn-fp').addEventListener('click', () => (fp.on ? exitFp() : enterFp()));

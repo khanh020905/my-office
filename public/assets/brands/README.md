@@ -12,9 +12,11 @@ any of them, and the logos are shown only as part of a street scene.
 | gs25.svg | [GS25 bi (2019).svg](https://commons.wikimedia.org/wiki/File:GS25_bi_(2019).svg) | GS Retail |
 | 7-eleven.svg | [7-eleven logo.svg](https://commons.wikimedia.org/wiki/File:7-eleven_logo.svg) | 7-Eleven, Inc. |
 | winmart.png | [WinMart logo.png](https://commons.wikimedia.org/wiki/File:WinMart_logo.png) | WinCommerce (Masan Group) |
+| ministop.svg | [MINISTOP logo.svg](https://commons.wikimedia.org/wiki/File:MINISTOP_logo.svg) | Ministop Co. (AEON) |
+| bach-hoa-xanh.png | [Logo Bachhoaxanh.png](https://commons.wikimedia.org/wiki/File:Logo_Bachhoaxanh.png) | Mobile World Investment Corporation |
 | xanh-sm.svg | [Xanh SM logo.svg](https://commons.wikimedia.org/wiki/File:Xanh_SM_logo.svg) | GSM (Green and Smart Mobility) |
 | grab.svg | [Simple Icons](https://simpleicons.org) 15.17.0, CC0 (not Commons) | Grab Holdings |
 
-Which chains appear depends on the city picked for the weather, as of October 2026: Ho Chi Minh City has GS25, Circle K
-and 7-Eleven (almost all of 7-Eleven's Vietnamese stores are there); Hanoi has Circle K, GS25 and WinMart+; Đà Nẵng has
+Which chains appear depends on the city picked for the weather, as of October 2026: Ho Chi Minh City has GS25, Circle K,
+7-Eleven (almost all of 7-Eleven's Vietnamese stores are there), Ministop, WinMart+ and Bách Hóa Xanh; Hanoi has Circle K, GS25 and WinMart+; Đà Nẵng has
 WinMart+ (no Circle K, GS25 or 7-Eleven could be confirmed there) next to the city's own food: mì Quảng and seafood.

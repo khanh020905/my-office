@@ -271,7 +271,7 @@ const walkersAt = (h) => (h >= 7 && h < 22 ? 1 : h >= 6 && h < 23 ? 0.6 : 0.22);
 /** G: the city group; the street grid (XS, ZS, STREET_W), SB (the office's superblock), shops: the shop fronts (shops.js),
     parks: the blocks left as parks, solids: the buildings' footprints ([x0, x1, z0, z1], for walking in); for the park
     life and the weekend's wedding: trees ([x, z, size]), plazas (the parks' paved squares), faces (the buildings' fronts) */
-export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [], solids = [], trees = [], plazas = [], faces = [] }) {
+export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [], solids = [], trees = [], plazas = [], faces = [], inShop = () => undefined }) {
   textures();
   const low = quality.level === 'low';
   const C = officeMiddle();
@@ -1104,7 +1104,8 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
   const pads = blocks.map((b) => [b.x0, b.x1, b.z0, b.z1]), TERR = [TER.x0, TER.x1, TER.z0, TER.z1];
   const inRect = (x, z, [x0, x1, z0, z1], r = 0) => x > x0 - r && x < x1 + r && z > z0 - r && z < z1 + r;
   const groundAt = (x, z) => (pads.some((p) => inRect(x, z, p)) ? GY + 0.12 : GY);
-  const blockedAt = (x, z, r = 0.25) => !near(x, z, 66) || inRect(x, z, TERR, r) || solids.some((sd) => inRect(x, z, sd, r)) || park.blocked(x, z, r) || wedding.blocked(x, z, r) || trade.some((p) => p.blocked?.(x, z, r));
+  // (in a shop, or at its front: the shop says, shops.js)
+  const blockedAt = (x, z, r = 0.25) => inShop(x, z, r) ?? (!near(x, z, 66) || inRect(x, z, TERR, r) || solids.some((sd) => inRect(x, z, sd, r)) || park.blocked(x, z, r) || wedding.blocked(x, z, r) || trade.some((p) => p.blocked?.(x, z, r)));
 
   if (statics.length) mergedTo(G, statics, vmat({ roughness: 0.6, metalness: 0.2 }));
   return {
