@@ -11,6 +11,7 @@ import { macSnap } from './mac-drawer.js';
 import { queuePlace } from '../interact/place-cards.js';
 import { unseenDone } from '../life/your-turn.js';
 import { whereabouts } from '../people/outings.js';
+import { imageUrl, openImage } from './image-view.js';
 import { t as tr, num } from '../../i18n/index.js';
 
 let feedFilter = 'all';
@@ -22,13 +23,18 @@ const ATT = new Set(['wait', 'ask', 'fail', 'cired']);
 export const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 // Consecutive events from the same session (or subagent) within four minutes share one card; alerts stand alone
 // with their actions, so "needs you" never hides inside a group.
-const KIND = { cmd: ['bash', 'deploy', 'commit', 'push', 'cired', 'cigreen'], edit: ['edit', 'write'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
+const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'cired', 'cigreen'], edit: ['edit', 'write'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
 const typeFilter = new Set();
 const kindOk = (e) => !typeFilter.size || [...typeFilter].some((k) => KIND[k].includes(e.type));
 function lineOf(e) {
   const ln = el('span', 'fg-line'), ic = el('span', 'fi-ico');
   ic.append(icon(TYPE_ICON[e.type] || 'sparkle')); if (TYPE_TONE[e.type]) ic.dataset.tone = TYPE_TONE[e.type];
   ln.append(ic, el('span', 'fg-text', cap(verb(e))));
+  if (e.img) {   // an image it read, wrote or edited: a thumbnail, a click opens it (image-view.js)
+    const th = el('span', 'fg-thumb'), im = el('img'); im.loading = 'lazy'; im.alt = ''; im.src = imageUrl(e.img);
+    im.addEventListener('error', () => { th.remove(); ln.classList.remove('has-thumb'); });   // (gone from the disk)
+    th.dataset.img = e.img; th.dataset.name = e.label || ''; th.title = tr('activity.image.view'); th.append(im); ln.append(th); ln.classList.add('has-thumb');
+  }
   return ln;
 }
 export function feedRow(e) {
@@ -219,7 +225,7 @@ function onListClick(ev) {
 }
 export const fmtTok = (n) => (n >= 1e6 ? `${num(n / 1e6, 1)}M` : `${Math.round(n / 1000)}k`);
 export const fmtUsd = (v) => `$${v >= 100 ? Math.round(v) : v.toFixed(2)}`;
-const KPIS = [['prompts', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'rocket']];   // labels: activity.kpi.<key>
+const KPIS = [['prompts', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'coin']];   // labels: activity.kpi.<key>
 export function renderHud() {
   const list = [...sessions.values()];
   const waiting = list.filter((s) => s.status === 'wait').length;
@@ -227,9 +233,10 @@ export function renderHud() {
   $('active-count').textContent = list.length ? tr('activity.sessions', { n: list.length }) + (subCount ? ` · ${tr('activity.subsRunning', { n: subCount })}` : '') : tr('activity.noSessions');
   $('feed-stats').replaceChildren(...KPIS.map(([k, ic]) => {
     const label = tr(`activity.kpi.${k}`);
-    const d = el('div', 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
-    const v = k === 'cost' ? fmtUsd(list.reduce((a, s) => a + (s.usage?.cost || 0), 0)) : num(state.stats[k] || 0);
-    d.append(i, el('b', null, v), el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiToday', { label });
+    const d = el('div', k === 'cost' ? 'kpi kpi--cost' : 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
+    const b = el('b', null, k === 'cost' ? fmtUsd(list.reduce((a, s) => a + (s.usage?.cost || 0), 0)) : num(state.stats[k] || 0));
+    if (k === 'cost') b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
+    d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiToday', { label });
     return d;
   }));
   $('bell-dot').hidden = !waiting;
@@ -264,7 +271,11 @@ export function setup() {
     if (typeFilter.has(b.dataset.k)) typeFilter.delete(b.dataset.k); else typeFilter.add(b.dataset.k);
     b.setAttribute('aria-pressed', String(typeFilter.has(b.dataset.k))); renderFeed();
   });
-  $('feed-list').addEventListener('click', (ev) => { const b = ev.target.closest('[data-sess]'); if (b) openFromRow(b); });
+  $('feed-list').addEventListener('click', (ev) => {
+    const im = ev.target.closest('[data-img]');
+    if (im) { const b = im.closest('[data-sess]'); openImage(im.dataset.img, im.dataset.name, (b && sessions.get(b.dataset.sess)?.name) || ''); return; }
+    const b = ev.target.closest('[data-sess]'); if (b) openFromRow(b);
+  });
   $('flt-all').addEventListener('click', () => setFilter('all'));
   $('flt-att').addEventListener('click', () => setFilter('att'));
   try { restCollapsed = localStorage.getItem('office-rest-folded') === '1'; } catch { /* storage blocked */ }

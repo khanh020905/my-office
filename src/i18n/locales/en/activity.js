@@ -1,5 +1,6 @@
 // The activity column, the session list and the stat tiles (ui/activity.js), plus the live connection (net/live.js).
 export default {
+  image: { view: 'View the image', close: 'Close', gone: 'This image is no longer on the computer.' },
   subagent: 'subagent',
   working: 'working',
   starting: 'Starting…',
@@ -38,7 +39,7 @@ export default {
     read: 'Reads',
     edit: 'Edits',
     cmd: 'Cmds',   // the tile is narrow: "Commands" does not fit
-    cost: 'API price ≈',
+    cost: 'API price',
   },
   kpiToday: '{label} today',
   costTitle: "Equivalent list API price of the open sessions (not your bill if you're on a Pro/Max plan)",

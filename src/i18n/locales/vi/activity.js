@@ -1,4 +1,5 @@
 export default {
+  image: { view: 'Xem ảnh', close: 'Đóng', gone: 'Ảnh này không còn trên máy.' },
   subagent: 'trợ lý',
   working: 'đang làm',
   starting: 'Đang bắt đầu…',
@@ -35,7 +36,7 @@ export default {
     read: 'Đọc',
     edit: 'Sửa',
     cmd: 'Lệnh',
-    cost: 'Giá API ≈',
+    cost: 'Giá API',
   },
   kpiToday: '{label} hôm nay',
   costTitle: 'Giá API niêm yết tương đương của các phiên đang mở (không phải hoá đơn nếu bạn dùng gói Pro/Max)',

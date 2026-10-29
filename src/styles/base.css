@@ -7,7 +7,10 @@
   --line: rgba(255, 255, 255, .07); --line-2: rgba(255, 255, 255, .13);
   --ink: #E8ECF4; --muted: #8D97AA; --faint: #5E687B;
   --green: #3DDC84; --green-ink: #8FEDB8; --green-soft: rgba(61, 220, 132, .11);
-  --amber: #F2B544; --amber-soft: rgba(242, 181, 68, .12);
+  --amber: #F2B544; --amber-soft: rgba(242, 181, 68, .12);   /* status only: waiting for approval, warnings */
+  /* the interface's own accent (selection, focus, the main action): the coral of the My Office mark, so amber keeps meaning
+     "someone is waiting for you" */
+  --accent: #EF8A5F; --accent-hi: #F5A07A; --accent-soft: rgba(239, 138, 95, .13); --accent-line: rgba(239, 138, 95, .6); --on-accent: #2A1307;
   --red: #FF5F5F; --red-soft: rgba(255, 95, 95, .12);
   --blue: #6AAEFF;
   --font: "Be Vietnam Pro", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
@@ -20,6 +23,6 @@ html, body { height: 100%; margin: 0; }
 body { background: var(--bg); color: var(--ink); font: 14px/1.45 var(--font); overflow: hidden; -webkit-font-smoothing: antialiased; }
 button, input { font: inherit; color: inherit; }
 svg.ic { width: 16px; height: 16px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-:focus-visible { outline: 2px solid var(--amber); outline-offset: 2px; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
 #app { position: relative; height: 100%; display: grid; grid-template-columns: 330px minmax(0, 1fr) 350px; grid-template-rows: 56px minmax(0, 1fr); grid-template-areas: "top top top" "left stage right"; }

@@ -7,7 +7,7 @@
 .lite-card { all: unset; --c: var(--muted); box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--c); cursor: pointer; }
 .lite-card[data-status="wait"] { border-color: rgba(242, 181, 68, .6); background: rgba(242, 181, 68, .08); border-left-color: var(--amber); }
 .lite-card:hover { background: var(--card-2); }
-.lite-card:focus-visible { outline: 2px solid var(--amber); }
+.lite-card:focus-visible { outline: 2px solid var(--accent); }
 .lite-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .lite-top i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
 .lite-top b { font-size: .9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

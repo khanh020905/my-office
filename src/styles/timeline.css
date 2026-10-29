@@ -2,8 +2,8 @@
 /* timeline */
 .tl-open { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; margin: 0 16px 12px; padding: 9px 12px; border-radius: 11px; background: var(--card); border: 1px solid var(--line); font-size: .76rem; cursor: pointer; }
 .tl-open:hover { border-color: var(--line-2); background: var(--card-2); }
-.tl-open:focus-visible { outline: 2px solid var(--amber); }
-.tl-open svg { width: 15px; height: 15px; color: var(--amber); }
+.tl-open:focus-visible { outline: 2px solid var(--accent); }
+.tl-open svg { width: 15px; height: 15px; color: var(--accent); }
 .tl-open-v { margin-left: auto; color: var(--muted); font-size: .7rem; text-align: right; }
 .tl { position: absolute; inset: 70px 16px 96px; z-index: 5; display: flex; flex-direction: column; min-height: 0; background: rgba(17, 23, 32, .97); border: 1px solid var(--line-2); border-radius: 18px; box-shadow: 0 24px 60px rgba(0, 0, 0, .55); animation: plc-in .18s ease-out; }
 .tl-head { display: flex; align-items: center; gap: 12px; padding: 14px 12px 10px 18px; flex-wrap: wrap; }
@@ -28,8 +28,8 @@
 .tl-name i { width: 9px; height: 9px; border-radius: 50%; grid-row: span 2; }
 .tl-name b { font-size: .76rem; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tl-name small { font-size: .64rem; color: var(--faint); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.tl-name:hover b { color: var(--amber); }
-.tl-name:focus-visible { outline: 2px solid var(--amber); }
+.tl-name:hover b { color: var(--accent); }
+.tl-name:focus-visible { outline: 2px solid var(--accent); }
 .tl-row--sub .tl-name { padding-left: 16px; }
 .tl-row--sub .tl-name b { font-weight: 600; color: #C3CAD6; }
 .tl-track { position: relative; height: 100%; min-height: 22px; }

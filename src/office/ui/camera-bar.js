@@ -31,6 +31,17 @@ export function setup() {
   try { state.camAuto = localStorage.getItem('office-autocam') !== 'off'; } catch { /* storage blocked */ }
   state.lastUserCam = -1e9;
   controls.addEventListener('start', () => { state.lastUserCam = performance.now(); panBack = null; clearTimeout(panTimer); });
+  // While the mouse is on the toolbar it is held by its right edge: a view's name sliding out (on hover) then grows it to
+  // the left, and the zoom, the tools and walking in stay where the pointer expects them. Centred again once it has shrunk.
+  const bar = document.querySelector('.toolbar'), host = bar.parentElement;
+  let unpin = 0;
+  bar.addEventListener('pointerenter', (e) => {
+    if (e.pointerType !== 'mouse') return;
+    clearTimeout(unpin);
+    if (bar.classList.contains('tb-pinned')) return;
+    bar.style.right = `${host.getBoundingClientRect().right - bar.getBoundingClientRect().right}px`; bar.classList.add('tb-pinned');
+  });
+  bar.addEventListener('pointerleave', () => { clearTimeout(unpin); unpin = setTimeout(() => { bar.classList.remove('tb-pinned'); bar.style.right = ''; }, 340); });
   document.querySelector('.tb-seg').addEventListener('click', (e) => {
     const b = e.target.closest('[data-view]'); if (!b) return;
     if (fp.on) exitFp();

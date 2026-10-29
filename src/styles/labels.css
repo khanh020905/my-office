@@ -5,6 +5,7 @@
 .tag--sub { font-size: 11px; padding: 4px 9px 4px 7px; }
 .tag--on { border-color: var(--green); box-shadow: 0 0 0 3px rgba(61, 220, 132, .22), 0 6px 16px rgba(0, 0, 0, .35); }
 .tag--wait { border-color: var(--amber); }
+.shop-say { font-size: 11.5px; padding: 5px 10px; border-width: 1.5px; white-space: nowrap; }   /* a shop's cashier greeting you (shops.js) */
 .cat-say { border-color: #FF8FB0; color: #FFE0EA; font-size: 11px; padding: 4px 9px; }
 .bubble-wrap { width: 0; height: 0; position: relative; }
 .bubble { transition: margin-bottom .2s ease-out; position: absolute; left: 0; bottom: 22px; transform: translateX(-50%); width: max-content; max-width: 210px; display: flex; align-items: center; gap: 8px; font: 500 12px/1.3 var(--font); color: #EEF1F7; background: rgba(14, 19, 27, .92); border: 1px solid rgba(61, 220, 132, .75); border-radius: 11px; padding: 7px 10px 7px 7px; box-shadow: 0 8px 22px rgba(0, 0, 0, .4); }

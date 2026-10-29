@@ -11,7 +11,7 @@
 .search svg { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); color: var(--faint); }
 .search input { width: 100%; height: 36px; padding: 0 12px 0 34px; background: var(--side); border: 1px solid var(--line-2); border-radius: 10px; outline: none; font-size: .8rem; }
 .search input::placeholder { color: var(--faint); }
-.search input:focus { border-color: var(--amber); }
+.search input:focus { border-color: var(--accent); }
 .sess-list { list-style: none; margin: 0; padding: 0 8px 10px; overflow-y: auto; display: flex; flex-direction: column; gap: 2px; }
 .pill { font: 600 .64rem/1 var(--font); padding: 4px 7px; border-radius: 999px; white-space: nowrap; border: 1px solid var(--line-2); color: var(--muted); }
 .pill[data-status="work"] { background: #2FB36C; border-color: #2FB36C; color: #06150C; }

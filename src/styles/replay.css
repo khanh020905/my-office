@@ -1,15 +1,15 @@
 /* Replay bar. */
 /* replay */
 .replay-chip { background: rgba(255, 179, 71, .14); border-color: rgba(255, 179, 71, .55); color: #FFD9A0; font-variant-numeric: tabular-nums; }
-#btn-replay[aria-pressed="true"] { border-color: var(--amber); background: var(--amber-soft); }
+#btn-replay[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
 .rp-bar { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); width: min(860px, calc(100% - 24px)); display: flex; flex-direction: column; gap: 10px; padding: 12px 14px; background: rgba(17, 23, 32, .92); -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 16px 40px rgba(0, 0, 0, .45); z-index: 3; animation: toast-in .22s ease-out; }
 .rp-top { display: flex; align-items: center; gap: 12px; }
-.rp-play { all: unset; flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--amber); color: #1A1206; cursor: pointer; }
+.rp-play { all: unset; flex: none; width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: var(--accent); color: var(--on-accent); cursor: pointer; }
 .rp-play svg { width: 18px; height: 18px; }
 .rp-play:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
 .rp-track { position: relative; flex: 1; min-width: 0; height: 44px; }
 .rp-track canvas { position: absolute; inset: 0 0 14px 0; width: 100%; height: 30px; pointer-events: none; }
-.rp-track input { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; height: 16px; accent-color: var(--amber); cursor: pointer; }
+.rp-track input { position: absolute; left: 0; right: 0; bottom: 0; width: 100%; margin: 0; height: 16px; accent-color: var(--accent); cursor: pointer; }
 .rp-time { flex: none; min-width: 92px; display: flex; flex-direction: column; align-items: flex-end; gap: 3px; font-variant-numeric: tabular-nums; }
 .rp-time b { font: 700 1.05rem/1 var(--mono); }
 .rp-time small { font-size: .68rem; color: var(--muted); }
@@ -17,7 +17,7 @@
 .rp-opts .pop-seg button { flex: none; padding: 0 10px; }
 .rp-rec { margin-left: auto; }
 .rp-rec svg { width: 12px; height: 12px; color: #FF5A5A; }
-.is-replay .live-tag i { background: var(--amber); box-shadow: none; animation: none; }
+.is-replay .live-tag i { background: var(--accent); box-shadow: none; animation: none; }
 .rp-rec[aria-pressed="true"] { background: #C62828; border-color: #FF6B6B; color: #fff; }
 .rp-rec[aria-pressed="true"] svg { color: #fff; animation: blink 1s steps(2) infinite; }
 .rp-close svg { width: 13px; height: 13px; }

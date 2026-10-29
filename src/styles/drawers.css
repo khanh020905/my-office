@@ -10,16 +10,19 @@
 .dr-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 4px rgba(255, 255, 255, .05); }
 .icon-btn { all: unset; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; color: var(--muted); cursor: pointer; flex: none; }
 .icon-btn:hover { background: var(--card-2); color: var(--ink); }
-.icon-btn:focus-visible { outline: 2px solid var(--amber); }
+.icon-btn:focus-visible { outline: 2px solid var(--accent); }
 .btn { all: unset; box-sizing: border-box; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 14px; border-radius: 9px; background: var(--card-2); border: 1px solid var(--line-2); font-size: .78rem; font-weight: 600; cursor: pointer; white-space: nowrap; }
 .btn:hover { background: var(--card-3); }
-.btn:focus-visible { outline: 2px solid var(--amber); }
+.btn:focus-visible { outline: 2px solid var(--accent); }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .btn--primary { background: #2FB36C; border-color: #2FB36C; color: #06150C; }
 .btn--primary:hover { background: #38C67A; }
 .btn--sm { height: 30px; padding: 0 12px; font-size: .74rem; }
-.btn--confirm { background: var(--amber); border-color: var(--amber); color: #1E1405; }
+.btn--confirm { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
 .btn--danger { background: var(--red); border-color: var(--red); color: #fff; }
+/* (their own hover: the plain one turns the button dark grey, which hid the dark text on the confirm) */
+.btn--confirm:hover { background: var(--accent-hi); border-color: var(--accent-hi); }
+.btn--danger:hover, .dr-actions .btn.btn--danger:hover { background: #FF7676; border-color: #FF7676; }
 .dr-actions .btn.btn--danger { background: var(--red); border-color: var(--red); color: #fff; }
 .dr-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 14px 18px 0; }
 .dr-note { margin: 0; font-size: .76rem; color: var(--muted); line-height: 1.45; }
@@ -30,6 +33,6 @@
 .counts span { font-size: .66rem; color: var(--muted); line-height: 1.2; }
 .tabs { display: flex; gap: 4px; margin: 14px 18px 0; padding: 4px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; }
 .tab { all: unset; flex: 1; text-align: center; height: 30px; line-height: 30px; font-size: .78rem; font-weight: 600; color: var(--muted); border-radius: 8px; border: 1px solid transparent; cursor: pointer; }
-.tab[aria-selected="true"] { background: var(--amber-soft); border-color: var(--amber); color: var(--ink); }
-.tab:focus-visible { outline: 2px solid var(--amber); }
+.tab[aria-selected="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+.tab:focus-visible { outline: 2px solid var(--accent); }
 .dr-body { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 18px 20px; }

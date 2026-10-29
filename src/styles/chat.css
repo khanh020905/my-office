@@ -18,17 +18,17 @@
 .msg-copy:hover { background: var(--card-3); color: var(--ink); }
 @media (hover: none) { .msg-copy { opacity: .7; } }
 .msg-body.is-clamped { max-height: 17.5em; overflow: hidden; -webkit-mask-image: linear-gradient(#000 72%, transparent); mask-image: linear-gradient(#000 72%, transparent); }
-.msg-more { all: unset; display: inline-block; margin-top: 6px; font-size: .74rem; font-weight: 700; color: var(--amber); cursor: pointer; }
+.msg-more { all: unset; display: inline-block; margin-top: 6px; font-size: .74rem; font-weight: 700; color: var(--accent); cursor: pointer; }
 .msg-more:hover { text-decoration: underline; }
-.msg-more:focus-visible { outline: 2px solid var(--amber); border-radius: 4px; }
+.msg-more:focus-visible { outline: 2px solid var(--accent); border-radius: 4px; }
 .msg-imgs { color: var(--muted); font-size: .76rem; }
 .msg-note { align-self: center; padding: 4px 12px; border-radius: 999px; font-size: .72rem; color: var(--muted); background: var(--card); border: 1px solid var(--line); }
 .msg-summary { border: 1px dashed var(--line-2); border-radius: 14px; background: rgba(255, 255, 255, .02); }
 .msg-summary > summary { list-style: none; display: flex; align-items: center; gap: 11px; padding: 11px 13px; cursor: pointer; border-radius: 14px; }
 .msg-summary > summary::-webkit-details-marker { display: none; }
 .msg-summary > summary:hover { background: rgba(255, 255, 255, .03); }
-.msg-summary > summary:focus-visible { outline: 2px solid var(--amber); }
-.sum-ico { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; background: var(--amber-soft); color: var(--amber); }
+.msg-summary > summary:focus-visible { outline: 2px solid var(--accent); }
+.sum-ico { width: 30px; height: 30px; flex: none; display: grid; place-items: center; border-radius: 9px; background: var(--accent-soft); color: var(--accent); }
 .sum-ico svg { width: 15px; height: 15px; }
 .sum-txt { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 1px; }
 .sum-txt b { font-size: .82rem; }
@@ -79,7 +79,7 @@ details[open] > summary .st-chev { transform: rotate(90deg); }
 .steps > summary { list-style: none; display: flex; align-items: center; gap: 8px; padding: 6px 10px 6px 7px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255, 255, 255, .015); cursor: pointer; white-space: nowrap; }
 .steps > summary::-webkit-details-marker { display: none; }
 .steps > summary:hover { background: var(--card); }
-.steps > summary:focus-visible { outline: 2px solid var(--amber); }
+.steps > summary:focus-visible { outline: 2px solid var(--accent); }
 .st-ico { width: 22px; height: 22px; flex: none; display: grid; place-items: center; border-radius: 7px; background: var(--green-soft); color: var(--green); }
 .st-ico svg { width: 12px; height: 12px; }
 .steps > summary b { color: var(--ink); font-weight: 700; }

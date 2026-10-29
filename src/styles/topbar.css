@@ -7,7 +7,7 @@
 .tb-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .tb-btn { position: relative; height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s; }
 .tb-btn:hover { background: var(--card-2); border-color: rgba(255, 255, 255, .2); }
-.tb-btn[aria-pressed="true"] { border-color: var(--amber); background: var(--amber-soft); }
+.tb-btn[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-soft); }
 .tb-icon { width: 38px; padding: 0; justify-content: center; }
 .badge { position: absolute; top: 6px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--red); box-shadow: 0 0 0 2px var(--card); }
 .mac-pill { gap: 10px; }
