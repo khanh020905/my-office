@@ -61,6 +61,56 @@ function renderOthers(rows) {
     for (const w of ws) limitRow(block, w);
   }
   if (state.limits?.others?.length) rows.append(autoRow());
+  // in the order the user dragged them into (the server's: switching goes down it), the switch after them
+  const order = state.limits?.auto?.order;
+  if (order) for (const b of blocksOf(rows).sort((x, y) => order.indexOf(x.dataset.slug) - order.indexOf(y.dataset.slug))) rows.insertBefore(b, rows.querySelector(':scope > .acct-auto'));
+}
+
+/* ---------- the accounts' order: drag one by its grip (or ↑ ↓ on the grip), saved at once (POST /api/accounts/order) ----------
+   The top one is the one new sessions start on; with switching on, they move down the list when one runs out. The block
+   moves in the list while it is dragged, so the drop is where it is seen. */
+let dragging = false;
+const blocksOf = (rows) => [...rows.querySelectorAll(':scope > .acct-block')];
+function gripFor(slug, label) {
+  const g = el('button', 'acct-grip'); g.type = 'button'; g.title = tr('mac.plan.drag'); g.setAttribute('aria-label', `${tr('mac.plan.drag')}: ${acctName(slug, label)}`);
+  g.addEventListener('pointerdown', (e) => startDrag(e, g));
+  g.addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowUp' && e.key !== 'ArrowDown') return;
+    e.preventDefault();
+    const block = g.closest('.acct-block'), rows = block.parentElement, list = blocksOf(rows), i = list.indexOf(block), j = i + (e.key === 'ArrowUp' ? -1 : 1);
+    if (j < 0 || j >= list.length) return;
+    if (j < i) rows.insertBefore(block, list[j]); else rows.insertBefore(list[j], block);
+    saveOrder(rows, slug);
+  });
+  return g;
+}
+function startDrag(e, grip) {
+  if (e.button !== 0) return;
+  const block = grip.closest('.acct-block'), rows = block.parentElement, was = blocksOf(rows).map((b) => b.dataset.slug).join('|');
+  e.preventDefault(); grip.setPointerCapture?.(e.pointerId);
+  dragging = true; block.classList.add('is-dragging'); rows.classList.add('is-sorting');
+  const move = (ev) => {   // before the first other account whose middle is below the pointer
+    let before = rows.querySelector(':scope > .acct-auto');
+    for (const b of blocksOf(rows)) { if (b === block) continue; const r = b.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { before = b; break; } }
+    if (block.nextElementSibling !== before && before !== block) { rows.insertBefore(block, before); blocksOf(rows).forEach((x, i) => { const n = x.querySelector('.acct-num'); if (n) n.textContent = String(i + 1); }); }
+  };
+  const up = () => {
+    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+    dragging = false; block.classList.remove('is-dragging'); rows.classList.remove('is-sorting');
+    if (blocksOf(rows).map((b) => b.dataset.slug).join('|') !== was) saveOrder(rows, block.dataset.slug); else renderLimits();
+  };
+  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+}
+async function saveOrder(rows, slug) {
+  const order = blocksOf(rows).map((b) => b.dataset.slug), first = state.limits?.auto?.order?.[0];
+  if (state.limits?.auto) state.limits.auto.order = order;
+  const r = await post('/api/accounts/order', { order });
+  if (!r.ok) { toast(tr('mac.plan.useFailed')); return; }
+  if (state.limits) state.limits.auto = r;
+  renderLimits();
+  $('plan-rows').querySelector(`.acct-block[data-slug="${CSS.escape(slug)}"] .acct-grip`)?.focus();
+  const nameOf = (s) => acctName(s, s ? state.limits?.others?.find((o) => o.name === s)?.label : state.limits?.label);
+  toast(order[0] !== first ? tr('mac.plan.usingNow', { name: nameOf(order[0]) }) : tr('mac.plan.orderSaved', { list: order.map(nameOf).join(' → ') }), 6000);
 }
 
 /* ---------- each account's heading: its name (click to rename), its plan, and on hover "use this one" ----------
@@ -71,10 +121,10 @@ let editing = null;   // the account whose name is being typed ('' = the main on
 const acctName = (slug, label) => label || (slug ? tr('mac.plan.otherAccount', { name: slug }) : tr('mac.plan.mainAccount'));
 const switchOn = () => { const a = state.limits?.auto; return !!(a?.on || a?.pick); };
 // an account's heading and its limits, together: hovering any of it shows its actions
-function acctBlock(slug, label, info, until) { const b = el('div', 'acct-block'); b.append(acctHead(slug, label, info, until)); return b; }
+function acctBlock(slug, label, info, until) { const b = el('div', 'acct-block'); b.dataset.slug = slug; b.append(acctHead(slug, label, info, until)); return b; }
 function acctHead(slug, label, info, until) {
   const a = state.limits?.auto || {}, inUse = switchOn() ? (a.now || '') === slug : !slug;
-  const head = el('div', `plan-other acct-head${slug ? '' : ' acct-head--main'}${inUse ? ' is-live' : ''}`);
+  const head = el('div', `plan-other acct-head${inUse ? ' is-live' : ''}`), order = a.order || [];
   const name = el('button', 'acct-name'); name.type = 'button'; name.title = tr('mac.plan.rename');
   name.append(el('b', null, acctName(slug, label)), icon('pencil', 'ic acct-pen'));
   name.addEventListener('click', () => renameIn(head, slug, label));
@@ -86,6 +136,8 @@ function acctHead(slug, label, info, until) {
   if (until > Date.now()) end.append(el('em', 'acct-badge acct-badge--out', tr('mac.plan.out', { when: resetText(until) })));
   else if (inUse) end.append(el('em', 'acct-badge acct-badge--on', tr('mac.plan.inUse')));
   const meta = el('span', 'acct-meta', info); if (!slug) meta.title = tr('mac.plan.account');
+  if (order.length > 1) head.append(gripFor(slug, label));
+  if (a.on && order.length > 1) { const n = el('span', 'acct-num', String(order.indexOf(slug) + 1)); n.title = tr('mac.plan.numTitle'); head.append(n); }
   head.append(name, meta, end);
   return head;
 }
@@ -255,7 +307,7 @@ export function renderLimits() {
   if (adding.step === 'idle') renderAdd();
   if (none) { $('plan-at').textContent = ''; $('plan-empty').textContent = state.limitsNote || tr('mac.plan.loading'); return; }
   $('plan-at').textContent = state.limits.at ? (Date.now() - state.limits.at < 60e3 ? tr('mac.plan.justUpdated') : tr('time.ago', { time: fmtAgo((Date.now() - state.limits.at) / 1000) })) : '';
-  if (editing !== null) return;   // (a name being typed: drawn again when it is done)
+  if (editing !== null || dragging) return;   // (a name being typed, an account being dragged: drawn again after)
   const rows = $('plan-rows'); rows.replaceChildren();
   const mainRows = acctBlock('', state.limits.label, accText, state.limits.until); rows.append(mainRows);
   if (!ws.length) mainRows.append(el('small', 'plan-other-note', state.limitsNote || tr('mac.plan.loading')));

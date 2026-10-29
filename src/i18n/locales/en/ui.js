@@ -20,7 +20,7 @@ export default {
     reading: 'reading…',
     planLimits: 'Claude plan usage limits',
     planEmpty: 'Reading usage limits from your Claude Code account…',
-    planFoot: 'Personal plans (Pro, Max) have a 5-hour limit and a weekly one, organization plans (Team, Enterprise) a 5-hour limit. Hover an account to rename it or click Use.',
+    planFoot: 'Personal plans (Pro, Max) have a 5-hour limit and a weekly one, organization plans (Team, Enterprise) a 5-hour limit. Hover an account to rename it, click Use, or drag ⠿ to set the switching order.',
     mac: '{Mac}',
     macTitle: 'See RAM, CPU and disk, and free up space',
     measuring: 'measuring…',

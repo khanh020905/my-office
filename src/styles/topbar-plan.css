@@ -60,7 +60,18 @@
    and "Use" when hovering anywhere over it (always shown on touch screens) */
 .acct-block { display: grid; gap: 4px; min-width: 0; }
 .plan-other.acct-head { align-items: center; min-height: 26px; }
-.plan-other.acct-head--main { margin-top: 0; padding-top: 0; border-top: 0; }
+.plan-rows > .acct-block:first-child > .plan-other.acct-head { margin-top: 0; padding-top: 0; border-top: 0; }
+/* the order: a grip to drag by (on hover; ↑ ↓ when it has focus), the place in the list while switching is on */
+.acct-grip { all: unset; flex: none; width: 10px; height: 16px; margin-left: -4px; border-radius: 3px; cursor: grab; touch-action: none; opacity: 0; transition: opacity .15s;
+  background: radial-gradient(circle, var(--muted) 1.2px, transparent 1.4px) 0 0 / 5px 5px; }
+.acct-block:hover .acct-grip, .acct-grip:focus-visible, .plan-rows.is-sorting .acct-grip { opacity: 1; }
+.acct-grip:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
+.acct-num { flex: none; display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 6px; background: rgba(255, 255, 255, .07); color: var(--muted); font: 700 .6rem/1 var(--mono); }
+.acct-head.is-live .acct-num { background: var(--accent-soft); color: var(--accent-hi); }
+.plan-other .acct-num { overflow: visible; font-size: .6rem; }
+.acct-block { border-radius: 10px; transition: background .15s, box-shadow .15s; }
+.acct-block.is-dragging { background: rgba(255, 255, 255, .05); box-shadow: 0 0 0 1px var(--accent-line), 0 10px 26px rgba(0, 0, 0, .45); position: relative; z-index: 1; }
+.plan-rows.is-sorting, .plan-rows.is-sorting * { cursor: grabbing !important; user-select: none; }
 .acct-name { all: unset; flex: 0 1 auto; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
 .acct-name b { overflow: hidden; text-overflow: ellipsis; }
 .acct-name:hover { background: rgba(255, 255, 255, .06); }
@@ -79,7 +90,7 @@
 .acct-use:hover { background: var(--accent-soft); }
 .acct-use:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 2px; }
 .acct-use:disabled { opacity: .5; cursor: progress; }
-@media (hover: none) { .acct-pen, .acct-use { opacity: 1; } }
+@media (hover: none) { .acct-pen, .acct-use, .acct-grip { opacity: 1; } }
 /* renaming in place */
 .acct-rename { display: grid; gap: 3px; flex: 1 1 auto; min-width: 0; }
 .acct-rename input { box-sizing: border-box; width: 100%; height: 26px; padding: 0 8px; border-radius: 7px; border: 1px solid var(--accent-line); background: #0B1018; color: var(--ink); font: inherit; font-size: .74rem; font-weight: 700; outline: none; }

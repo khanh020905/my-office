@@ -1293,19 +1293,25 @@ function blockedUntil(windows, hit = 0) {
 }
 function dirOfSlug(slug) { return otherDirs.find((d) => accName(d) === slug) || ''; }
 function nowSlug() { const d = nowDir && otherDirs.find((x) => path.resolve(x) === path.resolve(nowDir)); return d ? accName(d) : ''; }
-function pickSlug() { const p = String(prefs.get('accountPick') || ''); return p && dirOfSlug(p) ? p : ''; }
+// the accounts top to bottom as the user ordered them in the card (prefs accountOrder; a new one goes last, the main one
+// first by default): new sessions start on the first, and with switching on move down the list when one runs out
+function orderOf() {
+  const all = ['', ...otherDirs.map(accName)], pick = prefs.get('accountPick');   // (accountPick: the one "Use" picked before there was an order)
+  const saved = (prefs.get('accountOrder') || (pick ? [pick] : [])).filter((s) => all.includes(s));
+  return [...new Set([...saved, ...all])];
+}
+function pickSlug() { return orderOf()[0] || ''; }
 function switching() { return !!prefs.get('autoSwitch') || !!pickSlug(); }
 function writeNow(dir) {
   nowDir = dir;
   try { fs.mkdirSync(DATA_DIR, { recursive: true }); fs.writeFileSync(NOW_FILE, `${dir}\n`); } catch { /* read-only data: the script keeps the last one */ }
 }
-// the picked account first, then the others top to bottom (the main one, then the rest); with switching on, the first of
-// them with room (none: stay)
+// the first account in the user's order; with switching on, the first of them with room (none: stay)
 function repick(why = 'auto') {
   if (!switching()) { if (nowDir) writeNow(''); return; }
   const all = [{ slug: '', dir: '', until: blockedUntil(planLimits?.windows, hits.get('')) },
     ...otherDirs.map((d) => ({ slug: accName(d), dir: d, until: blockedUntil(others.get(d)?.windows, hits.get(accName(d))) }))];
-  const p = pickSlug(), list = [...all.filter((a) => a.slug === p), ...all.filter((a) => a.slug !== p)];
+  const order = orderOf(), list = [...all].sort((a, b) => order.indexOf(a.slug) - order.indexOf(b.slug));
   const cur = all.find((a) => a.dir === nowDir), next = !prefs.get('autoSwitch') ? list[0] : list.find((a) => !a.until) || cur || list[0];
   if (next.dir === nowDir && fs.existsSync(NOW_FILE)) return;
   if (next.dir) shareWithMain(next.dir);
@@ -1384,18 +1390,20 @@ function setEditorWrapper(on) {
   });
 }
 function autoOut() {
-  return { on: !!prefs.get('autoSwitch'), pick: pickSlug(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
+  return { on: !!prefs.get('autoSwitch'), pick: pickSlug(), order: orderOf(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
 }
-// the card's switch and "use this one": the editors' script goes in while either is in use, and out again after
-function setSwitch({ auto, pick } = {}) {
+// the card's switch, "use this one" (it goes to the top) and the order dragged into place: the editors' script goes in
+// while switching is on or the top account isn't the main one, and out again after
+function setSwitch({ auto, pick, order } = {}) {
   if (auto !== undefined) prefs.set('autoSwitch', auto || undefined);
-  if (pick !== undefined) prefs.set('accountPick', pick || undefined);
+  if (pick !== undefined) order = [pick, ...orderOf().filter((s) => s !== pick)];
+  if (order !== undefined) { prefs.set('accountOrder', order); prefs.set('accountPick', undefined); }
   const on = switching();
   editorsNow = setEditorWrapper(on);
   const bin = on && findClaude();
   switchAlias = bin ? `alias claude='${SWITCH_FILE} "${bin.file}"'` : '';
   if (on && prefs.get('autoSwitch')) for (const d of otherDirs) shareWithMain(d);
-  repick(pick !== undefined ? 'pick' : 'auto');
+  repick(pick !== undefined || order !== undefined ? 'pick' : 'auto');
   broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
   return { ok: true, ...autoOut() };
 }
@@ -1542,12 +1550,18 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto))?$/.test(url.pathname)) {   // (this computer only, from this page)
+  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order))?$/.test(url.pathname)) {   // (this computer only, from this page)
     const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
     readJson(req).then(async (b) => {
       if (url.pathname === '/api/accounts') { json(res, 200, await prepareAccount(b?.name)); return; }
       if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ auto: !!b?.on })); return; }
+      if (url.pathname === '/api/accounts/order') {   // (every account once: '' is the main one)
+        const all = orderOf(), order = Array.isArray(b?.order) ? b.order.map((s) => (s ? slugOf(s) : '')) : [];
+        if (order.length !== all.length || !all.every((s) => order.includes(s))) { json(res, 400, { ok: false }); return; }
+        json(res, 200, setSwitch({ order }));
+        return;
+      }
       if (/\/(rename|use)$/.test(url.pathname)) {   // ('' = the main account)
         const which = b?.name ? slugOf(b.name) : '';
         if (which && !dirOfSlug(which)) { json(res, 404, { ok: false }); return; }
