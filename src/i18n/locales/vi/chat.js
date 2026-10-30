@@ -88,6 +88,7 @@ export default {
     pick: 'Chọn người nhận',
     sessions: 'Nhắn cho một cuộc trò chuyện (Claude làm thật)',
     placeholder: 'Nhắn cho {name}…',
+    placeholderShort: 'Nhắn cho Claude…',
     sub: '📁 {folder} · Claude làm thật, trả lời trong nhóm',
     clear: 'Về nhắn cả nhóm',
     notAllowed: 'Chưa cho phép giao việc từ điện thoại. Trên Mac: bấm 📱 rồi gạt “Giao việc cho Claude từ điện thoại”.',

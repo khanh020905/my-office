@@ -416,7 +416,8 @@ function drawTarget() {
     const x = el('button', 'zc-ib zc-to-x'); x.type = 'button'; x.title = tr('chat.to.clear'); x.append(icon('x')); x.addEventListener('click', () => setTarget(null));
     toEl.append(el('small', 'zc-to-sub', tr(target.dir ? (target.fresh ? 'chat.to.subNew' : 'chat.to.subMine') : 'chat.to.sub', { folder: target.folder })), x);
   }
-  input.placeholder = target ? tr('chat.to.placeholder', { name: target.name }) : tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
+  const narrow = matchMedia('(max-width: 640px)').matches;   // (a phone: the short one; whom it goes to is on the "To" chip just above)
+  input.placeholder = target ? tr(narrow ? 'chat.to.placeholderShort' : 'chat.to.placeholder', { name: target.name }) : tr(narrow ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   root.classList.toggle('is-to', !!target);
   if (target?.sid) { const c = el('button', 'zc-ib zc-to-conv'); c.type = 'button'; c.title = tr('chat.conv.open'); c.append(el('span', null, '📜')); c.addEventListener('click', () => openConv(target)); toEl.insertBefore(c, toEl.querySelector('.zc-to-x')); }
   for (const b of root.querySelectorAll('.zc-photo-btn')) b.hidden = !state.isLocal && !target;   // (to Claude: a photo from this device; to the group: a photo of the office, the Mac's)
