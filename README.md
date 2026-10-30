@@ -212,7 +212,8 @@ Then open <http://localhost:4310>.
   the Friday tea with a photo of the table, birthdays), type for a moment first, react and answer each other, and answer
   you: @ someone and they say what they're on, "meeting" rings the bell, "milk tea" brings the Friday tea out. Each
   person's picture is their own chibi; stickers, polls, reactions, a pinned message, the unread count. Kept on this
-  computer only (localStorage); nothing you write reaches Claude.
+  computer (`data/chat.json`) and seen by your phones too. What you write doesn't reach a conversation; to hand Claude
+  something, use **Give work** (below).
 - **Timeline and replay**: one lane per session; replay the last hour or day at up to ×120; export it as a video.
 - **Weekly recap**: a picture card of your week with Claude, ready to save or paste into a post. It shows the hours,
   prompts, edits and commands, the cost at API prices, and your busiest project.
@@ -257,9 +258,15 @@ Then open <http://localhost:4310>.
 - Graphics: Auto, Low, Medium or High. Auto steps down by itself when frames come late, and remembers it per device.
 - Streamer mode blurs commands, paths and chat for recording.
 - List mode turns the 3D off and shows sessions as cards. It saves battery and works without WebGL.
-- Open on your phone: same Wi-Fi (or your Tailscale network when you're out), 6-digit PIN. Watching, plus approving
-  if you turn on "Approve from a phone" on the Mac. To give Claude work from the phone, Claude Code's own Remote
-  Control (`/rc`): the session's QR code in its drawer opens it in the Claude app.
+- Open on your phone: same Wi-Fi, or anywhere through the Cloudflare tunnel (below), 6-digit PIN. Watching, plus
+  approving if you turn on "Approve from a phone" on the Mac. Claude Code's own Remote Control (`/rc`) works too: the
+  session's QR code in its drawer opens that conversation in the Claude app.
+- **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
+  its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
+  worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and
+  add up to 4 photos. The Mac runs it as `claude -p`; its commands ask for approval like any session's, and its answer
+  comes back to the chat. From a phone only once "Give Claude work from a phone" is on, on the Mac; at most 3 at a
+  time and 12 an hour.
 - On a phone the office lays itself out like an app, upright or held sideways: a compact top bar (plan, Mac, settings),
   the office filling the screen, and a tab bar (Office · Sessions · Activity · Approve · Chat, with counts) whose tabs
   open each panel as a full-screen sheet. A waiting approval floats just above the tabs with thumb-sized buttons.
@@ -294,11 +301,14 @@ Then open <http://localhost:4310>.
     can switch it): allow once or deny, answer a question or a plan; never "always", and a risky (red) command can
     only be denied from a phone. Each answer from a phone is logged with its address. Hooks come from the Mac alone.
   - Away from home (mobile data, another Wi-Fi): "Use it when you're out" in the phone window starts a Cloudflare quick
-    tunnel (cloudflared, downloaded once; no account, no domain) and shows its https address and QR code, new each
-    time. What comes through it is from the internet whatever its address: the PIN only (no token links), an
-    https-only cookie, and nothing but the PIN, approvals (if allowed) and presence may be sent; hooks, stopping
-    processes, accounts and the switches are refused. Off: cloudflared stops and the phones are cut off. A Tailscale
-    network works too (the window shows its address).
+    tunnel (cloudflared, downloaded once; no account, no domain) and shows its https address and QR code. The address
+    stays while it's on, across restarts of the office. What comes through it is from the internet whatever its
+    address: the PIN only (no token links), an https-only cookie, and nothing but the PIN, chat messages, presence,
+    approvals and work (these two only if allowed on the Mac) may be sent; hooks, stopping processes, accounts and the
+    switches are refused. Off: cloudflared stops and the phones are cut off. A Tailscale network works too (the window
+    shows its address).
+  - While the tunnel is on and the Mac is on its charger, the office runs macOS's `caffeinate` so the Mac doesn't
+    sleep (the display still turns off). On battery, or with the tunnel off, it sleeps as usual.
   - The page is plain HTTP, so only use `--lan` on a network you trust.
 
 ## Settings from the environment

@@ -317,6 +317,44 @@ test('away from home: the tunnel switch, and all that comes through it is from t
   expect(errors).toEqual([]);
 });
 
+test('giving Claude work from the chat: a folder or a tagged conversation, the result in the group; from a phone only when the Mac allows it', async ({ page, request }) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  await page.addInitScript(() => { try { localStorage.setItem('office-lite', 'on'); } catch { /* private mode */ } });
+  // a session that has worked in a folder: the folder becomes somewhere work can go
+  fs.mkdirSync(HOME_DIR, { recursive: true });
+  const base = { session_id: `e2e-task-sess-${Date.now()}`, cwd: HOME_DIR, transcript_path: path.join(HOME_DIR, 'e2e-task.jsonl') };
+  await request.post('/event', { data: { ...base, hook_event_name: 'SessionStart', source: 'startup' } });
+  await expect.poll(async () => (await (await request.get('/api/tasks')).json()).projects.length, { timeout: 20_000 }).toBeGreaterThan(0);
+  await page.goto('/');
+  await expect(async () => { if (!(await page.locator('#zchat').isVisible())) await page.click('#btn-chat'); await expect(page.locator('#zchat')).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
+  const zc = page.locator('#zchat');
+  await zc.locator('.zc-task-btn').click();
+  const sheet = zc.locator('.zc-task');
+  await expect(sheet.locator('.zc-task-o').first()).toBeVisible({ timeout: 20_000 });
+  await sheet.locator('.zc-task-o', { hasText: path.basename(HOME_DIR) }).last().click();   // (a new conversation in that folder)
+  await sheet.locator('.zc-task-in').fill('write a hello file');
+  await sheet.locator('.zc-task-go').click();
+  await expect(sheet).toBeHidden({ timeout: 20_000 });
+  await expect(zc.locator('.zc-row.is-mine', { hasText: 'write a hello file' })).toBeVisible({ timeout: 20_000 });
+  await expect(zc).toContainText('Done: the e2e task.', { timeout: 30_000 });   // (tests/e2e/fake-claude.sh answers for `claude -p`)
+  // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it
+  await request.post('/api/tunnel', { data: { on: true } });
+  await expect.poll(async () => (await (await request.get('/api/tunnel')).json()).state).toBe('on');
+  const t = await (await request.get('/api/tunnel')).json();
+  const via = `http://127.0.0.1:${t.port}`, host = { Host: 'e2e-office-test.trycloudflare.com', Origin: 'https://e2e-office-test.trycloudflare.com' };
+  const login = await request.post(`${via}/pin`, { headers: { ...host, 'Content-Type': 'application/x-www-form-urlencoded' }, data: `pin=${t.pin}`, maxRedirects: 0 });
+  const cookie = String(login.headers()['set-cookie'] || '').split(';')[0];
+  const dir = (await (await request.get('/api/tasks')).json()).projects[0].dir;
+  const give = () => request.post(`${via}/api/tasks`, { headers: { ...host, Cookie: cookie }, data: { dir, text: 'from the phone' } });
+  expect((await give()).status()).toBe(403);
+  await request.post('/api/tasks/allow', { data: { on: true } });
+  expect((await give()).status()).toBe(200);
+  await request.post('/api/tasks/allow', { data: { on: false } });
+  await request.post('/api/tunnel', { data: { on: false } });
+  expect(errors).toEqual([]);
+});
+
 // The handful of debug hooks (?debug) the reaction tests read: who is doing what, and the floor lamps.
 type Person = { station: string, phase: string, chore?: { thing?: unknown, gathering?: unknown }, deliver: () => void, reset: () => void, anim: string, goHomeNow: () => void,
   onBreak?: boolean, doze?: boolean, carry?: string };

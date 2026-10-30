@@ -83,6 +83,9 @@ function renderPhone() {
   body.append(el('h4', 'pm-h', tr('topbar.phone.rcTitle')));
   if (tun) body.append(phoneSwitch(tr('topbar.phone.rcSwitch'), !!tun.rc, false, async (want) => { const r = await post('/api/rc', { on: want }); if (!r?.ok) return false; tun.rc = r.rc; renderPhone(); return true; }));
   body.append(el('p', 'muted pm-note', tr(tun?.rc ? 'topbar.phone.rcOn' : 'topbar.phone.rcText')));
+  // "Giao việc" from the group chat on a phone: a new Claude Code run on this Mac (server/tasks.mjs), allowed here only
+  if (tun) body.append(phoneSwitch(tr('topbar.phone.tasksSwitch'), !!tun.tasks, false, async (want) => { const r = await post('/api/tasks/allow', { on: want }); if (!r?.ok) return false; tun.tasks = r.allowed; renderPhone(); return true; }),
+    el('p', 'muted pm-note', tr('topbar.phone.tasksNote')));
 }
 
 export function setup() {

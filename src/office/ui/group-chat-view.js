@@ -15,6 +15,7 @@ import { icon } from './icons.js';
 import { avatar } from './chat-avatars.js';
 import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
+import { openTaskSheet, dictate } from './task-sheet.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
@@ -264,17 +265,42 @@ function send() {
   const v = input.value; input.value = ''; syncBar(); mentionEl.hidden = true; input.style.height = '';
   if (v.trim()) chatSend(v, { replyTo: replyTo?.id });
   setReply(null);
+  // @ a conversation: give it this as work? (one tap opens the sheet with it filled in: its folder, photos, send)
+  const tagged = v.trim() && [...sessions.values()].sort((a, b) => dn(b).length - dn(a).length).find((s) => v.includes(`@${dn(s)}`));
+  if (tagged) setTimeout(() => {
+    const ask = el('div', 'zc-ask'), yes = el('button', 'zc-ask-yes', tr('chat.task.askYes')), no = el('button', 'zc-ask-no', tr('chat.task.askNo'));
+    yes.type = no.type = 'button';
+    yes.addEventListener('click', () => { ask.remove(); openTaskSheet(root, { to: { id: tagged.id }, text: v.replace(`@${dn(tagged)}`, '').trim() }); });
+    no.addEventListener('click', () => ask.remove());
+    ask.append(el('span', null, tr('chat.task.ask', { name: dn(tagged), folder: folderOf(tagged) })), no, yes);
+    body.append(ask); body.scrollTop = body.scrollHeight;
+  }, 300);
 }
+// a session's project folder, short (its last two parts), and what it's doing now
+const folderOf = (s) => { const d = String(s?.dir || '').replace(/\/+$/, ''); return d.split('/').slice(-2).join('/') || d; };
+const statusOf = (s) => tr(s.status === 'rest' ? 'chat.memberRest' : s.status === 'wait' ? 'chat.memberWait' : 'chat.memberWork');
+// @: every conversation (not only those in the office now), newest first, with its folder and what it's doing; one with
+// Remote Control also gets "Giao việc ↗", which opens it in the Claude app (the real way to give it work)
 function mentions() {
   const m = /@([^\s@]*)$/.exec(input.value.slice(0, input.selectionStart));
   if (!m) { mentionEl.hidden = true; return; }
-  const q = m[1].toLowerCase(), list = people().map((id) => sessions.get(id)).filter((s) => dn(s).toLowerCase().includes(q)).slice(0, 6);
+  const q = m[1].toLowerCase();
+  const list = [...sessions.values()].filter((s) => `${dn(s)} ${s.dir || ''}`.toLowerCase().includes(q)).sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0)).slice(0, 8);
+  if (!list.length) { mentionEl.replaceChildren(el('small', 'zc-men-empty', tr('chat.noSessions'))); mentionEl.hidden = false; return; }
   mentionEl.replaceChildren(...list.map((s) => {
-    const b = el('button', 'zc-men-o'); b.type = 'button'; b.append(avatar(who(s.id), 28), el('span', null, dn(s)));
-    b.addEventListener('mousedown', (e) => { e.preventDefault(); const pos = input.selectionStart, before = input.value.slice(0, pos).replace(/@[^\s@]*$/, `@${dn(s)} `); input.value = before + input.value.slice(pos); input.setSelectionRange(before.length, before.length); mentionEl.hidden = true; syncBar(); });
-    return b;
+    const row = el('div', 'zc-men-row'), b = el('button', 'zc-men-o'); b.type = 'button';
+    const t = el('span', 'zc-men-t'); t.append(el('b', null, dn(s)), el('small', null, `📁 ${folderOf(s)} · ${statusOf(s)}`));
+    b.append(avatar(faceOf(s.id, dn(s)), 30), t);
+    b.addEventListener('pointerdown', (e) => e.preventDefault());   // (the input keeps the keyboard up)
+    b.addEventListener('click', () => { const pos = input.selectionStart, before = input.value.slice(0, pos).replace(/@[^\s@]*$/, `@${dn(s)} `); input.value = before + input.value.slice(pos); input.setSelectionRange(before.length, before.length); mentionEl.hidden = true; syncBar(); input.focus(); });
+    const task = el('button', 'zc-men-task'); task.type = 'button'; task.title = tr('chat.task.title'); task.append(icon('clipboard'));
+    task.addEventListener('pointerdown', (e) => e.preventDefault());
+    task.addEventListener('click', () => { mentionEl.hidden = true; openTaskSheet(root, { to: { id: s.id }, text: input.value.replace(/@[^\s@]*$/, '').trim() }); });
+    row.append(b, task);
+    if (s.link) { const go = el('a', 'zc-men-go', tr('chat.giveWork')); go.href = s.link; go.target = '_blank'; go.rel = 'noopener'; row.append(go); }
+    return row;
   }));
-  mentionEl.hidden = !list.length;
+  mentionEl.hidden = false;
 }
 // the panel under the input: stickers (sent at once) or emoji (into the text), the way the app has both behind 😊
 function drawStickers() {
@@ -301,7 +327,9 @@ function drawMore() {
   for (const inp of [q, ...opts]) inp.addEventListener('keydown', (e) => e.stopPropagation());
   const at = el('button', 'zc-more-o'); at.type = 'button'; at.append(icon('at'), el('span', null, tr('chat.mention')));
   at.addEventListener('click', () => { moreEl.hidden = true; input.focus(); input.setRangeText(input.value && !/\s$/.test(input.value) ? ' @' : '@', input.selectionStart, input.selectionEnd, 'end'); mentions(); });
-  moreEl.replaceChildren(at, form);
+  const task = el('button', 'zc-more-o'); task.type = 'button'; task.append(icon('clipboard'), el('span', null, tr('chat.task.title')));
+  task.addEventListener('click', () => { moreEl.hidden = true; openTaskSheet(root); });
+  moreEl.replaceChildren(task, at, form);
 }
 function drawMembers() {
   const rows = [];
@@ -312,7 +340,7 @@ function drawMembers() {
     rows.push(r);
   };
   add({ ...meP(), name: `${tr('chat.boss')} (${tr('chat.you')})` }, tr('chat.memberYou'));
-  for (const id of people()) { const s = sessions.get(id); add(who(id), s.status === 'rest' ? tr('chat.memberRest') : tr('chat.memberWork'), s.link); }
+  for (const s of [...sessions.values()].sort((a, b) => (b.lastAt || 0) - (a.lastAt || 0))) add(faceOf(s.id, dn(s)), `${statusOf(s)} · 📁 ${folderOf(s)}`, s.link);
   for (const k of ['reception', 'hr', 'accountant', 'cleaner']) { const p = who(k); if (p) add(p, tr('chat.memberStaff')); }
   membersEl.replaceChildren(el('b', 'zc-mem-h', `${tr('chat.membersTitle')} (${rows.length})`), ...rows, el('p', 'zc-mem-note', tr('chat.note')));
 }
@@ -353,16 +381,20 @@ function build() {
   const photoBtn = (cls) => { const b = ib('image', tr('chat.sendPhoto'), () => chatSendPhoto(), cls); b.hidden = !state.isLocal; return b; };   // (a photo of the office as it is now: taken on the Mac)
   const atBtn = () => { moreEl.hidden = true; input.focus(); input.setRangeText(input.value && !/\s$/.test(input.value) ? ' @' : '@', input.selectionStart, input.selectionEnd, 'end'); mentions(); };
   const toolbar = el('div', 'zc-toolbar zc-pc');
-  toolbar.append(ib('smile', tr('chat.stickerTab'), () => openStickers('sticker')), photoBtn(''), ib('clip', ''), ib('card', ''), ib('chart', tr('chat.newPoll'), openMore), ib('at', tr('chat.mention'), atBtn), ib('format', ''), ib('more', tr('chat.more'), openMore));
+  toolbar.append(ib('smile', tr('chat.stickerTab'), () => openStickers('sticker')), photoBtn(''), ib('clip', ''), ib('card', ''), ib('chart', tr('chat.newPoll'), openMore), ib('at', tr('chat.mention'), atBtn),
+    ib('clipboard', tr('chat.task.title'), () => openTaskSheet(root), 'zc-task-btn'), ib('format', ''), ib('more', tr('chat.more'), openMore));
   bar = el('form', 'zc-bar');
   input = el('textarea', 'zc-in'); input.rows = 1; input.maxLength = 600;
   input.placeholder = tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; });
   input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } if (e.key === 'Escape') { if (replyTo) setReply(null); else toggle(false); } });
+  // the phone's 🎤: speak into the input (the browser's speech recognition, in the office's language)
+  let stopMic = null;
+  const micBtn = ib('mic', tr('chat.task.mic'), () => { if (stopMic) { stopMic(); stopMic = null; } else stopMic = dictate(micBtn, input, () => { syncBar(); input.dispatchEvent(new Event('input')); }); }, 'zc-mo zc-when-empty zc-mic');
   const like = el('button', 'zc-like-send zc-pc zc-when-empty', '👍'); like.type = 'button'; like.title = tr('chat.like'); like.addEventListener('click', () => { chatSend('👍', { replyTo: replyTo?.id }); setReply(null); });
   const sendBtn = el('button', 'zc-send'); sendBtn.type = 'submit'; sendBtn.title = tr('chat.send'); sendBtn.append(icon('send'), el('span', 'zc-send-t', tr('chat.sendPc')));
   bar.append(ib('smile', tr('chat.sticker'), () => openStickers('sticker'), 'zc-mo'), input,
-    ib('more', tr('chat.more'), openMore, 'zc-mo zc-when-empty'), ib('mic', '', null, 'zc-mo zc-when-empty'), photoBtn('zc-mo zc-when-empty'),
+    ib('more', tr('chat.more'), openMore, 'zc-mo zc-when-empty'), micBtn, photoBtn('zc-mo zc-when-empty'),
     ib('smile', tr('chat.emojiTab'), () => openStickers('emoji'), 'zc-pc'), like, sendBtn);
   bar.addEventListener('submit', (e) => { e.preventDefault(); send(); });
   membersEl = el('aside', 'zc-mems'); membersEl.hidden = true;
@@ -382,11 +414,18 @@ export function toggle(on = !chat.open) {
     redraw(); drawTyping();
     const line = body.querySelector('.zc-newline');
     if (line) line.scrollIntoView({ block: 'center' }); else body.scrollTop = body.scrollHeight;
-    $('zc-peek')?.setAttribute('hidden', ''); setTimeout(() => input.focus({ preventScroll: true }), 30);
+    $('zc-peek')?.setAttribute('hidden', ''); fitKeyboard(); setTimeout(() => input.focus({ preventScroll: true }), 30);
   }
   badge();
 }
+function fitKeyboard() {
+  const vv = window.visualViewport;
+  if (!root || root.hidden || !vv || !matchMedia('(max-width: 640px)').matches) { if (root) { root.style.height = ''; root.style.top = ''; } return; }
+  root.style.top = `${vv.offsetTop}px`; root.style.height = `${vv.height}px`;
+  if (document.activeElement === input) body.scrollTop = body.scrollHeight;
+}
 export function setup() {
+  window.visualViewport?.addEventListener('resize', fitKeyboard); window.visualViewport?.addEventListener('scroll', fitKeyboard);
   $('btn-chat')?.addEventListener('click', () => toggle());
   addEventListener('keydown', (e) => { if (e.key === 'Escape' && chat.open && !e.defaultPrevented) toggle(false); });
   badge();

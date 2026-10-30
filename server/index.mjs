@@ -20,6 +20,7 @@ import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
+import { createTasks } from './tasks.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
@@ -493,6 +494,34 @@ chat = createChatEngine({
 setInterval(() => chat.clock(), 30_000).unref();
 const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pinned, typing: chat.state.typing });
 
+/* ---------- "Giao việc" (server/tasks.mjs): Claude Code runs started from the office ---------- */
+const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs became (their leaving isn't announced: their result is); your task, quoted in the answer
+const tasks = createTasks({
+  dataDir: DATA_DIR, claude: () => findClaude(),
+  env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
+  onDone: (t) => {
+    if (t.sid) taskSids.add(t.sid);
+    const s = t.sid && [...sessions.values()].find((x) => x.sid === t.sid), folder = path.basename(t.dir);
+    const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), 560);
+    const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
+    if (s) chat.say(s.id, text, { reply: quote, react: ['❤️', '👍'], reacts: 2 });
+    else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
+  },
+});
+const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
+  projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
+  sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status })) });
+
+/* ---------- the project folders sessions have worked in: where "Giao việc" may start a new conversation (a phone
+   picks one of these, never a path of its own); the last 30, kept in data/projects.json ---------- */
+const DIRS_FILE = path.join(DATA_DIR, 'projects.json');
+let knownDirs = []; try { knownDirs = JSON.parse(fs.readFileSync(DIRS_FILE, 'utf8')).filter((d) => typeof d === 'string'); } catch { /* none yet */ }
+function noteDir(dir) {
+  if (!dir || !path.isAbsolute(dir) || knownDirs[0] === dir) return;
+  knownDirs = [dir, ...knownDirs.filter((d) => d !== dir)].slice(0, 30);
+  fsp.writeFile(DIRS_FILE, JSON.stringify(knownDirs)).catch(() => {});
+}
+
 /* ---------- session discovery ---------- */
 let scanning = null;
 function scanSessions() { return (scanning ??= doScan().finally(() => { scanning = null; })); }
@@ -532,7 +561,7 @@ async function doScan() {
     if (j.sessionId) sidToKey.set(j.sessionId, key);
     const link = j.bridgeSessionId ? 'https://claude.ai/code/' + j.bridgeSessionId : null;
     const name = j.name || base(j.cwd) || 'claude';
-    if (s.name !== name || s.cwd !== j.cwd || s.link !== link) { s.name = name; s.cwd = j.cwd || ''; s.link = link; changed = true; }
+    if (s.name !== name || s.cwd !== j.cwd || s.link !== link) { s.name = name; s.cwd = j.cwd || ''; s.link = link; changed = true; noteDir(s.cwd); }
     s.pid = j.pid; s.fromFile = true; s.busy = j.status === 'busy'; s.entry = j.entrypoint || '';
     // Claude's own session file says busy: trust it even if we missed the hook (e.g. the server restarted mid-turn).
     if (s.busy && s.status === 'rest') { s.status = 'work'; if (!s.taskStart) s.taskStart = j.statusUpdatedAt || Date.now(); s.lastEventAt = Math.max(s.lastEventAt, Date.now()); changed = true; }
@@ -586,7 +615,7 @@ async function recallTask(s) {
   broadcast({ k: 'sess', s: pub(s) });
 }
 function dropSession(key, s) {
-  if (s.fromFile) chat.onLeft(s.title || s.name);
+  if (s.fromFile && !taskSids.has(s.sid)) chat.onLeft(s.title || s.name);
   sessions.delete(key);
   if (s.sid && sidToKey.get(s.sid) === key) sidToKey.delete(s.sid);
   broadcast({ k: 'gone', id: s.id });
@@ -646,7 +675,7 @@ async function onHook(p) {
   if (!s) {
     const key = 's' + sid;
     s = newSession(key);
-    s.sid = sid; s.cwd = p.cwd || ''; s.name = `${base(p.cwd) || 'claude'}-${sid.slice(0, 2)}`;
+    s.sid = sid; s.cwd = p.cwd || ''; s.name = `${base(p.cwd) || 'claude'}-${sid.slice(0, 2)}`; noteDir(s.cwd);
     sessions.set(key, s); sidToKey.set(sid, key);
     broadcast({ k: 'sess', s: pub(s) });
   }
@@ -1629,7 +1658,7 @@ const server = http.createServer((req, res) => {
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN, its answers to approvals (when the Mac allows
   // them) and the page's presence. Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/perm', '/api/presence', '/api/chat'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -1699,6 +1728,40 @@ const server = http.createServer((req, res) => {
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone lan ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
       const on = lanIsOn();
       json(res, 200, { ok: true, on, fixed: lanFixed, lan: on ? lanUrl() : null, lanBase: on ? lanUrl(false) : null, ts: on ? tsUrl() : null, pin: currentPin() });
+    });
+    return;
+  }
+  if (url.pathname.startsWith('/api/tasks') && req.method === 'POST') {   // giving Claude work: start (from a phone only when allowed on the Mac), stop, allow
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req, 8_000_000).then((b) => {
+      if (url.pathname === '/api/tasks/allow') {
+        if (!mac) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+        prefs.set('phoneTasks', b?.on ? true : undefined);
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tasks from phones ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
+        json(res, 200, tasksOut(true)); return;
+      }
+      if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
+      if (url.pathname !== '/api/tasks') { json(res, 404, { ok: false }); return; }
+      if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
+      // where: a conversation the office knows (its context, branched), or a folder sessions have worked in
+      const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
+      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), dir = s ? s.cwd : knownDirs.find((d) => d === want);
+      if (!dir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
+      const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
+      if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
+      // in the group: your task (the photos with it), then the run
+      const name = s ? s.title || s.name : path.basename(dir);
+      chat.system(tr(s ? 'chat.task.toSession' : 'chat.task.toFolder', { name, folder: path.basename(dir) }));
+      for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
+      chat.say('me', `📋 ${text}`, { now: true });
+      const mine = chat.state.msgs.at(-1);
+      const r = tasks.start({ dir, text, images, from: s ? { sid: s.sid, name } : null });
+      if (r.ok) {
+        taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
+      } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${mac ? 'mac' : `phone ${clientIp(req)}`} ${s ? `resume ${s.sid}` : dir} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+      json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
     });
     return;
   }
@@ -1855,6 +1918,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
+  if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
     if (!type) { res.writeHead(404).end(); return; }
@@ -1963,10 +2027,10 @@ setInterval(syncLan, 30_000).unref();
    whatever its address looks like (req.viaTunnel): it needs the PIN (no token links), its cookie is https-only, and all
    that only the Mac may do (hooks, stopping processes, accounts, these switches) refuses it, as it refuses a phone.
    Off: cloudflared stops and the listener closes, cutting off whoever was in. OFFICE_TUNNEL_CMD: a stand-in (tests). */
-const tunnel = { state: 'off', url: '', host: '', error: '', proc: null, srv: null, port: 0, tries: 0, gen: 0 };
+const tunnel = { state: 'off', url: '', host: '', error: '', pid: 0, srv: null, port: 0, tries: 0, gen: 0, watch: null };
 const TUNNEL_PID = path.join(DATA_DIR, 'tunnel.pid'), CF_BIN = path.join(DATA_DIR, 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
 const tunnelOut = () => ({ ok: true, on: !!prefs.get('tunnel'), state: tunnel.state, url: tunnel.url, error: tunnel.error, port: tunnel.port, pin: currentPin(),
-  awake: process.platform === 'darwin' ? { held: !!awakeProc, ac: powerAC } : null, rc: rcAtStartup() });
+  awake: process.platform === 'darwin' ? { held: !!awakeProc, ac: powerAC } : null, rc: rcAtStartup(), tasks: !!prefs.get('phoneTasks') });
 // Giving Claude work from a phone is Claude Code's own Remote Control: with remoteControlAtStartup in its settings every
 // new session opens its bridge by itself (the other accounts share these settings by a link), and the office shows each
 // session's link. Switched in the phone window, by you, on the Mac; the rest of the file is left as it is.
@@ -2023,38 +2087,64 @@ function killStaleTunnel() {
   } catch { /* none, or gone */ }
   fs.rmSync(TUNNEL_PID, { force: true });
 }
+// The tunnel outlives a restart of the office (an update, say): cloudflared runs on its own, writing to data/tunnel.log, and
+// leads to a port that doesn't change (OFFICE_TUNNEL_PORT, else the office's + 7), so the office coming back takes the
+// same cloudflared and the same address (data/tunnel.json) and the phone's link still works. Only the switch stops it.
+const TUNNEL_FILE = path.join(DATA_DIR, 'tunnel.json'), TUNNEL_LOG = path.join(DATA_DIR, 'tunnel.log'), TUNNEL_PORT = Number(process.env.OFFICE_TUNNEL_PORT) || PORT + 7;
+const isCloudflared = (pid) => { try { return process.platform !== 'win32' && /cloudflared/.test(path.basename(execFileSync('ps', ['-o', 'comm=', '-p', String(pid)], { timeout: 4000 }).toString().trim())); } catch { return false; } };
+const readJsonFile = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
+async function listenTunnel() {
+  if (tunnel.srv) return;
+  const handle = server.listeners('request')[0], srv = http.createServer((req, res) => { req.viaTunnel = true; handle(req, res); });
+  await new Promise((resolve, reject) => { srv.once('error', reject); srv.listen(TUNNEL_PORT, '127.0.0.1', resolve); });
+  tunnel.srv = srv; tunnel.port = TUNNEL_PORT;
+}
+function tunnelUp(pid, url) {
+  Object.assign(tunnel, { pid, url, host: new URL(url).host, state: 'on', tries: 0, error: '' });
+  try { fs.writeFileSync(TUNNEL_FILE, JSON.stringify({ pid, url, port: tunnel.port })); } catch { /* read-only data */ }
+  console.log(`[my-office] ${tr('server.tunnel.ready', { url })}`);
+  clearInterval(tunnel.watch);
+  tunnel.watch = setInterval(() => {   // (it may drop: the network went away, Cloudflare closed it; again, later each time)
+    if (!tunnel.pid || alive(tunnel.pid)) return;
+    clearInterval(tunnel.watch); Object.assign(tunnel, { pid: 0, url: '', host: '' }); fs.rmSync(TUNNEL_FILE, { force: true });
+    if (!prefs.get('tunnel')) { tunnel.state = 'off'; return; }
+    tunnel.state = 'error'; tunnel.error = tr('server.tunnel.dropped');
+    if (++tunnel.tries <= 6) setTimeout(() => { if (prefs.get('tunnel')) startTunnel(); }, Math.min(60_000, 3000 * 2 ** tunnel.tries)).unref();
+  }, 5000);
+  tunnel.watch.unref();
+}
 async function startTunnel() {
-  if (tunnel.proc || tunnel.state === 'download' || tunnel.state === 'starting') return;
+  if (tunnel.pid || tunnel.state === 'download' || tunnel.state === 'starting') return;
   keepAwake(true);
   const gen = ++tunnel.gen;
   tunnel.state = 'starting'; tunnel.error = ''; tunnel.url = ''; tunnel.host = '';
   try {
+    await listenTunnel();
+    // the one left running before a restart, to the same port: the same address
+    const saved = readJsonFile(TUNNEL_FILE);
+    if (saved?.url && saved.port === tunnel.port && saved.pid > 1 && alive(saved.pid) && isCloudflared(saved.pid)) { tunnelUp(saved.pid, saved.url); return; }
+    killStaleTunnel();
     const cmd = await cloudflared();
     if (gen !== tunnel.gen || !prefs.get('tunnel')) return;
     tunnel.state = 'starting';
-    if (!tunnel.srv) {
-      const handle = server.listeners('request')[0];
-      tunnel.srv = http.createServer((req, res) => { req.viaTunnel = true; handle(req, res); });
-      await new Promise((resolve, reject) => { tunnel.srv.once('error', reject); tunnel.srv.listen(0, '127.0.0.1', resolve); });
-      tunnel.port = tunnel.srv.address().port;
-    }
-    killStaleTunnel();
-    const proc = tunnel.proc = spawn(cmd, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${tunnel.port}`], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
-    try { fs.writeFileSync(TUNNEL_PID, String(proc.pid)); } catch { /* read-only data */ }
-    const read = (chunk) => {
-      const m = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(String(chunk));
-      if (m && !tunnel.url) { tunnel.url = m[0]; tunnel.host = new URL(m[0]).host; tunnel.state = 'on'; tunnel.tries = 0; console.log(`[my-office] ${tr('server.tunnel.ready', { url: tunnel.url })}`); }
-    };
-    proc.stdout.on('data', read); proc.stderr.on('data', read);
+    fs.writeFileSync(TUNNEL_LOG, '');
+    const out = fs.openSync(TUNNEL_LOG, 'a');
+    const proc = spawn(cmd, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${tunnel.port}`], { stdio: ['ignore', out, out], detached: true, windowsHide: true });
+    fs.closeSync(out); proc.unref();
     proc.on('error', (err) => { tunnel.error = String(err.message || err).slice(0, 200); });
-    proc.on('exit', () => {
-      if (tunnel.proc !== proc) return;
-      tunnel.proc = null; tunnel.url = ''; tunnel.host = '';
-      fs.rmSync(TUNNEL_PID, { force: true });
-      if (!prefs.get('tunnel')) { tunnel.state = 'off'; return; }
-      // it dropped while on (the network went away, Cloudflare closed it): again, a little later each time
-      tunnel.state = 'error'; tunnel.error ||= tr('server.tunnel.dropped');
-      if (++tunnel.tries <= 6) setTimeout(() => { if (prefs.get('tunnel')) startTunnel(); }, Math.min(60_000, 3000 * 2 ** tunnel.tries)).unref();
+    try { fs.writeFileSync(TUNNEL_PID, String(proc.pid)); } catch { /* read-only data */ }
+    // its address, from its log
+    const t0 = Date.now();
+    await new Promise((resolve) => {
+      const look = () => {
+        if (gen !== tunnel.gen) { resolve(); return; }
+        let log = ''; try { log = fs.readFileSync(TUNNEL_LOG, 'utf8'); } catch { /* not yet */ }
+        const m = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(log);
+        if (m) { tunnelUp(proc.pid, m[0]); resolve(); return; }
+        if (!alive(proc.pid) || Date.now() - t0 > 90_000) { tunnel.state = 'error'; tunnel.error ||= clip(oneLine(log.split('\n').filter(Boolean).pop() || tr('server.tunnel.dropped')), 200); try { process.kill(proc.pid); } catch { /* gone */ } resolve(); return; }
+        setTimeout(look, 500);
+      };
+      look();
     });
   } catch (err) {
     if (gen !== tunnel.gen) return;
@@ -2063,16 +2153,15 @@ async function startTunnel() {
 }
 function stopTunnel() {
   tunnel.gen++;
-  keepAwake(false);
-  const proc = tunnel.proc; tunnel.proc = null;
-  if (proc) { try { proc.kill('SIGTERM'); } catch { /* gone */ } }
-  fs.rmSync(TUNNEL_PID, { force: true });
+  keepAwake(false); clearInterval(tunnel.watch);
+  if (tunnel.pid) { try { process.kill(tunnel.pid, 'SIGTERM'); } catch { /* gone */ } }
+  fs.rmSync(TUNNEL_PID, { force: true }); fs.rmSync(TUNNEL_FILE, { force: true });
   if (tunnel.srv) { tunnel.srv.close(); tunnel.srv.closeAllConnections?.(); tunnel.srv = null; tunnel.port = 0; }
-  Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0 });
+  Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0, pid: 0 });
 }
-// (the office stopping: cloudflared stops with it)
-process.on('exit', () => { try { tunnel.proc?.kill('SIGTERM'); awakeProc?.kill(); } catch { /* gone */ } });
-for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { try { tunnel.proc?.kill('SIGTERM'); } catch { /* gone */ } process.exit(0); });
+// (the office stopping: cloudflared keeps going for when it comes back; staying awake ends with it, caffeinate -w)
+process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } });
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
 
 server.listen(PORT, HOST, () => {
   syncLan();
