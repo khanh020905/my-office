@@ -474,6 +474,16 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-work.is-work .zc-work-btn.is-stop').last().click({ timeout: 20_000 });
   await expect(zc.locator('.zc-work.is-stopped').last()).toBeVisible({ timeout: 20_000 });
   await expect(zc.locator('.zc-row', { hasText: 'Stopped, as you asked' }).last()).toBeVisible({ timeout: 20_000 });
+  // quick commands: a tap fills the input; ✎ changes them (kept on the Mac, for the phones too)
+  await zc.locator('.zc-quick .zc-quick-c').first().click();
+  await expect(zc.locator('.zc-in')).toHaveValue(/tests/);
+  await zc.locator('.zc-quick .zc-quick-c.is-edit').click();
+  await zc.locator('.zc-quick-ed .zc-quick-c', { hasText: 'Add' }).click();
+  await zc.locator('.zc-quick-row input').last().fill('Lint');
+  await zc.locator('.zc-quick-row textarea').last().fill('Run the linter.');
+  await zc.locator('.zc-quick-ed .zc-quick-c.is-save').click();
+  await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Lint' })).toBeVisible();
+  expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Run the linter.');
   await zc.locator('.zc-to-x').click();
   await expect(zc.locator('.zc-to-chip')).not.toHaveClass(/is-on/);
   // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it

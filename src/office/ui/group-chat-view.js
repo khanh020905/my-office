@@ -22,7 +22,7 @@ import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
-let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, convEl;
+let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, quickEl, convEl;
 let replyTo = null, readTo = null, stickTab = 'sticker';   // the message you answer; the last one read when the window shut; the panel's tab
 const RUN_MS = 3 * 60e3, GAP_MS = 20 * 60e3;   // one run of bubbles: the same person within 3 minutes; a time line after 20 quiet minutes
 const seeVotes = new Set();   // polls whose voters are listed
@@ -419,6 +419,46 @@ function drawTarget() {
   input.placeholder = target ? tr('chat.to.placeholder', { name: target.name }) : tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   root.classList.toggle('is-to', !!target);
   if (target?.sid) { const c = el('button', 'zc-ib zc-to-conv'); c.type = 'button'; c.title = tr('chat.conv.open'); c.append(el('span', null, '📜')); c.addEventListener('click', () => openConv(target)); toEl.insertBefore(c, toEl.querySelector('.zc-to-x')); }
+  drawQuick();
+}
+
+/* ---------- quick commands over the input (to a conversation or a project): a tap fills the input, ✎ changes them ----------
+   Shared by the Mac and the phones (data/quick.json); the office's own until you change them. */
+let quick = null;
+const QUICK0 = () => ['test', 'commit', 'deploy', 'today', 'errors'].map((k) => ({ label: tr(`chat.quick.${k}`), prompt: tr(`chat.quick.${k}Prompt`) }));
+async function loadQuick() { const r = await fetch(`/api/quick${tq()}`).then((x) => x.json()).catch(() => null); quick = r?.list?.length ? r.list : QUICK0(); drawQuick(); }
+function drawQuick() {
+  if (!quickEl) return;
+  quickEl.hidden = !target || !quick;
+  if (quickEl.hidden) return;
+  const chip = (label, fn, cls = '') => { const b = el('button', `zc-quick-c ${cls}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+  quickEl.replaceChildren(...quick.map((q) => chip(q.label, () => { input.value = q.prompt; syncBar(); input.dispatchEvent(new Event('input')); input.focus(); })),
+    chip('✎', editQuick, 'is-edit'));
+}
+function editQuick() {
+  mentionEl.hidden = moreEl.hidden = stickersEl.hidden = true;
+  const rows = el('div', 'zc-quick-ed'), list = quick.map((q) => ({ ...q }));
+  const draw = () => {
+    rows.replaceChildren(el('small', 'zc-to-h', tr('chat.quick.edit')), ...list.map((q, i) => {
+      const r = el('div', 'zc-quick-row'), l = el('input', 'zc-more-in'), p = el('textarea', 'zc-more-in'), x = el('button', 'zc-ib zc-reply-x');
+      l.value = q.label; l.maxLength = 24; l.placeholder = tr('chat.quick.label'); p.value = q.prompt; p.rows = 2; p.maxLength = 2000; p.placeholder = tr('chat.quick.prompt');
+      for (const f of [l, p]) f.addEventListener('keydown', (e) => e.stopPropagation());
+      l.addEventListener('input', () => { q.label = l.value; }); p.addEventListener('input', () => { q.prompt = p.value; });
+      x.type = 'button'; x.append(icon('x')); x.addEventListener('click', () => { list.splice(i, 1); draw(); });
+      r.append(l, x, p); return r;
+    }));
+    const acts = el('div', 'zc-quick-acts'), add = el('button', 'zc-quick-c', tr('chat.quick.add')), reset = el('button', 'zc-quick-c', tr('chat.quick.reset')), save = el('button', 'zc-quick-c is-save', tr('chat.quick.save'));
+    for (const b of [add, reset, save]) b.type = 'button';
+    add.addEventListener('click', () => { if (list.length < 12) { list.push({ label: '', prompt: '' }); draw(); } });
+    reset.addEventListener('click', () => { list.splice(0, list.length, ...QUICK0()); draw(); });
+    save.addEventListener('click', async () => {
+      const r = await fetch(`/api/quick${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list }) }).then((x) => x.json()).catch(() => null);
+      if (!r?.ok) { toast(tr('drawer.unreachable')); return; }
+      quick = r.list.length ? r.list : QUICK0(); pickEl.hidden = true; drawQuick(); toast(tr('chat.quick.saved'));
+    });
+    acts.append(add, reset, save); rows.append(acts);
+  };
+  draw(); pickEl.replaceChildren(rows); pickEl.hidden = false;
 }
 
 /* ---------- one conversation on its own screen: everything said in it and what Claude did, as in the Claude app, kept up to
@@ -673,9 +713,11 @@ function build() {
   try { hint.hidden = localStorage.getItem('office-chat-hint') === 'seen'; } catch { /* storage blocked */ }
   hintX.addEventListener('click', () => { hint.hidden = true; try { localStorage.setItem('office-chat-hint', 'seen'); } catch { /* storage blocked */ } });
   toEl = el('div', 'zc-to'); toEl.hidden = DEMO_CHAT; pickEl = el('div', 'zc-to-pick'); pickEl.hidden = true;
+  quickEl = el('div', 'zc-quick'); quickEl.hidden = true;
   convEl = el('div', 'zc-conv'); convEl.hidden = true;
+  if (!DEMO_CHAT) loadQuick();
   notifyBar = el('div', 'zc-nbar'); notifyBar.hidden = true;
-  root.append(head, notifyBar, pinEl, body, convEl, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, toEl, bar, membersEl);
+  root.append(head, notifyBar, pinEl, body, convEl, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, quickEl, toEl, bar, membersEl);
   drawTarget();
   $('app').append(root);
 }
