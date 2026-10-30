@@ -143,7 +143,11 @@ function acctHead(slug, label, info, until) {
     const use = el('button', 'acct-use', tr('mac.plan.use')); use.type = 'button'; use.title = tr('mac.plan.useTitle', { name: acctName(slug, label) });
     use.addEventListener('click', () => useAccount(slug, label, use)); end.append(use);
   }
-  if (until > Date.now()) end.append(el('em', 'acct-badge acct-badge--out', tr('mac.plan.out', { when: new Date(until).toDateString() === new Date().toDateString() ? hhmm(until) : resetText(until) })));
+  if (until > Date.now()) {   // (short: the day and the time, the date in its tooltip; the row has its "Dùng" too)
+    const d = new Date(until), today = d.toDateString() === new Date().toDateString();
+    const out = el('em', 'acct-badge acct-badge--out', tr('mac.plan.out', { when: today ? hhmm(until) : `${tr('mac.plan.weekdays', null, 'list')[d.getDay()]} ${hhmm(until)}` }));
+    out.title = resetText(until); end.append(out);
+  }
   else if (inUse) end.append(el('em', 'acct-badge acct-badge--on', tr('mac.plan.inUse')));
   const meta = el('span', 'acct-meta', info); if (!slug) meta.title = tr('mac.plan.account');
   if (order.length > 1) head.append(gripFor(slug, label));

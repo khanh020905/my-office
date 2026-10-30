@@ -150,7 +150,7 @@ engine switches to demo mode and talks to no API.
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 47 | List mode: the sessions as cards, no 3D. |
 | `ui/look-switch.js` | 19 | Switching the character look. |
-| `ui/mac-drawer.js` | 669 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
+| `ui/mac-drawer.js` | 673 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
 | `ui/permissions.js` | 148 | Approve / deny cards and Claude's questions. |
 | `ui/phone.js` | 92 | The office on a phone: an app-like layout for small screens, upright or held sideways. |
