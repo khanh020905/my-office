@@ -17,6 +17,9 @@ export function shotsIn(text) {
   return { text: String(text || '').replace(LINE, '').replace(/\n{3,}/g, '\n\n').trim(), urls: [...new Set(urls)].slice(0, 3) };
 }
 const CHROME = ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/usr/bin/google-chrome', '/usr/bin/chromium', '/usr/bin/chromium-browser'];
+// (never the Mac's keychain: without these, a Chrome started away from your own home folder, as in the tests, asks
+// macOS for one and a "Keychain Not Found" window comes up)
+const QUIET = ['--use-mock-keychain', '--password-store=basic', '--no-first-run', '--no-default-browser-check'];
 const run = (file, args, ms) => new Promise((ok) => execFile(file, args, { timeout: ms }, (err) => ok(!err)));
 /** A page at a phone's size, as a JPEG data URL (under the chat's 500 kB), or null. */
 export async function shoot(url, { width = 390, height = 844 } = {}) {
@@ -24,7 +27,7 @@ export async function shoot(url, { width = 390, height = 844 } = {}) {
   const jpeg = (buf) => `data:image/jpeg;base64,${buf.toString('base64')}`;
   try {
     const { chromium } = await import('playwright');
-    const b = await chromium.launch();
+    const b = await chromium.launch({ args: QUIET });
     try {
       const p = await b.newPage({ viewport: { width, height }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
       await p.goto(url, { waitUntil: 'load', timeout: 30_000 }).catch(() => {});
@@ -36,7 +39,7 @@ export async function shoot(url, { width = 390, height = 844 } = {}) {
   const chrome = CHROME.find((f) => fs.existsSync(f)); if (!chrome) return null;
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-shot-')), png = path.join(dir, 'p.png'), jpg = path.join(dir, 'p.jpg');
   try {
-    if (!(await run(chrome, ['--headless=new', '--disable-gpu', '--hide-scrollbars', `--window-size=${width},${height}`, '--force-device-scale-factor=2', `--screenshot=${png}`, url], 45_000)) || !fs.existsSync(png)) return null;
+    if (!(await run(chrome, [...QUIET, `--user-data-dir=${path.join(dir, 'profile')}`, '--headless=new', '--disable-gpu', '--hide-scrollbars', `--window-size=${width},${height}`, '--force-device-scale-factor=2', `--screenshot=${png}`, url], 45_000)) || !fs.existsSync(png)) return null;
     if (process.platform === 'darwin' && await run('/usr/bin/sips', ['-s', 'format', 'jpeg', '-s', 'formatOptions', '55', png, '--out', jpg], 20_000) && fs.existsSync(jpg)) {
       const buf = fs.readFileSync(jpg); return buf.length * 1.37 < 480_000 ? jpeg(buf) : null;
     }
