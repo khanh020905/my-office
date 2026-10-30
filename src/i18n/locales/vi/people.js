@@ -125,6 +125,7 @@ export default {
     treat: { go: ['Đi mua kem Mixue khao cả phòng đây 🍦', 'Ra Mixue mua kem cho cả nhà nè 🍦'], got: ['Kem về rồi, ra lấy nha mọi người 🍦', 'Kem Mixue đây, ăn nhanh kẻo chảy 🍦'] },
     tea: { go: ['Ra {shop} làm ly trà sữa đây 🧋', 'Đi {shop} chút, ai uống gì không 🧋'], got: ['Trà sữa đây, làm tiếp thôi 🧋', 'Có ly {shop} rồi, về thôi 🧋'] },
     checkin: { go: ['Ra {shop} check-in chút 📸', 'Đi {shop} sống ảo đây 📸'], got: ['Chụp xong rồi, đẹp lắm 📸', 'Xếp hàng mệt nghỉ, mà đáng 🧋'] },
+    headache: { go: ['Nhức đầu quá, ra {shop} mua thuốc 😵', 'Đi {shop} mua vỉ thuốc đau đầu 💊'], got: ['Mua thuốc rồi, uống xong làm tiếp 💊', 'Dược sĩ dặn nghỉ ngơi xíu 😅'] },
     go: {
       cup: ['Xuống {shop} mua chai nước chút 🥤', 'Ra {shop} mua ly trà đào 🥤', 'Qua {shop} xíu, ai mua gì không? 🛒'],
       noodle: ['Xuống {shop} làm ly mì cho ấm bụng 🍜', 'Đói rồi, ra {shop} úp ly mì đây 🍜'],

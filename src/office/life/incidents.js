@@ -20,7 +20,7 @@ import { shredAction } from '../world/props/shredder.js';
 import { onTest } from './tests.js';
 import { onCommit, onPush, postAction } from './post.js';
 import { chatEvent } from '../ui/group-chat.js';
-import { treat } from '../people/outings.js';
+import { headache, treat } from '../people/outings.js';
 
 /* ---------- incidents: three failures in five minutes turn the office red for a while ---------- */
 export const fails = [];
@@ -29,6 +29,7 @@ function startIncident(s) {
   state.incidentUntil = state.sim + 25; $('stage-wrap').classList.add('is-incident'); sfx.play('siren');
   const b = $('incident'); b.textContent = `${tr('incident.banner')}${s ? ` · ${dn(s)}` : ''}`; b.hidden = false;
   for (const w of workers.values()) if (sessions.get(w.id)?.status === 'work') w.push({ ...ACT.fail, type: 'fail', text: tr('incident.bubble') });
+  headache();   // (and someone goes down to Long Châu for something for the headache: people/outings.js)
 }
 export function updateIncident(t) {
   const on = state.sim < state.incidentUntil;

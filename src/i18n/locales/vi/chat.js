@@ -184,6 +184,7 @@ export default {
     mixueAsk: ['Cho em 1 cây ốc quế với 🍦', 'Em ly trà sữa trân châu nha 🧋', 'Mua giùm em ly chanh tươi 🍋', 'Super Sundae dâu cho chị 😋', 'Em trà đào bốn mùa nha 🍑'],
     phuclongAsk: ['Mua giùm em ly trà sữa Phúc Long nha 🧋', 'Em trà đào, ít đá nha 🍑', 'Cho chị ly hồng trà sữa với', 'Trà vải lài cho em nha 🌸'],
     katinatAsk: ['Cho em ly ô long nướng, nhớ chụp hình nha 📸', 'Em bơ già dừa non 🥑🥥', 'Đông lắm đó, xếp hàng lâu không? 😆', 'Ô long nướng huyền châu cho em với 🧋'],
+    longchauAsk: ['Mua giùm em vỉ Panadol luôn 😭', 'Lấy thêm C sủi cho cả phòng đi', 'Uống thuốc rồi nghỉ xíu đi, để em fix tiếp', 'Hỏi dược sĩ thuốc nào không buồn ngủ nha'],
     parcelGot: ['Em lấy rồi ạ, cảm ơn chị 🥰', 'Dạ em xuống liền'],
   },
   // life in the office (the staff or a session, as it happens)
@@ -207,6 +208,7 @@ export default {
     phuclongTea: ['Chiều rồi, em ra Phúc Long làm ly trà sữa đây, ai uống gì không? 🧋', 'Rảnh tay rồi, đi Phúc Long mua trà đào cho tỉnh 🍑', 'Xong việc rồi, Phúc Long thôi, ai order không 🧋'],
     katinatTea: ['Chiều rồi, em ra Katinat làm ly ô long nướng, ai uống không? 🧋', 'Đi Katinat chút, ai gửi gì không 🧋'],
     katinatCheckin: ['Cuối tuần rồi, ra Katinat check-in sống ảo chút 📸', 'Em đi Katinat, xếp hàng chắc nửa tiếng 😆 ai uống gì không', 'Tối nay Katinat đông lắm, em đi giữ chỗ chụp hình nè 📸'],
+    longchauHeadache: ['Lỗi hoài nhức đầu quá, em ra Long Châu mua thuốc đau đầu đây 😵', 'Đỏ cả phòng rồi 😭 ra Long Châu mua vỉ Panadol cái đã', 'Test fail liên tục, đau đầu thiệt sự, em chạy ra Long Châu chút 💊'],
     cleaner: ['Cô lau nhà nha, mọi người đi nhẹ thôi kẻo trượt nha con 🧽'],
     altar: ['Hôm nay rằm, chị cúng rồi nha cả nhà 🙏', 'Mùng một đầu tháng, chúc cả nhà làm ăn phát đạt 🙏'],
     trophy: '🏆 Cả nhà vừa đạt “{name}”! Giỏi quá đi 🎉',
