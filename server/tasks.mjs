@@ -10,13 +10,14 @@ import path from 'node:path';
 
 const MAX_TEXT = 4000, MAX_IMAGES = 4, MAX_IMAGE = 3_500_000;
 
-/** claude() -> { file } | null; env() -> the environment to run with; onStart(task), onDone(task) for the office. */
-export function createTasks({ dataDir, claude, env, onStart, onDone, max = 3, perHour = 12 }) {
+/** claude() -> { file } | null; env() -> the environment to run with; onStart(task), onStep(task, { name, input }) (a tool
+    it uses, as it goes), onDone(task) for the office. */
+export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, max = 3, perHour = 12 }) {
   const running = new Map(), recent = [];   // id -> task; when the last ones started (the hourly cap)
   const imgDir = path.join(dataDir, 'task-images');
   const pub = (t) => ({ id: t.id, dir: t.dir, text: t.text.slice(0, 200), at: t.at, from: t.from || null, sid: t.sid || null });
   /** { dir, text, images: [data URLs], from: { sid, name, fork } | null } -> { ok, task } or { ok: false, code } */
-  function start({ dir, text, images = [], from = null }) {
+  function start({ dir, text, images = [], from = null, env: extra = null }) {
     text = String(text || '').trim().slice(0, MAX_TEXT);
     if (!text) return { ok: false, code: 'empty' };
     if (running.size >= max) return { ok: false, code: 'busy' };
@@ -37,7 +38,8 @@ export function createTasks({ dataDir, claude, env, onStart, onDone, max = 3, pe
     // (from.fork false: carry on that very conversation, one this office started for you, instead of a branch of it)
     const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : [])];
     let proc;
-    try { proc = spawn(bin.file, args, { cwd: dir, env: env(), stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }
+    const e = { ...env(), ...extra }; for (const k of Object.keys(e)) if (e[k] == null) delete e[k];   // (extra: the conversation's own account; null unsets)
+    try { proc = spawn(bin.file, args, { cwd: dir, env: e, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }
     catch { return { ok: false, code: 'noClaude' }; }
     const t = { id, pid: proc.pid, proc, dir, text, at: now, from, sid: null, result: '', error: '', buf: '' };
     running.set(id, t); recent.push(now);
@@ -50,6 +52,7 @@ export function createTasks({ dataDir, claude, env, onStart, onDone, max = 3, pe
         try {
           const j = JSON.parse(line);
           if (j.type === 'system' && j.subtype === 'init' && j.session_id) t.sid = j.session_id;
+          if (j.type === 'assistant' && !j.parent_tool_use_id) for (const c of j.message?.content || []) if (c?.type === 'tool_use') onStep?.(t, { name: c.name, input: c.input || {} });
           if (j.type === 'result') { t.result = String(j.result || ''); if (j.is_error) t.error = t.result || j.subtype || 'error'; }
         } catch { /* not a line of its stream */ }
       }

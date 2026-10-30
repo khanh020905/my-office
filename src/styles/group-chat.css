@@ -300,3 +300,25 @@
 .zc-to-proj { background: #FFF3E0; }
 .zc-to-pill { flex: none; margin-left: auto; padding: 2px 8px; border-radius: 999px; background: #E5F1FF; color: var(--zc-blue); font-size: 11.5px; font-style: normal; font-weight: 700; }
 .zc-to-o .zc-men-t { flex: 1; }
+
+/* Claude at work on what you sent it (a live card), and "Xem thêm" on a long message */
+.zc-work { display: grid; gap: 6px; min-width: 220px; }
+.zc-work-h { display: flex; align-items: center; gap: 8px; }
+.zc-work-h b { font-size: 14.5px; font-weight: 600; }
+.zc-work-h small { margin-left: auto; color: var(--zc-grey); font-size: 12px; font-variant-numeric: tabular-nums; }
+.zc-work-ic { flex: none; width: 18px; height: 18px; display: grid; place-items: center; font-style: normal; font-size: 14px; }
+.zc-work.is-work .zc-work-ic::before { content: ''; width: 14px; height: 14px; border-radius: 50%; border: 2px solid #9CC5FF; border-top-color: var(--zc-blue); animation: zc-spin .8s linear infinite; }
+@keyframes zc-spin { to { transform: rotate(360deg); } }
+.zc-work-steps { margin: 0; padding: 0 0 0 2px; list-style: none; display: grid; gap: 3px; font-size: 13px; color: #33415C; }
+.zc-work-steps li { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-work.is-work .zc-work-steps li:last-child { color: var(--zc-ink); font-weight: 500; }
+.zc-work-ask { padding: 6px 8px; border-radius: 6px; background: #FFF4D6; color: #6B4E00; font-size: 13px; }
+.zc-work-none { color: var(--zc-grey); font-size: 12px; }
+.zc .zc-readmore { all: unset; color: var(--zc-blue); font-size: 13.5px; font-weight: 600; cursor: pointer; }
+.zc .zc-readmore:hover { text-decoration: underline; }
+
+/* the bar that offers notifications on a phone */
+.zc-nbar { flex: none; display: flex; align-items: center; gap: 8px; padding: 8px 6px 8px 12px; background: #FFF8E1; border-bottom: 1px solid #F3E2A9; color: #5C4A12; font-size: 13px; line-height: 1.4; }
+.zc-nbar > span { flex: 1; }
+.zc .zc-nb-go { all: unset; flex: none; padding: 6px 14px; border-radius: 999px; background: var(--zc-blue); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
+.zc .zc-nb-go:disabled { opacity: .6; }

@@ -23,15 +23,25 @@ export async function pushState() {
   const r = await fetch(api({ endpoint: sub.endpoint })).then((x) => x.json()).catch(() => null);
   return r?.on ? 'on' : 'off';
 }
-/** Asks (it must follow a tap), subscribes and tells the office: true when on. */
+// what went wrong, told to the office too (data/actions.log), so it can be looked into from the Mac
+const fail = (why, e) => { const detail = String(e?.message || e || '').slice(0, 160); post({ op: 'report', why, detail }); return { ok: false, why, detail }; };
+const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new Error('timeout')), ms))]);
+/** Asks (it must follow a tap), subscribes and tells the office: { ok } or { ok: false, why: 'none' | 'denied' | 'key' |
+    'sw' | 'subscribe' | 'server', detail }. */
 export async function pushOn() {
-  if (!supported() || (await Notification.requestPermission()) !== 'granted') return false;
-  const meta = await fetch(api()).then((x) => x.json()).catch(() => null); if (!meta?.key) return false;
-  const reg = await worker(); await navigator.serviceWorker.ready;
-  let sub = await reg.pushManager.getSubscription();
-  if (sub && b64key(meta.key).join() !== new Uint8Array(sub.options?.applicationServerKey || []).join()) { await sub.unsubscribe(); sub = null; }   // (an older key of the office's)
-  sub ||= await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(meta.key) }).catch(() => null);
-  return !!sub && !!(await post({ op: 'add', sub: sub.toJSON() }))?.ok;
+  if (!supported()) return { ok: false, why: 'none' };
+  let perm; try { perm = await Notification.requestPermission(); } catch (e) { return fail('denied', e); }
+  if (perm !== 'granted') return { ok: false, why: 'denied' };
+  const meta = await fetch(api()).then((x) => x.json()).catch(() => null); if (!meta?.key) return fail('key');
+  let reg; try { reg = await worker(); await within(navigator.serviceWorker.ready, 15_000); } catch (e) { return fail('sw', e); }
+  let sub;
+  try {
+    sub = await reg.pushManager.getSubscription();
+    if (sub && b64key(meta.key).join() !== new Uint8Array(sub.options?.applicationServerKey || []).join()) { await sub.unsubscribe(); sub = null; }   // (an older key of the office's)
+    sub ||= await within(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: b64key(meta.key) }), 20_000);
+  } catch (e) { return fail('subscribe', e); }
+  const r = await post({ op: 'add', sub: sub.toJSON() });
+  return r?.ok ? { ok: true } : fail('server', r ? JSON.stringify(r).slice(0, 80) : 'unreachable');
 }
 export async function pushOff() {
   const sub = supported() && await (await worker()).pushManager.getSubscription().catch(() => null);

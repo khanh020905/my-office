@@ -140,11 +140,13 @@ export function renderPhone() {
   }).catch(() => {});
 }
 
-// Notifications on this phone: the switch, or how to get them (an iPhone: the office added to its home screen first)
-function notifyBox(body) {
+// Notifications on this phone: one button (an iPhone asks only right after a tap), what went wrong if it didn't work,
+// or how to get them (an iPhone: the office added to its home screen first)
+export function notifyBox(body) {
   const box = el('div', 'pm-notify');
   body.append(el('h4', 'pm-h', tr('topbar.phone.notifyTitle')), box);
-  const draw = async () => {
+  const btn = (text, cls, fn) => { const b = el('button', `btn ${cls}`, text); b.type = 'button'; b.addEventListener('click', fn); return b; };
+  const draw = async (said = '') => {
     const st = await pushState();
     box.replaceChildren();
     if (st === 'install') {
@@ -153,17 +155,24 @@ function notifyBox(body) {
       box.append(el('p', 'muted pm-note', tr('topbar.phone.notifyInstall')), ol);
       return;
     }
-    if (st === 'none' || st === 'blocked') { box.append(el('p', 'muted pm-note', tr(st === 'none' ? 'topbar.phone.notifyNone' : 'topbar.phone.notifyBlocked'))); return; }
-    box.append(phoneSwitch(tr('topbar.phone.notifySwitch'), st === 'on', false, async (want) => {
-      const ok = want ? await pushOn() : await pushOff();
-      if (!ok) toast(tr('topbar.phone.notifyFail'), 6000);
-      draw(); return ok;
-    }, tr('topbar.phone.notifyDesc')));
+    if (st === 'none' || st === 'blocked') { box.append(el('p', 'pm-err', tr(st === 'none' ? 'topbar.phone.notifyNone' : 'topbar.phone.notifyBlocked'))); return; }
     if (st === 'on') {
-      const t = el('button', 'btn btn--sm', tr('topbar.phone.notifyTest')); t.type = 'button';
-      t.addEventListener('click', async () => { t.disabled = true; toast(tr((await pushTest()) ? 'topbar.phone.notifySent' : 'topbar.phone.notifyFail')); t.disabled = false; });
-      box.append(t);
+      box.append(el('p', 'pm-on', tr('topbar.phone.notifyIsOn')));
+      const row = el('div', 'pm-btns');
+      row.append(btn(tr('topbar.phone.notifyTest'), 'btn--sm', async (e) => { e.target.disabled = true; toast(tr((await pushTest()) ? 'topbar.phone.notifySent' : 'topbar.phone.notifyFail')); e.target.disabled = false; }),
+        btn(tr('topbar.phone.notifyOff'), 'btn--sm', async () => { await pushOff(); draw(); }));
+      box.append(row);
+      return;
     }
+    box.append(el('p', 'muted pm-note', tr('topbar.phone.notifyDesc')));
+    const on = btn(tr('topbar.phone.notifyOn'), 'btn--confirm pm-big', async () => {
+      on.disabled = true; on.textContent = tr('topbar.phone.notifyAsking');
+      const r = await pushOn();
+      if (r.ok) { toast(tr('topbar.phone.notifyDone')); pushTest(); draw(); return; }
+      draw(tr(r.why === 'denied' ? 'topbar.phone.notifyDenied' : 'topbar.phone.notifyWhy', { why: r.why, detail: r.detail || '' }));
+    });
+    box.append(on);
+    if (said) box.append(el('p', 'pm-err', said));
   };
   draw();
 }

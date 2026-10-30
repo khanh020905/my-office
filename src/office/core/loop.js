@@ -60,6 +60,7 @@ const _camDelta = new THREE.Vector3();
 const walkingNow = () => { for (const w of workers.values()) if (w.phase === 'walk') return true; for (const w of subs.values()) if (w.phase === 'walk') return true; for (const w of npcs) if (w.phase === 'walk') return true; return leaving.size > 0 || flights.length > 0; };
 function frameGap(now) {
   if (SOFTWARE_GL) return 1000 / 5;
+  if (state.covered) return 1000 / 2;   // (a phone's full-screen sheet over it, the chat say: nobody sees the office, its CPU goes to the sheet)
   if (fp.on) return 1000 / 60;
   if (recorder || state.clip) return 1000 / 30;
   if (!document.hasFocus()) return 1000 / 8;

@@ -4,6 +4,7 @@
 // chat as full-screen sheets over the office; "Văn phòng" closes whatever is open. Approvals also float above the tab
 // bar as soon as one comes in, with buttons big enough for a thumb. The counts on the tabs follow the page: the waiting
 // sessions, the approvals in the stack, the chat's unread badge (watched, so nothing else has to call in here).
+import { state } from '../core/state.js';
 import { $, el } from '../core/env.js';
 import { icon } from './icons.js';
 import { closeSession, drM, drS } from './session-drawer.js';
@@ -51,6 +52,7 @@ function sync() {
   badge('sessions', Number($('st-wait')?.textContent) || 0, 'amber');
   const cb = $('chat-badge'); badge('chat', cb && !cb.hidden ? Number(cb.textContent.replace(/\D/g, '')) || 1 : 0, 'red');
   emptyEl.hidden = !(tab === 'approve' && !waiting);
+  state.covered = tab === 'sessions' || tab === 'activity' || tab === 'chat';   // (the office under a full-screen sheet: loop.js barely draws it)
   document.documentElement.classList.toggle('ph-has-perms', waiting > 0);
 }
 // a close button at the top of a sheet that has none of its own

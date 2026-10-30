@@ -365,7 +365,7 @@ test('away from home: the tunnel switch, and all that comes through it is from t
   await phone.click('#btn-look'); await phone.click('#st-tab-more'); await phone.click('#btn-phone');
   await expect(side).toBeVisible();
   await expect(phone.locator('#pm-body')).toContainText('Give Claude work from a phone: off');
-  await expect(phone.locator('#pm-body .pm-notify')).toContainText(/Get notifications|blocked/);   // (the switch; a headless Chromium says notifications are blocked whatever it was granted)
+  await expect(phone.locator('#pm-body .pm-notify')).toContainText(/Turn on notifications|blocked/);   // (the switch; a headless Chromium says notifications are blocked whatever it was granted)
   await side.locator('input').nth(0).fill('11111111');
   await side.locator('input').nth(1).fill('31121999');
   await side.locator('button').click();
@@ -395,6 +395,7 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   const base = { session_id: `e2e-task-sess-${Date.now()}`, cwd: HOME_DIR, transcript_path: path.join(HOME_DIR, 'e2e-task.jsonl') };
   await request.post('/event', { data: { ...base, hook_event_name: 'SessionStart', source: 'startup' } });
   await expect.poll(async () => (await (await request.get('/api/tasks')).json()).projects.length, { timeout: 20_000 }).toBeGreaterThan(0);
+  const said0 = (await (await request.get('/api/chat')).json()).msgs.filter((m: { tag?: string }) => m.tag === 'claude').length;   // (answers from earlier runs)
   await page.goto('/');
   await expect(async () => { if (!(await page.locator('#zchat').isVisible())) await page.click('#btn-chat'); await expect(page.locator('#zchat')).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
   const zc = page.locator('#zchat');
@@ -407,25 +408,30 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect(sheet).toBeHidden({ timeout: 20_000 });
   await expect(zc.locator('.zc-row.is-mine', { hasText: 'write a hello file' })).toBeVisible({ timeout: 20_000 });
   await expect(zc).toContainText('Done: the e2e task.', { timeout: 30_000 });   // (tests/e2e/fake-claude.sh answers for `claude -p`)
-  // writing to that conversation ("To", over the input): a branch of it, the answer from its person, marked Claude; what
-  // you write next carries on that branch (never the conversation itself)
+  // its card: the steps it took (the fake one reads a README), then done
+  await expect(zc.locator('.zc-work.is-done').first()).toBeVisible({ timeout: 20_000 });
+  await zc.locator('.zc-work.is-done .zc-readmore').first().click();
+  await expect(zc.locator('.zc-work-steps').first()).toContainText('README.md');
+  // writing to that conversation ("To", over the input): that very conversation carried on (no branch), the answer from
+  // its person, marked Claude; and again
   const asked = () => { try { return fs.readFileSync(path.join(HOME_DIR, '.fake-claude.log'), 'utf8'); } catch { return ''; } };
-  const claudeSaid = async () => (await (await request.get('/api/chat')).json()).msgs.filter((m: { tag?: string }) => m.tag === 'claude').length;
+  const claudeSaid = async () => (await (await request.get('/api/chat')).json()).msgs.filter((m: { tag?: string }) => m.tag === 'claude').length - said0;
   await zc.locator('.zc-to-chip').click();
   await zc.locator(`.zc-to-pick .zc-to-o[data-sid="${base.session_id}"]`).click();
   await expect(zc.locator('.zc-to-chip')).toHaveClass(/is-on/);
   await zc.locator('.zc-in').fill('what are you on?');
   await zc.locator('.zc-in').press('Enter');
   await expect(zc.locator('.zc-row.is-mine', { hasText: 'what are you on?' })).toBeVisible({ timeout: 20_000 });
-  await expect.poll(asked, { timeout: 20_000 }).toContain(`--resume ${base.session_id} --fork-session`);
-  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(new RegExp(`--resume ${base.session_id}$`));
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(1);   // (the folder's work answered first)
   await expect(zc.locator('.zc-claude').first()).toBeVisible();
   await zc.locator('.zc-in').fill('and then?');
   await zc.locator('.zc-in').press('Enter');
-  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);
+  await expect.poll(() => asked().trim().split('\n').length, { timeout: 20_000 }).toBeGreaterThan(2);
+  expect(asked().trim().split('\n').pop()).toMatch(new RegExp(`--resume ${base.session_id}$`));
   // a new conversation in a project ("＋"): no conversation to carry on the first time, then that one
   const runs = () => asked().trim().split('\n').length;
-  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(1);
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(2);
   await zc.locator('.zc-to-chip').click();
   await zc.locator('.zc-to-pick .zc-to-o[data-dir]').first().click();
   await expect(zc.locator('.zc-to-chip')).toContainText(path.basename(HOME_DIR));
@@ -434,7 +440,7 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-in').press('Enter');
   await expect.poll(runs, { timeout: 20_000 }).toBe(before + 1);
   expect(asked().trim().split('\n').pop()).not.toContain('--resume');
-  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(2);
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(3);
   await zc.locator('.zc-in').fill('and go on');
   await zc.locator('.zc-in').press('Enter');
   await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);

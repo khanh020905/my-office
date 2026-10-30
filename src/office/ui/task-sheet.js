@@ -87,7 +87,7 @@ export async function openTaskSheet(host, { to = null, text = '' } = {}) {
   field.addEventListener('input', sync);
   go.addEventListener('click', async () => {
     stopMic?.(); stopMic = null; go.disabled = true; go.textContent = tr('chat.task.sending');
-    const res = await fetch(`/api/tasks${q()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...pick, text: field.value, images: photos }) }).then((x) => x.json()).catch(() => null);
+    const res = await fetch(`/api/tasks${q()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ ...pick, text: field.value, images: photos, fresh: !!pick.dir }) }).then((x) => x.json()).catch(() => null);
     if (res?.ok) { toast(tr('chat.task.started'), 5000); sheet.remove(); sheet = null; return; }
     toast(res?.message || tr('drawer.unreachable'), 6000); go.textContent = tr('chat.task.send'); sync();
   });

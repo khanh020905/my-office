@@ -13,6 +13,7 @@ fi
 case " $* " in *" -p "*)
   printf '%s\n' "$*" >> "$HOME/.fake-claude.log"   # (what it was asked to resume, for the tests to read)
   echo '{"type":"system","subtype":"init","session_id":"e2e-task-1"}'
+  echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/e2e/README.md"}}]}}'
   sleep 1
   echo '{"type":"result","subtype":"success","is_error":false,"result":"Done: the e2e task."}'
   exit 0 ;;

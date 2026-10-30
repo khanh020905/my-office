@@ -268,10 +268,11 @@ Then open <http://localhost:4310>.
 - Open on your phone: same Wi-Fi, or anywhere through the Cloudflare tunnel (below), 6-digit PIN. Watching, plus
   approving if you turn on "Approve from a phone" on the Mac. Claude Code's own Remote Control (`/rc`) works too: the
   session's QR code in its drawer opens that conversation in the Claude app.
-- **To**, over the chat's input: pick a conversation and write (or speak). It goes to that conversation as work, on a
-  branch of it with its whole context (the one open in your editor is left as it is); its person types while Claude
-  works and answers in the group, marked Claude. What you write next carries on the same branch, so it remembers (for 6
-  hours). Replying to one of Claude's answers writes to it too. Or pick **＋ a new conversation in a project** (the
+- **To**, over the chat's input: pick a conversation and write (or speak): that very conversation carries on. Resting in
+  your editor, it is closed there first (safely, the way an account move does) and its tab takes it up again, with what
+  you said on the phone, the next time you write there; one at work on the Mac waits. A live card under your message
+  shows what Claude does (📖 reads, ✏️ edits, ▶ commands, an approval it waits for), then its answer comes, marked
+  Claude, quoting you. Long messages fold with "Read more". Replying to one of Claude's answers writes to it too. Or pick **＋ a new conversation in a project** (the
   folders sessions have worked in, the latest first): Claude starts fresh there, and what you write next carries it on.
 - **Notifications on your phone** (Web Push, from `server/push.mjs` with nothing but `node:crypto`; shown by
   `public/sw.js`): Claude's answers, and an approval a phone's work needs while no office page is open, even with the

@@ -18,7 +18,7 @@ import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate } from './task-sheet.js';
 import { toast } from './activity.js';
 import { TOKEN } from '../net/live.js';
-import { pushState } from './notify.js';
+import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
@@ -126,13 +126,47 @@ function content(m) {
     if (!m.photo) return el('span', 'zc-text zc-muted', tr('chat.photo'));
     const box = el('span', 'zc-photo'), img = el('img'); img.src = m.photo; img.alt = tr('chat.photo'); box.append(img, el('span', 'zc-ptime', fmtTime(m.at))); return box;
   }
+  if (m.kind === 'work') return workCard(m);
   if (bigEmoji(m.text)) return el('span', 'zc-bigemo', m.text);
   const t = el('span', 'zc-text');
   // @names in blue, the way the app shows a mention: the whole name of someone in the group (names have spaces), else one word
   const names = [tr('chat.boss'), tr('chat.everyone'), 'All', ...people().map((id) => dn(sessions.get(id)))].filter(Boolean).sort((a, b) => b.length - a.length);
   const re = new RegExp(`(@(?:${names.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})|@[^\\s,.!?:]+)`, 'u');
-  for (const part of mask(m.text).split(re)) { if (part?.startsWith('@')) t.append(el('span', 'zc-at', part)); else if (part) t.append(part); }
+  // a long one (a whole prompt, Claude's answer) folded the way the app does, "Xem thêm" to read it all
+  const full = mask(m.text), long = !opened.has(m.id) && (full.length > 700 || full.split('\n').length > 14);
+  const shown = long ? `${full.split('\n').slice(0, 10).join('\n').slice(0, 520).trimEnd()}…` : full;
+  for (const part of shown.split(re)) { if (part?.startsWith('@')) t.append(el('span', 'zc-at', part)); else if (part) t.append(part); }
+  if (long) {
+    const more = el('button', 'zc-readmore', tr('chat.readMore')); more.type = 'button';
+    more.addEventListener('click', (e) => { e.stopPropagation(); opened.add(m.id); redrawOne(m); });
+    t.append(el('br'), more);
+  }
   return t;
+}
+const opened = new Set();   // the long messages you unfolded
+// the clocks of the cards at work, every second while the chat is open
+setInterval(() => { if (!root || root.hidden) return; for (const x of root.querySelectorAll('.zc-work-h small[data-at]')) x.textContent = tr('chat.card.meta', { n: Number(x.dataset.n), took: clock(Date.now() - Number(x.dataset.at)) }); }, 1000);
+// Claude at work on what you sent it: what it is doing (its latest steps, live), an approval it waits for, then done
+const clock = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return s < 60 ? `${s}s` : `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
+function workCard(m) {
+  const w = m.work || {}, state = w.state || 'work', live = state === 'work' || state === 'wait';
+  const box = el('div', `zc-work is-${state}`), head = el('div', 'zc-work-h');
+  head.append(el('i', 'zc-work-ic', state === 'done' ? '✅' : state === 'fail' ? '⚠️' : state === 'wait' ? '⏳' : ''), el('b', null, tr(`chat.card.${state}`)),
+    el('small', null, tr('chat.card.meta', { n: w.n || 0, took: clock((w.end || Date.now()) - (w.at || m.at)) })));
+  if (live) Object.assign(head.lastChild.dataset, { at: String(w.at || m.at), n: String(w.n || 0) });   // (its clock runs on: tick())
+  box.append(head);
+  if (state === 'wait' && w.ask) box.append(el('div', 'zc-work-ask', tr('chat.card.ask', { what: w.ask })));
+  const steps = w.steps || [], all = opened.has(m.id);
+  const list = el('ol', 'zc-work-steps');
+  for (const st of all ? steps : live ? steps.slice(-4) : []) list.append(el('li', null, st));
+  if (list.children.length) box.append(list);
+  if (!all && steps.length > (live ? 4 : 0)) {
+    const more = el('button', 'zc-readmore', tr(live ? 'chat.card.all' : 'chat.card.show', { n: w.n || steps.length })); more.type = 'button';
+    more.addEventListener('click', (e) => { e.stopPropagation(); opened.add(m.id); redrawOne(m); });
+    box.append(more);
+  }
+  if (!live && !steps.length) box.append(el('small', 'zc-work-none', tr('chat.card.none')));
+  return box;
 }
 // one to three emoji and nothing else (a 👍 sent with the button, say): shown big, without a bubble
 const EMO_ONLY = /^(?:\p{Extended_Pictographic}(?:\uFE0F|\u200D\p{Extended_Pictographic}|\p{Emoji_Modifier})*\s*){1,3}$/u;
@@ -146,7 +180,8 @@ function row(m, prev, nextM) {
   if (!mine) { const slot = el('span', 'zc-av-slot'); if (first) slot.append(avatar(faceOf(m.from, m.name), 32)); r.append(slot); }
   const bare = !m.recalled && (m.kind === 'sticker' || m.kind === 'photo' || (m.kind === 'text' && bigEmoji(m.text)));
   const bub = el('div', `zc-bub${bare ? ' is-bare' : ''}`);
-  if (!mine && first && !bare) { const n = el('span', 'zc-name', m.name); if (m.tag === 'claude') n.append(el('i', 'zc-claude', tr('chat.claudeTag'))); bub.append(n); }
+  // (Claude's answer: always named and marked, under its card too)
+  if (!mine && (first || m.tag === 'claude') && !bare) { const n = el('span', 'zc-name', m.name); if (m.tag === 'claude') n.append(el('i', 'zc-claude', tr('chat.claudeTag'))); bub.append(n); }
   if (m.reply && !m.recalled) bub.append(quote(m.reply));
   bub.append(content(m));
   if (last && !bare) bub.append(el('span', 'zc-time', fmtTime(m.at)));
@@ -234,6 +269,7 @@ let peekTimer = 0;
 function peek(m) {
   if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn()) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
+  if (m.kind === 'work') return;   // (a card at work: its answer is the news)
   const txt = m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
   const box = el('span', 'zc-peek-t'); box.append(el('b', null, tr('chat.group')), el('span', null, `${m.name}: ${txt}`));
   p.replaceChildren(groupAvatar(44), box);
@@ -353,6 +389,26 @@ async function sendTo(text) {
   }
   toast(r?.code === 'notAllowed' ? tr('chat.to.notAllowed') : r?.message || tr('drawer.unreachable'), 7000);
   if (!input.value) { input.value = text; syncBar(); }   // (nothing lost: back in the input)
+}
+// on a phone that could get notifications but doesn't: a bar at the top of the chat (one tap turns them on; an iPhone is
+// shown how to add the office to its home screen first), until turned on or closed for the day
+let notifyBar = null;
+async function drawNotifyBar() {
+  if (!notifyBar || state.isLocal || DEMO_CHAT) return;
+  let gone = false; try { gone = localStorage.getItem('office-notify-bar') === new Date().toDateString(); } catch { /* storage blocked */ }
+  const st = gone ? 'gone' : await pushState();
+  notifyBar.hidden = !(st === 'off' || st === 'install');
+  if (notifyBar.hidden) return;
+  const go = el('button', 'zc-nb-go', tr('chat.notifyBarBtn')), x = el('button', 'zc-ib zc-reply-x'); go.type = x.type = 'button'; x.append(icon('x'));
+  x.addEventListener('click', () => { notifyBar.hidden = true; try { localStorage.setItem('office-notify-bar', new Date().toDateString()); } catch { /* storage blocked */ } });
+  go.addEventListener('click', async () => {
+    if (st === 'install') { $('btn-phone')?.click(); return; }   // (the phone window: the steps to the home screen)
+    go.disabled = true;
+    const r = await pushOn();
+    if (r.ok) { toast(tr('topbar.phone.notifyDone')); pushTest(); notifyBar.hidden = true; return; }
+    go.disabled = false; toast(tr(r.why === 'denied' ? 'topbar.phone.notifyDenied' : 'topbar.phone.notifyWhy', { why: r.why, detail: r.detail || '' }), 9000);
+  });
+  notifyBar.replaceChildren(el('span', null, tr(st === 'install' ? 'chat.notifyBarInstall' : 'chat.notifyBar')), go, x);
 }
 // on a phone that could get notifications but doesn't yet: a word, once a day, that it can know when Claude answers
 async function notifyNudge() {
@@ -489,7 +545,8 @@ function build() {
   try { hint.hidden = localStorage.getItem('office-chat-hint') === 'seen'; } catch { /* storage blocked */ }
   hintX.addEventListener('click', () => { hint.hidden = true; try { localStorage.setItem('office-chat-hint', 'seen'); } catch { /* storage blocked */ } });
   toEl = el('div', 'zc-to'); toEl.hidden = DEMO_CHAT; pickEl = el('div', 'zc-to-pick'); pickEl.hidden = true;
-  root.append(head, pinEl, body, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, toEl, bar, membersEl);
+  notifyBar = el('div', 'zc-nbar'); notifyBar.hidden = true;
+  root.append(head, notifyBar, pinEl, body, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, toEl, bar, membersEl);
   drawTarget();
   $('app').append(root);
 }
@@ -497,11 +554,13 @@ export function toggle(on = !chat.open) {
   if (!root) build();
   if (!on) readTo = [...chat.msgs].reverse().find((m) => m.kind !== 'sys')?.id || null;   // (where to draw "Tin nhắn mới" next time)
   root.hidden = !on; setOpen(on); $('btn-chat')?.setAttribute('aria-pressed', String(on));
+  state.covered = on && document.documentElement.classList.contains('is-phone');   // (full screen on a phone: the office under it barely draws)
   if (on) {
     redraw(); drawTyping();
     const line = body.querySelector('.zc-newline');
     if (line) line.scrollIntoView({ block: 'center' }); else body.scrollTop = body.scrollHeight;
     $('zc-peek')?.setAttribute('hidden', ''); fitKeyboard(); setTimeout(() => input.focus({ preventScroll: true }), 30);
+    drawNotifyBar();
   }
   badge();
 }

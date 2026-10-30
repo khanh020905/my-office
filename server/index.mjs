@@ -519,15 +519,19 @@ const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs 
 const tasks = createTasks({
   dataDir: DATA_DIR, claude: () => findClaude(),
   env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
+  onStep: (t, x) => cardStep(t.id, stepOf(x.name, x.input)),
   onDone: (t) => {
     if (t.sid) taskSids.add(t.sid);
+    const card = cards.get(t.id); cards.delete(t.id);
+    if (card) { clearTimeout(card.timer); chat.setWork(card.id, { state: t.error && !t.result ? 'fail' : 'done', steps: card.steps, n: card.n, end: Date.now() }); }
+    for (const x of sessions.values()) if (x.viaOffice === t.id) delete x.viaOffice;   // (its events are its own again)
     const dm = t.from?.chat, folder = path.basename(t.dir);
     // the answer from whoever you asked (the conversation's person; Claude itself for a new conversation, or if that one has gone)
     const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (dm ? 'claude' : t.sid && all.find((x) => x.sid === t.sid)?.id);
     const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), dm ? 3800 : 560);
     const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
     if (dm) { chat.working(t.from.id || 'claude', false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
-    if (who) chat.say(who, text, { now: dm, long: dm, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
+    if (who) chat.say(who, text, { now: true, long: true, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
     else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
     pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/?chat' });
   },
@@ -539,7 +543,59 @@ const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg
 
 /* Writing to a conversation from the chat ("Gửi tới"): the first message branches it (its whole context, the one open in
    your editor left as it is); what you write next carries on that branch, so it remembers what you said (for 6 hours). */
-const threads = new Map();   // the conversation's own id -> { sid: the branch, at, running }
+const threads = new Map();   // the conversation's own id (or 'dir:' a project) -> { sid: the one carried on, at, running }
+// each run's card in the chat (Claude at work: its steps as they come, then done): task id -> { id, steps, n, at, timer }
+const cards = new Map();
+function cardStep(taskId, step) {
+  const c = cards.get(taskId); if (!c) return;
+  c.steps.push(step); c.n++; if (c.steps.length > 40) c.steps.shift();
+  if (!c.timer) c.timer = setTimeout(() => { c.timer = 0; chat.setWork(c.id, { steps: c.steps, n: c.n, state: c.wait ? 'wait' : 'work', ask: c.wait || null }); }, 700);   // (a burst of steps: one update)
+}
+// one line for a step on the card: what Claude does (its tool), on what (a file, a command, a search)
+function stepOf(name, i = {}) {
+  const f = (p) => path.basename(String(p || '')), c = (t, n = 70) => clip(redact(oneLine(String(t || ''))), n);
+  switch (name) {
+    case 'Read': return `📖 ${tr('chat.step.read', { f: f(i.file_path) })}`;
+    case 'Edit': case 'MultiEdit': case 'NotebookEdit': return `✏️ ${tr('chat.step.edit', { f: f(i.file_path || i.notebook_path) })}`;
+    case 'Write': return `📝 ${tr('chat.step.write', { f: f(i.file_path) })}`;
+    case 'Bash': return `▶ ${c(i.description || i.command)}`;
+    case 'Grep': case 'Glob': return `🔍 ${c(i.pattern, 50)}`;
+    case 'WebSearch': return `🌐 ${c(i.query, 60)}`;
+    case 'WebFetch': try { return `🌐 ${new URL(i.url).host}`; } catch { return '🌐'; }
+    case 'Task': case 'Agent': return `🤖 ${c(i.description, 60)}`;
+    case 'TodoWrite': return `☑️ ${tr('chat.step.todo')}`;
+    default: return `⚙️ ${c(name, 40)}`;
+  }
+}
+// the run started from the office that a session's events belong to (its card shows them, not the chat's chatter)
+function runOf(sid, cwd, now = Date.now()) {
+  const list = tasks.list();
+  return list.find((t) => t.sid === sid) || list.find((t) => t.from?.sid === sid) || list.find((t) => !t.sid && !t.from?.sid && t.dir === cwd && now - t.at < 30e3) || null;
+}
+// a run on the conversation's own account (its history is there): null for the main one (~/.claude)
+const acctEnv = (slug) => ({ CLAUDE_CONFIG_DIR: slug ? dirOfSlug(slug) : null });
+/* Carrying on, from a phone, a conversation open in the editor and resting: it is closed there first (safely: the process
+   it is, still resting) and parked on its account, so its tab takes it up again (the editor's script, --resume) the next
+   time you write there, with what was said on the phone. One in a terminal can't be: it would just end. */
+async function parkForPhone(s) {
+  const name = s.title || s.name;
+  if (s.entry !== 'claude-vscode') return { ok: false, message: tr('chat.task.macTerminal', { name }) };
+  const eds = setEditorWrapper(true), host = eds.find((e) => e.app === s.origin);
+  if (!(host ? host.ok : eds.some((e) => e.ok))) return { ok: false, message: tr('server.move.noScript') };
+  editorsNow = eds;
+  const proc = (await sysSnapshot().catch(() => null))?.claude?.find((c) => c.pid === s.pid);
+  if (!proc) return { ok: true };   // (already gone: nothing to close)
+  const acct = acctOf(s) || '', pin = path.join(PIN_DIR, s.sid);
+  try { fs.mkdirSync(PIN_DIR, { recursive: true }); fs.writeFileSync(pin, `${acct ? dirOfSlug(acct) : ''}\n`); } catch { return { ok: false, message: tr('server.move.failed') }; }
+  s.parked = { to: acct, at: Date.now(), phone: true };   // (before the process goes: the scan must not see it leave)
+  const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
+  if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
+  s.pid = null;
+  chat.system(tr('chat.task.parked', { name }));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone carries on ${name} (${s.sid})\n`).catch(() => {});
+  broadcast({ k: 'sess', s: pub(s) });
+  return { ok: true };
+}
 const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
   sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status })) });
@@ -647,7 +703,7 @@ async function recallTask(s) {
   broadcast({ k: 'sess', s: pub(s) });
 }
 function dropSession(key, s) {
-  if (s.fromFile && !taskSids.has(s.sid)) chat.onLeft(s.title || s.name);
+  if (s.fromFile && !taskSids.has(s.sid) && !s.viaOffice) chat.onLeft(s.title || s.name);
   sessions.delete(key);
   if (s.sid && sidToKey.get(s.sid) === key) sidToKey.delete(s.sid);
   broadcast({ k: 'gone', id: s.id });
@@ -715,6 +771,7 @@ async function onHook(p) {
   s.lastEventAt = now;
   { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
+  { const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id; }   // (a run from the office: its card tells it)
   const agent = p.agent_id || null;
   if (agent && ev !== 'SubagentStop') ensureSub(s, agent, p.agent_type, now).seenAt = now;
   const prevStatus = s.status;
@@ -739,6 +796,7 @@ async function onHook(p) {
       s.taskStart = now;
       stats.prompts++; dirty = true; trophies.bump('prompts'); trophies.session(s.sid);
       e = mk('prompt', clip(s.lastPrompt, 64));
+      Object.defineProperty(e, 'full', { value: clip(redact(unwrapPaste(String(p.prompt || '').replace(STRIP_TAGS, '')).trim()), 4000), enumerable: false });   // (the chat shows it whole)
       break;
     }
     case 'PreToolUse': {
@@ -821,7 +879,7 @@ async function onHook(p) {
   if (e) {
     if (toFeed) pushFeed(e);
     broadcast({ k: 'ev', e, s: pub(s), stats });
-    chat.onEvent(e);
+    if (!s.viaOffice) chat.onEvent(e);
   } else if (s.status !== prevStatus) {
     broadcast({ k: 'sess', s: pub(s), stats });
   } else if (ev === 'PostToolUse') {
@@ -1048,7 +1106,7 @@ function ruleText(sug) {
 }
 async function onPermission(p, res) {
   // a run started from the office (a phone's work) may wait for a phone to answer even with no office open: they get a push
-  const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id);
+  const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id || t.from?.sid === p.session_id);
   if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !ours)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const c = await classifyVi(p.tool_name, p.tool_input);
@@ -1062,6 +1120,9 @@ async function onPermission(p, res) {
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
   if (ours) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
+  { const run = tasks.list().find((t) => t.sid === p.session_id || t.from?.sid === p.session_id), card = run && cards.get(run.id);
+    if (card) { card.wait = clip(`${c.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, steps: card.steps, n: card.n });
+      res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null }); } }); } }
 }
 
 /* ---------- questions and plans from Claude, answered in the office ----------
@@ -1807,7 +1868,9 @@ const server = http.createServer((req, res) => {
         if (!push.add(b?.sub, req.headers['user-agent'])) { json(res, 400, { ok: false }); return; }
         fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} push on ${isLoopback(req) ? 'mac' : clientIp(req)} ${new URL(endpoint).host}\n`).catch(() => {});
       } else if (op === 'remove') push.remove(endpoint);
-      else if (op === 'test') {
+      else if (op === 'report') {   // a phone that couldn't turn them on: why, for looking into it
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} push trouble ${clip(oneLine(String(b?.why || '')), 20)} ${clip(oneLine(String(b?.detail || '')), 160)} ${isLoopback(req) ? 'mac' : clientIp(req)} ${clip(oneLine(String(req.headers['user-agent'] || '')), 120)}\n`).catch(() => {});
+      } else if (op === 'test') {
         const st = await push.test(endpoint || (isLoopback(req) ? '' : 'none'), { title: tr('server.push.testTitle'), body: tr('server.push.testBody'), tag: 'test', url: '/' });
         json(res, 200, { ok: st.length > 0 && st.every((x) => x >= 200 && x < 300), statuses: st, count: push.count() }); return;
       }
@@ -1818,7 +1881,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname.startsWith('/api/tasks') && req.method === 'POST') {   // giving Claude work: start (from a phone only when allowed on the Mac), stop, allow
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
-    readJson(req, 8_000_000).then((b) => {
+    readJson(req, 8_000_000).then(async (b) => {
       if (url.pathname === '/api/tasks/allow') {
         if (!mac) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
         prefs.set('phoneTasks', b?.on ? true : undefined);
@@ -1829,39 +1892,37 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
       if (url.pathname !== '/api/tasks') { json(res, 404, { ok: false }); return; }
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
-      // where: a conversation the office knows (its context, branched), or a folder sessions have worked in
+      // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
+      // conversation there, or the one you started there); one way for both the chat's "Gửi tới" and 📋 Giao việc
       const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-      if (b?.chat) {   // a message from the chat: to a conversation (on its branch, the answer from its person), or to a project (a new conversation there: fresh)
-        const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && knownDirs.find((d) => d === want);
-        if (!s && !pdir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
-        const key = s ? s.sid : `dir:${pdir}`, text = String(b?.text || '').trim().slice(0, 4000), name = s ? s.title || s.name : path.basename(pdir), th = threads.get(key);
-        if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
-        if (th?.running) { json(res, 409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }); return; }
-        const on = th && (!s || th.sid !== s.sid) && !(b.fresh && !s) && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;   // (never the conversation itself: that one stays as it is)
-        chat.say('me', `@${name} ${text}`, { now: true });
-        const mine = chat.state.msgs.at(-1), sid = on || s?.sid || null;
-        const r = tasks.start({ dir: s ? s.cwd : pdir, text, images: [], from: { sid, fork: !on && !!s, name, id: s?.id, orig: key, chat: true } });
-        if (r.ok) { threads.set(key, { sid, at: Date.now(), running: true }); chat.working(s?.id || 'claude', true); taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null); }
-        else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${on ? `carry ${on}` : s ? `branch ${s.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
-        json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
-        return;
-      }
-      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), dir = s ? s.cwd : knownDirs.find((d) => d === want);
-      if (!dir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
+      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && knownDirs.find((d) => d === want);
+      if (!s && !pdir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
       const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
       if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
-      // in the group: your task (the photos with it), then the run
-      const name = s ? s.title || s.name : path.basename(dir);
-      chat.system(tr(s ? 'chat.task.toSession' : 'chat.task.toFolder', { name, folder: path.basename(dir) }));
-      for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
-      chat.say('me', `📋 ${text}`, { now: true });
+      const name = s ? s.title || s.name : path.basename(pdir), key = s ? s.sid : `dir:${pdir}`, th = threads.get(key);
+      if (th?.running) { json(res, 409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }); return; }
+      let from;
+      if (s) {   // the conversation itself: open in the editor and resting, it is closed there first; at work there: not now
+        const open = s.pid && !s.parked;
+        if (open && (s.status !== 'rest' || s.busy || [...pending.values()].some((p) => p.sess === s.id))) { json(res, 409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name }) }); return; }
+        if (open) { const pk = await parkForPhone(s); if (!pk.ok) { json(res, 409, { ok: false, code: 'macOpen', message: pk.message }); return; } }
+        from = { sid: s.sid, fork: false, name, id: s.id, orig: key, chat: true, acct: acctOf(s) || '' };
+      } else {   // a project: a new conversation, or the one you started there (for 6 hours; ＋ asks for a new one)
+        const on = th?.sid && !b.fresh && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;
+        from = { sid: on, fork: false, name, orig: key, chat: true };
+      }
+      chat.say('me', `@${name} ${text}`, { now: true, long: true });
       const mine = chat.state.msgs.at(-1);
-      const r = tasks.start({ dir, text, images, from: s ? { sid: s.sid, name, id: s.id } : null });
+      for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
+      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null });
       if (r.ok) {
+        threads.set(key, { sid: from.sid, at: Date.now(), running: true });
+        if (s) s.viaOffice = r.task.id;
+        const card = chat.workCard(s ? s.id : 'claude', { state: 'work', steps: [], n: 0, at: Date.now() });
+        if (card) cards.set(r.task.id, { id: card.id, steps: [], n: 0, at: Date.now(), timer: 0 });
         taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
       } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${mac ? 'mac' : `phone ${clientIp(req)}`} ${s ? `resume ${s.sid}` : dir} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${s ? `${s.sid}${from.acct ? ` on ${from.acct}` : ''}` : from.sid ? `carry ${from.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
       json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
     });
     return;
