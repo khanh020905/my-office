@@ -15,6 +15,7 @@ case " $* " in *" -p "*)
   echo '{"type":"system","subtype":"init","session_id":"e2e-task-1"}'
   echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/e2e/README.md"}}]}}'
   sleep 1
+  case " $* " in *"slowly"*) sleep 25 ;; esac   # (long enough to be stopped from its card)
   case " $* " in
     *"with a picture"*) printf '{"type":"result","subtype":"success","is_error":false,"result":"**Done**, with:\\n- one change\\n- and `code`\\nSCREENSHOT: http://127.0.0.1:%s/health"}\n' "$OFFICE_PORT" ;;
     *) echo '{"type":"result","subtype":"success","is_error":false,"result":"Done: the e2e task."}' ;;

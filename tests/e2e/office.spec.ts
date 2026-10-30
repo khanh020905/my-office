@@ -453,6 +453,13 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect(zc.locator('.zc-md').last()).toContainText('📸');
   await expect(zc.locator('.zc-photo img').last()).toBeVisible({ timeout: 60_000 });
   expect(asked().trim().split('\n').pop()).toContain('--append-system-prompt');
+  // stopped from its card, on purpose: "Stopped", not an error
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(5);
+  await zc.locator('.zc-in').fill('take it slowly');
+  await zc.locator('.zc-in').press('Enter');
+  await zc.locator('.zc-work.is-work .zc-work-btn.is-stop').last().click({ timeout: 20_000 });
+  await expect(zc.locator('.zc-work.is-stopped').last()).toBeVisible({ timeout: 20_000 });
+  await expect(zc.locator('.zc-row', { hasText: 'Stopped, as you asked' }).last()).toBeVisible({ timeout: 20_000 });
   await zc.locator('.zc-to-x').click();
   await expect(zc.locator('.zc-to-chip')).not.toHaveClass(/is-on/);
   // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it
