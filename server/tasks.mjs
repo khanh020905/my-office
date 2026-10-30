@@ -71,6 +71,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, max
   /** Stops a task (its whole process group: the commands it started too). */
   function stop(id) {
     const t = running.get(id); if (!t) return false;
+    t.stopped = true;   // (on purpose: its card says stopped, not failed)
     try { if (process.platform === 'win32') t.proc.kill(); else process.kill(-t.pid, 'SIGTERM'); } catch { try { t.proc.kill(); } catch { /* gone */ } }
     return true;
   }

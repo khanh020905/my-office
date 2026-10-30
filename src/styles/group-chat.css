@@ -344,3 +344,10 @@
 .zc-md-table table { border-collapse: collapse; font-size: 13px; }
 .zc-md-table th, .zc-md-table td { padding: 4px 8px; border: 1px solid var(--zc-line); text-align: left; vertical-align: top; }
 .zc-md-table th { background: #F4F6F9; font-weight: 600; }
+
+.zc-work-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.zc .zc-work-btn { all: unset; padding: 6px 14px; border-radius: 999px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.zc .zc-work-btn:disabled { opacity: .5; cursor: default; }
+.zc .zc-work-btn.is-ok { background: var(--zc-blue); color: #fff; }
+.zc .zc-work-btn.is-no { background: #FDECEC; color: #C31818; }
+.zc .zc-work-btn.is-stop { background: #F1F3F6; color: var(--zc-ink); margin-left: auto; }

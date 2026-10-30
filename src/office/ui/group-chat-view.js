@@ -205,11 +205,24 @@ const clock = (ms) => { const s = Math.max(0, Math.round(ms / 1000)); return s <
 function workCard(m) {
   const w = m.work || {}, state = w.state || 'work', live = state === 'work' || state === 'wait';
   const box = el('div', `zc-work is-${state}`), head = el('div', 'zc-work-h');
-  head.append(el('i', 'zc-work-ic', state === 'done' ? '✅' : state === 'fail' ? '⚠️' : state === 'wait' ? '⏳' : ''), el('b', null, tr(`chat.card.${state}`)),
+  head.append(el('i', 'zc-work-ic', state === 'done' ? '✅' : state === 'fail' ? '⚠️' : state === 'stopped' ? '⏹' : state === 'wait' ? '⏳' : ''), el('b', null, tr(`chat.card.${state}`)),
     el('small', null, tr('chat.card.meta', { n: w.n || 0, took: clock((w.end || Date.now()) - (w.at || m.at)) })));
   if (live) Object.assign(head.lastChild.dataset, { at: String(w.at || m.at), n: String(w.n || 0) });   // (its clock runs on: tick())
   box.append(head);
-  if (state === 'wait' && w.ask) box.append(el('div', 'zc-work-ask', tr('chat.card.ask', { what: w.ask })));
+  if (state === 'wait' && w.ask) box.append(el('div', 'zc-work-ask', tr(w.perm ? 'chat.card.askHere' : 'chat.card.ask', { what: w.ask })));
+  // right here: allow or deny what it waits for (a risky command: deny only, as on any phone), stop it
+  if (live) {
+    const acts = el('div', 'zc-work-acts');
+    const btn = (label, cls, fn) => { const b = el('button', `zc-work-btn ${cls}`, label); b.type = 'button'; b.addEventListener('click', async (e) => { e.stopPropagation(); b.disabled = true; const r = await fn(); if (!r?.ok) { b.disabled = false; toast(r?.message || tr('drawer.unreachable'), 6000); } }); return b; };
+    const call = (url, body) => fetch(`${url}${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => null);
+    if (state === 'wait' && w.perm) {
+      if (!w.risky) acts.append(btn(tr('chat.card.allow'), 'is-ok', () => call('/api/perm', { id: w.perm, choice: 'allow' })));
+      acts.append(btn(tr('chat.card.deny'), 'is-no', () => call('/api/perm', { id: w.perm, choice: 'deny' })));
+    }
+    if (w.task) acts.append(btn(tr('chat.card.stop'), 'is-stop', () => call('/api/tasks/stop', { id: w.task })));
+    if (acts.children.length) box.append(acts);
+    if (state === 'wait' && w.perm && w.risky) box.append(el('small', 'zc-work-none', tr('chat.card.risky')));
+  }
   const steps = w.steps || [], all = opened.has(m.id);
   const list = el('ol', 'zc-work-steps');
   for (const st of all ? steps : live ? steps.slice(-4) : []) list.append(el('li', null, st));
