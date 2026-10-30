@@ -8,8 +8,9 @@
 // ice cream at Ministop, an auntie with her shopping at WinMart+ after work. Real opening hours: the 24-hour chains stay
 // lit all night, WinMart+ and Bách Hóa Xanh roll their shutters down at closing time. The signs carry the chains' real
 // logos (public/assets/brands, from Wikimedia Commons: see the README there); the town's own eateries are painted fronts.
-// All the printing (signs, posters, menus, the QR stand) is one canvas; the shops cost a handful of merged meshes, and
-// their people are street-folk.js figures, stepped only when in view. Rebuilt when the city changes.
+// The Highlands Coffee is a whole module of its own (shop-highlands.js). All the printing (signs, posters, menus, the QR
+// stand) is one canvas; the shops cost a handful of merged meshes, and their people are street-folk.js figures, stepped
+// only when in view. Rebuilt when the city changes.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { HQ, PRO, el, officeNow } from '../../core/env.js';
@@ -21,19 +22,27 @@ import { parkedScooter } from './street-life.js';
 import { folk, stepper } from './street-folk.js';
 import { puffs } from './street-corner.js';
 import { RM, drawMixue, fitMixue, snowDancer, snowKing } from './shop-mixue.js';
+import { HIGHLANDS } from './shop-highlands.js';
+// the shops made whole in a file of their own (their printing, fittings, front and people): chain key -> that module
+const CUSTOM = { highlands: HIGHLANDS };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-export const SHOPS = 7, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
+export const SHOPS = 8, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
 export const shopDepth = (deep) => Math.min(5.0, deep - 1.4);   // how far in a shop goes, in a building `deep` deep
 const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (level with the pavement), the glass's top, the sign, half the door
 /* what each city has, front-most first (Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25
    and WinMart+ in Hanoi; WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng;
-   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each). 'rent': a shuttered front to let. */
+   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each; Highlands Coffee in every city
+   too). 'rent': a shuttered front to let. */
 const SETS = {
-  hcm: ['gs25', 'mixue', 'circlek', 'seven', 'ministop', 'winmart', 'bhx'], hn: ['circlek', 'mixue', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
-  hp: ['winmart', 'mixue', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'], dn: ['winmart', 'mixue', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  hue: ['winmart', 'mixue', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'], nt: ['winmart', 'mixue', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  dl: ['winmart', 'mixue', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'], ct: ['bhx', 'mixue', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
+  hcm: ['gs25', 'mixue', 'highlands', 'circlek', 'winmart', 'seven', 'ministop', 'bhx'],
+  hn: ['circlek', 'mixue', 'highlands', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
+  hp: ['winmart', 'mixue', 'highlands', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'],
+  dn: ['winmart', 'mixue', 'highlands', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  hue: ['winmart', 'mixue', 'highlands', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'],
+  nt: ['winmart', 'mixue', 'highlands', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  dl: ['winmart', 'mixue', 'highlands', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
+  ct: ['bhx', 'mixue', 'highlands', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
 };
 /* the chains: logo, the sign (face, stripes), the staff's shirt, opening hours (null: day and night), a window counter to
    sit at, and the three things you can take: from the fridges, from the chain's own corner (`side`), at the till (`hot`).
@@ -51,6 +60,7 @@ const CHAINS = {
     fridge: { id: 'milk', price: 32, carry: 'grocery' }, side: { id: 'veg', price: 12, carry: 'grocery', unit: 'produce' }, hot: null },
   // (an ice cream and tea shop, not a store: its own printing, fittings and people, shop-mixue.js)
   mixue: { name: 'Mixue', parlour: true, face: '#E50914', stripes: ['#E50914'], accent: '#E50914', shirt: '#1E1E1E', hours: [9, 22], seats: true },
+  highlands: { ...HIGHLANDS.chain, custom: 'highlands' },
   bhx: { name: 'Bách Hóa Xanh', logo: 'bach-hoa-xanh.png', face: '#008C44', stripes: ['#FFE600', '#008C44'], accent: '#008C44', shirt: '#0B8A43', hours: [6.5, 21.5], seats: false,
     fridge: { id: 'eggs', price: 30, carry: 'grocery' }, side: { id: 'meat', price: 65, carry: 'grocery', unit: 'meat' }, hot: null },
 };
@@ -416,6 +426,7 @@ export function buildShops(G, fronts) {
     fronts.forEach((_, n) => {
       const [cx, cy] = cellOf(n), key = set[n] || 'rent', ch = CHAINS[key], at = ([x, y, w, h]) => [cx + x, cy + y, w, h];
       if (ch?.parlour) { drawMixue(g, cx, cy, !!shut[n]); return; }
+      if (ch?.custom) { CUSTOM[ch.custom].draw(g, cx, cy, !!shut[n]); return; }
       sign(g, ...at(R.sign), key, draw, !!shut[n]);
       if (!ch) { if (EATS[key]) eateryFront(g, ...at(R.front), key); else rentFront(g, ...at(R.front)); return; }
       poster(g, at(R.posterA), PROMO[key][0]); poster(g, at(R.posterB), PROMO[key][1]);
@@ -433,13 +444,13 @@ export function buildShops(G, fronts) {
   const decal = (w, h, n, rect) => decalOn(new THREE.PlaneGeometry(w, h), n, rect);
   const faceM = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: '#FFFFFF', emissiveIntensity: 0.06, roughness: 0.45, alphaTest: 0.5 });
   // the insides: lit by their own tubes, so each glows in its own colours (per shop: open or shut, day or night)
-  const glow = { value: new Array(8).fill(0) };
+  const glow = { value: new Array(SHOPS + 1).fill(0) };
   const innerM = vmat({ roughness: 0.7 });
   innerM.onBeforeCompile = (sh) => {
     sh.uniforms.uGlow = glow;
     sh.vertexShader = sh.vertexShader.replace('#include <common>', '#include <common>\nattribute float aShop;\nvarying float vShop;').replace('#include <begin_vertex>', '#include <begin_vertex>\nvShop = aShop;');
-    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', '#include <common>\nuniform float uGlow[8];\nvarying float vShop;')
-      .replace('#include <emissivemap_fragment>', '#include <emissivemap_fragment>\n{ float gl = 0.; for (int k = 0; k < 8; k++) if (abs(float(k) - vShop) < .5) gl = uGlow[k]; totalEmissiveRadiance += diffuseColor.rgb * gl; }');
+    sh.fragmentShader = sh.fragmentShader.replace('#include <common>', `#include <common>\nuniform float uGlow[${SHOPS + 1}];\nvarying float vShop;`)
+      .replace('#include <emissivemap_fragment>', `#include <emissivemap_fragment>\n{ float gl = 0.; for (int k = 0; k < ${SHOPS + 1}; k++) if (abs(float(k) - vShop) < .5) gl = uGlow[k]; totalEmissiveRadiance += diffuseColor.rgb * gl; }`);
   };
   innerM.customProgramCacheKey = () => 'shop-inner';
   const glassM = new THREE.MeshStandardMaterial({ color: '#BFD9E6', transparent: true, opacity: 0.16, roughness: 0.05, metalness: 0.1, depthWrite: false, side: THREE.DoubleSide });
@@ -465,14 +476,15 @@ export function buildShops(G, fronts) {
       put(boxAt(SHOP_W + 0.3, SIGN_H_M + 0.1, 0.18, 0, FL + GLASS + SIGN_H_M / 2 + 0.05, 0.09, '#D8DCE1'), out);
       put(decal(SHOP_W + 0.2, SIGN_H_M, n, R.sign).translate(0, FL + GLASS + SIGN_H_M / 2 + 0.05, 0.185), faces);
       // (in front of the till, not the window counter; at GS25 the other side, its table is there)
-      const kerb = ch?.parlour ? [2.0, 2.85] : ch && !ch.outdoor ? [1.15, 2.0, 2.85] : [-2.6, -1.75, -0.9, -0.05].slice(0, ch?.outdoor ? 2 : 3 + (n % 2));
+      const kerb = ch?.custom ? CUSTOM[ch.custom].kerb : ch?.parlour ? [2.0, 2.85] : ch && !ch.outdoor ? [1.15, 2.0, 2.85] : [-2.6, -1.75, -0.9, -0.05].slice(0, ch?.outdoor ? 2 : 3 + (n % 2));
       kerb.forEach((x, k) => put(parkedScooter(['#D9534F', '#F2F2F2', '#2E86DE', '#3B3B3B'][(k + n) % 4]).rotateY(0.18 * (k % 2 ? 1 : -1)).translate(x, FL, 1.0), out));
       if (!ch) {   // an eatery or a front to let: painted, in a plain frame
         put(boxAt(SHOP_W + 0.3, GLASS + 0.05, 0.08, 0, FL + GLASS / 2, 0.03, '#5E6670'), out);
         put(decal(SHOP_W, GLASS - FL, n, R.front).translate(0, FL + (GLASS - FL) / 2 + 0.02, 0.075), faces);
         return;
       }
-      Object.assign(S, ch.parlour ? fitMixue(D, rnd(n * 7919 + key.length * 131 + 17), low, SHOP_W) : fitOut(key, D, rnd(n * 7919 + key.length * 131 + 17), low));
+      const fr = rnd(n * 7919 + key.length * 131 + 17);
+      Object.assign(S, ch.custom ? CUSTOM[ch.custom].fit(D, fr, low, SHOP_W) : ch.parlour ? fitMixue(D, fr, low, SHOP_W) : fitOut(key, D, fr, low));
       inner.push(S.inner.map((geo) => tag(geo.applyMatrix4(M), n)));   // (each shop's own mesh: one out of view isn't drawn)
       for (const geo of S.glass) put(geo, glass);
       S.inner = S.glass = null;
@@ -482,7 +494,8 @@ export function buildShops(G, fronts) {
       put(boxAt(2 * DOOR + 0.1, 0.06, 0.09, 0, FL + 2.12, 0, '#4A515B'), out);
       for (const [x0, x1] of [[-SHOP_W / 2, -DOOR - 0.03], [DOOR + 0.03, SHOP_W / 2]]) put(new THREE.PlaneGeometry(x1 - x0, GLASS - FL - 0.12).translate((x0 + x1) / 2, FL + 0.12 + (GLASS - FL - 0.12) / 2, 0.01), glass);
       put(new THREE.PlaneGeometry(2 * DOOR, GLASS - FL - 2.15).translate(0, FL + 2.15 + (GLASS - FL - 2.15) / 2, 0.01), glass);
-      if (ch.parlour) {   // Mixue: its posters, the hours on the door, the menu over the back counter, the counter's front, the
+      if (ch.custom) Object.assign(S, CUSTOM[ch.custom].front({ n, D, put, out, faces, decal, decalOn, built, S, GY }));   // (its printing, and what stands out front)
+      else if (ch.parlour) {   // Mixue: its posters, the hours on the door, the menu over the back counter, the counter's front, the
         // slogan on the wall, the round light box out on its bracket, the Snow King's statue by the window; the Snow King himself
         put(decal(0.55, 0.7, n, RM.posterA).translate(-2.75, FL + 1.5, -0.015), faces);
         put(decal(0.55, 0.7, n, RM.posterB).translate(2.75, FL + 1.5, -0.015), faces);
@@ -600,6 +613,7 @@ export function buildShops(G, fronts) {
         setTimeout(() => { o.removeFromParent(); d.remove(); }, 2600);
       };
       if (S.ch.parlour) { parts.push(parlour(S, { cashier, barista: browser, sit, out, at, face, hand, lay, held, sy, mid, r })); continue; }
+      if (S.ch.custom) { parts.push(CUSTOM[S.ch.custom].people(S, { crowd, props, cashier, staff: browser, sit, out, at, face, hand, lay, held, sy, mid, r, LOOK, HAIR, isOpen, wx, now: () => now })); continue; }
       parts.push({
         when: [0, 24], dry: true, at: mid,
         update(t, dt, h) {
@@ -758,7 +772,7 @@ export function buildShops(G, fronts) {
       for (const S of stores) {
         if (!S.ch) continue;
         const [lx, lz] = p ? local(S, p[0], p[1]) : [99, 99], inside = Math.abs(lx) < SHOP_W / 2 && lz < -0.3 && lz > -S.D;
-        if (inside && !S.inside && !shut[S.n]) { S.greetT = now + 1.5; S.say?.(`${S.ch.name} xin chào!`); if (S.ch.parlour) sfx.play('mixue'); }
+        if (inside && !S.inside && !shut[S.n]) { S.greetT = now + 1.5; S.say?.(S.ch.greet || `${S.ch.name} xin chào!`); if (S.ch.parlour) sfx.play('mixue'); }
         S.inside = inside;
       }
     },
@@ -793,6 +807,7 @@ function propSet(G, n) {
     noodle: mergeAll([colorize(new THREE.CylinderGeometry(0.055, 0.042, 0.1, 10).translate(0, 0.05, 0), '#F2F2F2'), colorize(new THREE.CylinderGeometry(0.056, 0.056, 0.012, 10).translate(0, 0.1, 0), '#E8742A')]),
     bento: mergeAll([boxAt(0.2, 0.05, 0.14, 0, 0.025, 0, '#1E1E1E'), boxAt(0.2, 0.01, 0.14, 0, 0.055, 0, '#E8E8E8')]),
     chicken: boxAt(0.14, 0.1, 0.1, 0, 0.05, 0, '#E60012'),
+    hlcup: mergeAll([colorize(new THREE.CylinderGeometry(0.04, 0.032, 0.12, 10).translate(0, 0.06, 0), '#F2F2F0'), colorize(new THREE.CylinderGeometry(0.042, 0.038, 0.035, 10).translate(0, 0.065, 0), '#9B1C21'), colorize(new THREE.SphereGeometry(0.04, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.12, 0), '#F6F1E7')]),
     mxcup: mergeAll([colorize(new THREE.CylinderGeometry(0.042, 0.033, 0.13, 10).translate(0, 0.065, 0), '#C9A27A'), colorize(new THREE.CylinderGeometry(0.044, 0.04, 0.04, 10).translate(0, 0.07, 0), '#E50914'), boxAt(0.008, 0.08, 0.008, 0.012, 0.16, 0, '#F2F2F2')]),
     cone: mergeAll([colorize(new THREE.ConeGeometry(0.03, 0.1, 8).rotateX(Math.PI), '#D9A441'), colorize(new THREE.SphereGeometry(0.035, 8, 6).translate(0, 0.065, 0), '#FFF8EC')]),
     bag: mergeAll([boxAt(0.22, 0.24, 0.1, 0, -0.12, 0, '#F4F3EE'), colorize(new THREE.SphereGeometry(0.05, 6, 4).translate(0.04, 0.02, 0), '#3E8E3A')]),
