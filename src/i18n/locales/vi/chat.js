@@ -60,6 +60,12 @@ export default {
   memberYou: 'Trưởng nhóm',
   giveWork: 'App ↗',
   to: {
+    newTitle: '＋ Mở phiên mới trong dự án',
+    newPill: 'Mới',
+    subNew: '📁 {folder} · phiên mới, Claude làm thật',
+    subMine: '📁 {folder} · đang tiếp phiên mới của bạn',
+    nudgeOn: '🔔 Muốn điện thoại báo ngay khi Claude trả lời? Bật thông báo ở ⚙ → Khác → 📱.',
+    nudgeInstall: '🔔 Muốn được báo khi Claude trả lời? Thêm My Office vào màn hình chính (nút Chia sẻ → Thêm vào MH chính), rồi bật thông báo ở ⚙ → Khác → 📱.',
     label: 'Gửi tới',
     group: 'Cả nhóm',
     groupSub: 'Trò chuyện vui trong nhóm, không gửi cho Claude',

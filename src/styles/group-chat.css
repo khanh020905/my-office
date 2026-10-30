@@ -296,3 +296,7 @@
 .is-to .zc-bar { box-shadow: inset 0 2px 0 #0068FF; }
 /* Claude's own answer (a message sent to its conversation, or work given): marked by the name */
 .zc-claude { font-style: normal; margin-left: 6px; padding: 1px 6px; border-radius: 999px; background: #EFE7FF; color: #6A3FD0; font-size: 10.5px; font-weight: 700; vertical-align: 1px; }
+.zc-to-icon { flex: none; width: 20px; height: 20px; border-radius: 50%; display: grid; place-items: center; background: #E5F1FF; font-size: 12px; font-style: normal; }
+.zc-to-proj { background: #FFF3E0; }
+.zc-to-pill { flex: none; margin-left: auto; padding: 2px 8px; border-radius: 999px; background: #E5F1FF; color: var(--zc-blue); font-size: 11.5px; font-style: normal; font-weight: 700; }
+.zc-to-o .zc-men-t { flex: 1; }

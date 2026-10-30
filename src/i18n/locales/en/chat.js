@@ -60,6 +60,12 @@ export default {
   memberYou: 'Group owner',
   giveWork: 'App ↗',
   to: {
+    newTitle: '＋ A new conversation in a project',
+    newPill: 'New',
+    subNew: '📁 {folder} · a new conversation, Claude for real',
+    subMine: '📁 {folder} · carrying on your new conversation',
+    nudgeOn: '🔔 Want your phone to tell you when Claude answers? Turn notifications on in ⚙ → More → 📱.',
+    nudgeInstall: '🔔 Want to know when Claude answers? Add My Office to your home screen (Share → Add to Home Screen), then turn notifications on in ⚙ → More → 📱.',
     label: 'To',
     group: 'The whole group',
     groupSub: 'Chatting in the group, not sent to Claude',

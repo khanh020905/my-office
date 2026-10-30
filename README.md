@@ -271,7 +271,13 @@ Then open <http://localhost:4310>.
 - **To**, over the chat's input: pick a conversation and write (or speak). It goes to that conversation as work, on a
   branch of it with its whole context (the one open in your editor is left as it is); its person types while Claude
   works and answers in the group, marked Claude. What you write next carries on the same branch, so it remembers (for 6
-  hours). Replying to one of Claude's answers writes to it too.
+  hours). Replying to one of Claude's answers writes to it too. Or pick **＋ a new conversation in a project** (the
+  folders sessions have worked in, the latest first): Claude starts fresh there, and what you write next carries it on.
+- **Notifications on your phone** (Web Push, from `server/push.mjs` with nothing but `node:crypto`; shown by
+  `public/sw.js`): Claude's answers, and an approval a phone's work needs while no office page is open, even with the
+  phone locked. Turned on on each phone (⚙ → More → 📱) over the https address; on an iPhone, add My Office to the home
+  screen first (Share → Add to Home Screen: it becomes an app, full screen, with its icon). The Mac's phone window counts
+  the phones and sends a test. Subscriptions are posted only to the browsers' own push services.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and

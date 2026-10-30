@@ -95,6 +95,7 @@ import * as lifeIncidents from './life/incidents.js';
 import * as audioSfx from './audio/sfx.js';
 import * as uiPermissions from './ui/permissions.js';
 import * as uiPhone from './ui/phone.js';
+import * as uiNotify from './ui/notify.js';
 import * as demoDemo from './demo/demo.js';
 import * as replayReplay from './replay/replay.js';
 import * as replayTimeline from './replay/timeline.js';
@@ -198,6 +199,7 @@ const MODULES = [
   audioSfx,
   uiPermissions,
   uiPhone,
+  uiNotify,
   demoDemo,
   replayReplay,
   replayTimeline,

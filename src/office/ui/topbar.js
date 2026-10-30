@@ -11,6 +11,7 @@ import { popLook, togglePlan, togglePop } from './settings.js';
 import { exitFp, fp } from '../interact/first-person.js';
 import { closeTimeline } from '../replay/timeline.js';
 import { t as tr } from '../../i18n/index.js';
+import { pushOff, pushOn, pushState, pushTest } from './notify.js';
 
 export let bellOn = false;
 export function renderBell() { $('btn-bell').setAttribute('aria-pressed', String(bellOn)); }
@@ -128,10 +129,48 @@ export function renderPhone() {
   // Claude Code's own Remote Control, on by itself in every new session if you like
   if (tun) list.append(phoneSwitch(tr('topbar.phone.rcSwitch'), !!tun.rc, false, async (want) => { const r = await post('/api/rc', { on: want }); if (!r?.ok) return false; tun.rc = r.rc; renderPhone(); return true; }, tr(tun.rc ? 'topbar.phone.rcShortOn' : 'topbar.phone.rcShort')));
   body.append(el('h4', 'pm-h', tr('topbar.phone.mayTitle')), list);
+  // the phones that get notifications (switched on on each phone), and one to all of them
+  const pushRow = el('div', 'pm-pushrow'); body.append(pushRow);
+  fetch('/api/push').then((r) => r.json()).then((j) => {
+    pushRow.append(el('span', 'muted', j.count ? tr('topbar.phone.pushCount', { n: j.count }) : tr('topbar.phone.pushNone')));
+    if (!j.count) return;
+    const t = el('button', 'btn btn--sm', tr('topbar.phone.notifyTest')); t.type = 'button';
+    t.addEventListener('click', async () => { t.disabled = true; toast(tr((await pushTest()) ? 'topbar.phone.notifySent' : 'topbar.phone.notifyFail')); t.disabled = false; });
+    pushRow.append(t);
+  }).catch(() => {});
+}
+
+// Notifications on this phone: the switch, or how to get them (an iPhone: the office added to its home screen first)
+function notifyBox(body) {
+  const box = el('div', 'pm-notify');
+  body.append(el('h4', 'pm-h', tr('topbar.phone.notifyTitle')), box);
+  const draw = async () => {
+    const st = await pushState();
+    box.replaceChildren();
+    if (st === 'install') {
+      const ol = el('ol', 'pm-steps');
+      for (const k of ['notifyStep1', 'notifyStep2', 'notifyStep3']) ol.append(el('li', null, tr(`topbar.phone.${k}`)));
+      box.append(el('p', 'muted pm-note', tr('topbar.phone.notifyInstall')), ol);
+      return;
+    }
+    if (st === 'none' || st === 'blocked') { box.append(el('p', 'muted pm-note', tr(st === 'none' ? 'topbar.phone.notifyNone' : 'topbar.phone.notifyBlocked'))); return; }
+    box.append(phoneSwitch(tr('topbar.phone.notifySwitch'), st === 'on', false, async (want) => {
+      const ok = want ? await pushOn() : await pushOff();
+      if (!ok) toast(tr('topbar.phone.notifyFail'), 6000);
+      draw(); return ok;
+    }, tr('topbar.phone.notifyDesc')));
+    if (st === 'on') {
+      const t = el('button', 'btn btn--sm', tr('topbar.phone.notifyTest')); t.type = 'button';
+      t.addEventListener('click', async () => { t.disabled = true; toast(tr((await pushTest()) ? 'topbar.phone.notifySent' : 'topbar.phone.notifyFail')); t.disabled = false; });
+      box.append(t);
+    }
+  };
+  draw();
 }
 
 // The same window on a phone: changing the PIN (with the one it has now), and what the Mac allows phones (switched there)
 function phoneSide(body) {
+  notifyBox(body);
   const form = el('form', 'pm-setpin pm-side'), now = el('input', 'pm-pinin'), next = el('input', 'pm-pinin'), err = el('p', 'pm-err');
   for (const [f, ph] of [[now, 'topbar.phone.pinCurrent'], [next, 'topbar.phone.pinNew']]) {
     f.inputMode = 'numeric'; f.maxLength = 10; f.autocomplete = 'off'; f.placeholder = tr(ph); f.setAttribute('aria-label', tr(ph));

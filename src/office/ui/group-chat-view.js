@@ -18,6 +18,7 @@ import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate } from './task-sheet.js';
 import { toast } from './activity.js';
 import { TOKEN } from '../net/live.js';
+import { pushState } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
@@ -286,7 +287,7 @@ function send() {
    { chat }); chosen above the input, or by replying to one of Claude's answers ---------- */
 const DEMO_CHAT = STATIC || new URLSearchParams(location.search).has('demo');
 const tq = () => (TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : '');
-let target = null;   // { id, sid, name, folder }, or null: the whole group
+let target = null;   // { id, sid, name, folder } a conversation, { dir, name, folder, fresh } a new one in a project, or null: the whole group
 try { target = DEMO_CHAT ? null : JSON.parse(sessionStorage.getItem('office-chat-to') || 'null'); } catch { /* storage blocked */ }
 function setTarget(t) {
   target = t; try { sessionStorage.setItem('office-chat-to', JSON.stringify(t)); } catch { /* storage blocked */ }
@@ -297,13 +298,15 @@ function drawTarget() {
   if (!toEl) return;
   const chip = el('button', `zc-to-chip${target ? ' is-on' : ''}`); chip.type = 'button'; chip.title = tr('chat.to.pick');
   chip.append(el('small', null, tr('chat.to.label')));
-  if (target) chip.append(avatar(faceOf(target.id, target.name), 20), el('b', null, target.name)); else chip.append(el('b', null, `💬 ${tr('chat.to.group')}`));
+  if (target?.dir) chip.append(el('span', 'zc-to-icon', target.fresh ? '＋' : '📁'), el('b', null, target.name));
+  else if (target) chip.append(avatar(faceOf(target.id, target.name), 20), el('b', null, target.name));
+  else chip.append(el('b', null, `💬 ${tr('chat.to.group')}`));
   chip.append(el('i', 'zc-to-caret', '▾'));
   chip.addEventListener('click', openPick);
   toEl.replaceChildren(chip);
   if (target) {
     const x = el('button', 'zc-ib zc-to-x'); x.type = 'button'; x.title = tr('chat.to.clear'); x.append(icon('x')); x.addEventListener('click', () => setTarget(null));
-    toEl.append(el('small', 'zc-to-sub', tr('chat.to.sub', { folder: target.folder })), x);
+    toEl.append(el('small', 'zc-to-sub', tr(target.dir ? (target.fresh ? 'chat.to.subNew' : 'chat.to.subMine') : 'chat.to.sub', { folder: target.folder })), x);
   }
   input.placeholder = target ? tr('chat.to.placeholder', { name: target.name }) : tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   root.classList.toggle('is-to', !!target);
@@ -329,13 +332,34 @@ async function openPick() {
     const o = opt(avatar(faceOf(s.id, s.name), 30), s.name, `📁 ${folder} · ${st}`, target?.sid === s.sid, () => { setTarget({ id: s.id, sid: s.sid, name: s.name, folder }); input.focus(); }, r && !r.allowed);
     o.dataset.sid = s.sid; items.push(o);
   }
+  // a new conversation in a project (the folders sessions have worked in, the latest first): Claude starts fresh there
+  if (r?.projects?.length) {
+    items.push(el('small', 'zc-to-h', tr('chat.to.newTitle')));
+    for (const p of r.projects) {
+      const folder = p.dir.split('/').slice(-2).join('/');
+      const o = opt(el('span', 'zc-to-group zc-to-proj', '📁'), p.name, p.dir, target?.dir === p.dir, () => { setTarget({ dir: p.dir, name: p.name, folder, fresh: true }); input.focus(); }, r && !r.allowed);
+      o.dataset.dir = p.dir; o.append(el('i', 'zc-to-pill', tr('chat.to.newPill'))); items.push(o);
+    }
+  }
   pickEl.replaceChildren(...items);
 }
 async function sendTo(text) {
-  const r = await fetch(`/api/tasks${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: target.sid, text, chat: true }) }).then((x) => x.json()).catch(() => null);
-  if (r?.ok) return;
+  const to = target, body = to.dir ? { dir: to.dir, text, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, chat: true };
+  const r = await fetch(`/api/tasks${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => null);
+  if (r?.ok) {
+    if (to.fresh && target === to) setTarget({ ...to, fresh: false });   // (what you write next carries on that new conversation)
+    notifyNudge();
+    return;
+  }
   toast(r?.code === 'notAllowed' ? tr('chat.to.notAllowed') : r?.message || tr('drawer.unreachable'), 7000);
   if (!input.value) { input.value = text; syncBar(); }   // (nothing lost: back in the input)
+}
+// on a phone that could get notifications but doesn't yet: a word, once a day, that it can know when Claude answers
+async function notifyNudge() {
+  if (state.isLocal) return;
+  try { if (localStorage.getItem('office-notify-nudge') === new Date().toDateString()) return; localStorage.setItem('office-notify-nudge', new Date().toDateString()); } catch { return; }
+  const st = await pushState();
+  if (st === 'off' || st === 'install') toast(tr(st === 'off' ? 'chat.to.nudgeOn' : 'chat.to.nudgeInstall'), 9000);
 }
 // a session's project folder, short (its last two parts), and what it's doing now
 const folderOf = (s) => { const d = String(s?.dir || '').replace(/\/+$/, ''); return d.split('/').slice(-2).join('/') || d; };

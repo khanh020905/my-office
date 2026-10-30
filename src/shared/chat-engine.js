@@ -13,7 +13,7 @@
 // act(what) for 'meeting' | 'tea', timer(fn, ms).
 const MAX = 300, PHOTOS = 6, KEYS = 600;
 export const REACTIONS = ['❤️', '👍', '😆', '😮', '😭', '😡'];
-const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant' };
+const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant', claude: '__claude' };
 const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys']);
 const short = (s, n = 60) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const rand = (a, b) => a + Math.random() * (b - a);

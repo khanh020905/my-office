@@ -71,3 +71,8 @@
 .wrap-card canvas { display: block; width: 100%; height: auto; border-radius: 14px; margin: 10px 0 8px; background: #0E1424; }
 .wrap-note { margin: 0 0 12px; color: var(--muted); font-size: .8rem; }
 .wrap-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+/* notifications: the switch, the steps to the home screen, how many phones get them */
+.pm-notify { display: grid; gap: 8px; }
+.pm-notify > .btn { justify-self: start; }
+.pm-steps { margin: 0; padding: 10px 12px 10px 30px; border-radius: 10px; background: var(--card); border: 1px solid var(--line-2); display: grid; gap: 6px; font-size: .8rem; line-height: 1.45; text-align: left; }
+.pm-pushrow { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: .78rem; }

@@ -58,6 +58,7 @@ function next() {
 export function avatar(p, size = 40) {
   const el = document.createElement('span'); el.className = 'zc-av'; el.style.width = el.style.height = `${size}px`;
   el.setAttribute('aria-hidden', 'true');
+  if (p?.key === '__claude') { el.textContent = '✳'; el.style.background = 'linear-gradient(135deg, #D97757, #E8A07A)'; el.style.fontSize = `${Math.round(size * 0.5)}px`; return el; }   // (Claude itself: a new conversation's answers)
   if (p?.key === 'me' || !p?.look) { el.textContent = initials(p?.name); el.style.background = p?.key === 'me' ? 'linear-gradient(135deg, #2B3A55, #4A6491)' : INITIAL_BG[hash(p?.name || '') % INITIAL_BG.length]; el.style.fontSize = `${Math.round(size * 0.38)}px`; return el; }
   const k = keyOf(p.look);
   el.style.background = INITIAL_BG[hash(p.name || '') % INITIAL_BG.length]; el.style.backgroundSize = 'cover'; el.style.fontSize = `${Math.round(size * 0.38)}px`;

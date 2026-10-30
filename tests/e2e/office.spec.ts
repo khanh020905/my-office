@@ -318,6 +318,22 @@ test('away from home: the tunnel switch, and all that comes through it is from t
   expect(kept).toContain(`Max-Age=${365 * 86400}`);
   expect(String((await login(t.pin, false)).headers()['set-cookie'])).not.toContain('Max-Age');
   expect((await request.get(`${via}/api/chat`, { headers: { ...host, Cookie: cookie } })).status()).toBe(200);
+  // the app on a phone's home screen: its manifest and worker are public (fetched without the PIN's cookie)
+  const manifest = await request.get(`${via}/manifest.webmanifest`, { headers: host });
+  expect(manifest.status()).toBe(200);
+  expect((await manifest.json()).display).toBe('standalone');
+  expect((await request.get(`${via}/sw.js`, { headers: host })).status()).toBe(200);
+  // notifications: the office's key; a subscription only to a browser's push service, kept, counted on the Mac
+  const key = (await (await request.get(`${via}/api/push`, { headers: { ...host, Cookie: cookie } })).json()).key;
+  expect(Buffer.from(key, 'base64url').length).toBe(65);
+  const p256dh = crypto.createECDH('prime256v1'); p256dh.generateKeys();
+  const sub = { endpoint: 'https://web.push.apple.com/QE2e', keys: { p256dh: p256dh.getPublicKey().toString('base64url'), auth: crypto.randomBytes(16).toString('base64url') } };
+  const subscribe = (b: object) => request.post(`${via}/api/push`, { headers: { ...host, Cookie: cookie, 'Content-Type': 'application/json' }, data: b });
+  expect((await subscribe({ op: 'add', sub: { ...sub, endpoint: 'https://evil.example/push' } })).status()).toBe(400);
+  expect((await (await subscribe({ op: 'add', sub })).json()).count).toBe(1);
+  await page.locator('#pm-body .pm-tab', { hasText: 'out' }).click();   // (the window drawn again: the count asked again)
+  await expect(page.locator('#pm-body .pm-pushrow')).toContainText('1 phone', { timeout: 10_000 });
+  expect((await (await subscribe({ op: 'remove', endpoint: sub.endpoint })).json()).count).toBe(0);
   // through the tunnel a page asks (/api/live, which answers as soon as there is something) instead of keeping a stream
   // open, which a quick tunnel holds back: the snapshot first, then what is broadcast after it
   const live = async (since?: number) => (await request.get(`${via}/api/live${since == null ? '' : `?since=${since}`}`, { headers: { ...host, Cookie: cookie } })).json();
@@ -345,8 +361,11 @@ test('away from home: the tunnel switch, and all that comes through it is from t
   await phone.locator('input[name=pin]').fill('20051990');
   await phone.locator('button[type=submit]').click();
   const side = phone.locator('#pm-body .pm-side');
-  await expect(async () => { if (!(await side.isVisible())) { await phone.click('#btn-look'); await phone.click('#st-tab-more'); await phone.click('#btn-phone'); } await expect(side).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
+  await expect.poll(() => phone.evaluate(() => document.getElementById('btn-phone')?.hidden === false), { timeout: 120_000 }).toBe(true);   // (the office's first news: the window is offered)
+  await phone.click('#btn-look'); await phone.click('#st-tab-more'); await phone.click('#btn-phone');
+  await expect(side).toBeVisible();
   await expect(phone.locator('#pm-body')).toContainText('Give Claude work from a phone: off');
+  await expect(phone.locator('#pm-body .pm-notify')).toContainText(/Get notifications|blocked/);   // (the switch; a headless Chromium says notifications are blocked whatever it was granted)
   await side.locator('input').nth(0).fill('11111111');
   await side.locator('input').nth(1).fill('31121999');
   await side.locator('button').click();
@@ -402,6 +421,21 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(0);
   await expect(zc.locator('.zc-claude').first()).toBeVisible();
   await zc.locator('.zc-in').fill('and then?');
+  await zc.locator('.zc-in').press('Enter');
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);
+  // a new conversation in a project ("＋"): no conversation to carry on the first time, then that one
+  const runs = () => asked().trim().split('\n').length;
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(1);
+  await zc.locator('.zc-to-chip').click();
+  await zc.locator('.zc-to-pick .zc-to-o[data-dir]').first().click();
+  await expect(zc.locator('.zc-to-chip')).toContainText(path.basename(HOME_DIR));
+  const before = runs();
+  await zc.locator('.zc-in').fill('start something new');
+  await zc.locator('.zc-in').press('Enter');
+  await expect.poll(runs, { timeout: 20_000 }).toBe(before + 1);
+  expect(asked().trim().split('\n').pop()).not.toContain('--resume');
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(2);
+  await zc.locator('.zc-in').fill('and go on');
   await zc.locator('.zc-in').press('Enter');
   await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);
   await zc.locator('.zc-to-x').click();

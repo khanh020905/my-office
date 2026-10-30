@@ -76,6 +76,11 @@ export default {
     full: 'The board already has {n} tasks. Remove some finished ones, then add more.',
     gone: 'This task is no longer on the board.',
   },
+  push: {
+    permTitle: '⚠️ {name} needs your approval (within 45 s)',
+    testTitle: '🔔 My Office',
+    testBody: 'Notifications work: your phone tells you when Claude answers or needs approving.',
+  },
   pin: {
     title: 'Enter My Office',
     help: 'Type the PIN. It is on the {mac}: click 📱 in the office.',

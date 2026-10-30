@@ -73,6 +73,11 @@ export default {
     full: 'Bảng đã có {n} việc. Xoá bớt việc đã xong rồi thêm tiếp.',
     gone: 'Việc này không còn trên bảng.',
   },
+  push: {
+    permTitle: '⚠️ {name} cần bạn duyệt (trong 45 giây)',
+    testTitle: '🔔 My Office',
+    testBody: 'Thông báo đã chạy: Claude trả lời hay cần duyệt là điện thoại báo ngay.',
+  },
   pin: {
     title: 'Vào My Office',
     help: 'Nhập mã PIN. Mã nằm trên {mac}: bấm 📱 trong văn phòng.',

@@ -21,6 +21,7 @@ import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
+import { createPush } from './push.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
@@ -38,7 +39,7 @@ const SESS_DIR = path.join(CLAUDE_DIR, 'sessions');
 // OFFICE_LOG: append the server's output to a file (the Windows sign-in script has nowhere else to put it)
 if (process.env.OFFICE_LOG) { const out = fs.createWriteStream(process.env.OFFICE_LOG, { flags: 'a' }); process.stdout.write = process.stderr.write = out.write.bind(out); }
 const DATA_DIR = process.env.OFFICE_DATA_DIR ? path.resolve(process.env.OFFICE_DATA_DIR) : path.join(ROOT, 'data');   // tests and a second dev copy use their own
-const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/opengraph-image.jpg', '/twitter-image.jpg']);   // (app/: the tab icons and the share card)
+const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/opengraph-image.jpg', '/twitter-image.jpg', '/manifest.webmanifest', '/sw.js', '/icon-512.png']);   // (app/: the tab icons, the share card, the app on a phone's home screen; public/: its worker and big icon)
 const prefs = createPrefs(DATA_DIR), { tr } = prefs;   // tr('area.key', vars): words in the office's language (src/i18n)
 const num = (n, digits) => createT(prefs.lang()).num(n, digits);   // a number written the office's way (1,000 / 1.000)
 setI18n({ tr, num, lang: prefs.lang });   // the Mac drawer's tips (system.mjs) speak the same language
@@ -498,7 +499,7 @@ async function replayRange(day, from, to, max = 80_000) {
    Mac's page (POST /api/chat say); you write from any page. Pages get { k: 'chat', op, m | typing } and { k: 'chatact' }. */
 const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
 let chat = null, chatSaveT = null;
-const STAFF_NAME = { __reception: 'people.staff.receptionist', __hr: 'people.staff.hr', __cleaner: 'people.staff.cleaner', __accountant: 'people.accountant.name', __guard: 'people.guard.name', __director: 'people.director', __courier: 'people.staff.shipper' };
+const STAFF_NAME = { __reception: 'people.staff.receptionist', __hr: 'people.staff.hr', __cleaner: 'people.staff.cleaner', __accountant: 'people.accountant.name', __guard: 'people.guard.name', __director: 'people.director', __courier: 'people.staff.shipper', __claude: 'chat.claudeTag' };   // (__claude: a new conversation's answers, before it has a person)
 chat = createChatEngine({
   tr, now: () => Date.now(),
   members: () => [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name || 'claude', status: s.status, task: s.lastPrompt ? clip(oneLine(unwrapPaste(s.lastPrompt)), 80) : '', last: s.last, project: path.basename(s.cwd || '') })),
@@ -521,15 +522,21 @@ const tasks = createTasks({
   onDone: (t) => {
     if (t.sid) taskSids.add(t.sid);
     const dm = t.from?.chat, folder = path.basename(t.dir);
-    // the answer from whoever you asked (the conversation's person; the run's own if that one has gone)
-    const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (t.sid && all.find((x) => x.sid === t.sid)?.id);
+    // the answer from whoever you asked (the conversation's person; Claude itself for a new conversation, or if that one has gone)
+    const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (dm ? 'claude' : t.sid && all.find((x) => x.sid === t.sid)?.id);
     const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), dm ? 3800 : 560);
     const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
-    if (dm) { chat.working(t.from.id, false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
+    if (dm) { chat.working(t.from.id || 'claude', false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
     if (who) chat.say(who, text, { now: dm, long: dm, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
     else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
+    pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/?chat' });
   },
 });
+/* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
+   from the office needs while nobody has the office open; none while an office page is looked at ---------- */
+const push = createPush({ dataDir: DATA_DIR, log: (l) => fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${l}\n`).catch(() => {}) });
+const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg).catch(() => {}); };
+
 /* Writing to a conversation from the chat ("Gửi tới"): the first message branches it (its whole context, the one open in
    your editor left as it is); what you write next carries on that branch, so it remembers what you said (for 6 hours). */
 const threads = new Map();   // the conversation's own id -> { sid: the branch, at, running }
@@ -1040,7 +1047,9 @@ function ruleText(sug) {
   return `${r0.toolName}${r0.ruleContent ? `(${clip(redact(r0.ruleContent), 60)})` : ''} ${where}`.trim();
 }
 async function onPermission(p, res) {
-  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || !officeFocused()) { res.writeHead(200).end(''); return; }
+  // a run started from the office (a phone's work) may wait for a phone to answer even with no office open: they get a push
+  const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id);
+  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !ours)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const c = await classifyVi(p.tool_name, p.tool_input);
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
@@ -1052,6 +1061,7 @@ async function onPermission(p, res) {
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
+  if (ours) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
 }
 
 /* ---------- questions and plans from Claude, answered in the office ----------
@@ -1692,7 +1702,7 @@ const server = http.createServer((req, res) => {
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/push'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -1789,6 +1799,22 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (url.pathname === '/api/push' && req.method === 'POST') {   // a phone saying yes ({ op: 'add', sub }) or no ({ op: 'remove', endpoint }); { op: 'test', endpoint? }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    readJson(req).then(async (b) => {
+      const op = String(b?.op || ''), endpoint = String(b?.endpoint || b?.sub?.endpoint || '');
+      if (op === 'add') {
+        if (!push.add(b?.sub, req.headers['user-agent'])) { json(res, 400, { ok: false }); return; }
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} push on ${isLoopback(req) ? 'mac' : clientIp(req)} ${new URL(endpoint).host}\n`).catch(() => {});
+      } else if (op === 'remove') push.remove(endpoint);
+      else if (op === 'test') {
+        const st = await push.test(endpoint || (isLoopback(req) ? '' : 'none'), { title: tr('server.push.testTitle'), body: tr('server.push.testBody'), tag: 'test', url: '/' });
+        json(res, 200, { ok: st.length > 0 && st.every((x) => x >= 200 && x < 300), statuses: st, count: push.count() }); return;
+      }
+      json(res, 200, { ok: true, count: push.count(), on: push.has(endpoint) });
+    });
+    return;
+  }
   if (url.pathname.startsWith('/api/tasks') && req.method === 'POST') {   // giving Claude work: start (from a phone only when allowed on the Mac), stop, allow
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -1805,18 +1831,19 @@ const server = http.createServer((req, res) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       // where: a conversation the office knows (its context, branched), or a folder sessions have worked in
       const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-      if (b?.chat) {   // a message to that conversation, from the chat: on its branch, and the answer comes back from its person
-        if (!s) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
-        const text = String(b?.text || '').trim().slice(0, 4000), name = s.title || s.name, th = threads.get(s.sid);
+      if (b?.chat) {   // a message from the chat: to a conversation (on its branch, the answer from its person), or to a project (a new conversation there: fresh)
+        const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && knownDirs.find((d) => d === want);
+        if (!s && !pdir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
+        const key = s ? s.sid : `dir:${pdir}`, text = String(b?.text || '').trim().slice(0, 4000), name = s ? s.title || s.name : path.basename(pdir), th = threads.get(key);
         if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
         if (th?.running) { json(res, 409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }); return; }
-        const on = th && th.sid !== s.sid && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;   // (never the conversation itself: that one stays as it is)
+        const on = th && (!s || th.sid !== s.sid) && !(b.fresh && !s) && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;   // (never the conversation itself: that one stays as it is)
         chat.say('me', `@${name} ${text}`, { now: true });
-        const mine = chat.state.msgs.at(-1);
-        const r = tasks.start({ dir: s.cwd, text, images: [], from: { sid: on || s.sid, fork: !on, name, id: s.id, orig: s.sid, chat: true } });
-        if (r.ok) { threads.set(s.sid, { sid: on || s.sid, at: Date.now(), running: true }); chat.working(s.id, true); taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null); }
+        const mine = chat.state.msgs.at(-1), sid = on || s?.sid || null;
+        const r = tasks.start({ dir: s ? s.cwd : pdir, text, images: [], from: { sid, fork: !on && !!s, name, id: s?.id, orig: key, chat: true } });
+        if (r.ok) { threads.set(key, { sid, at: Date.now(), running: true }); chat.working(s?.id || 'claude', true); taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null); }
         else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${on ? `carry ${on}` : `branch ${s.sid}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${on ? `carry ${on}` : s ? `branch ${s.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
         json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
         return;
       }
@@ -1993,6 +2020,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
+  if (url.pathname === '/api/push') { json(res, 200, { ok: true, key: push.publicKey, count: push.count(), on: push.has(String(url.searchParams.get('endpoint') || '')) }); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
     if (!type) { res.writeHead(404).end(); return; }
