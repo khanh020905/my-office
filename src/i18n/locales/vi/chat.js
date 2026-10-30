@@ -76,6 +76,7 @@ export default {
   giveWork: 'App ↗',
   to: {
     newTitle: '＋ Mở phiên mới trong dự án',
+    photoOnly: 'Xem ảnh này giúp em',
     newPill: 'Mới',
     subNew: '📁 {folder} · phiên mới, Claude làm thật',
     subMine: '📁 {folder} · đang tiếp phiên mới của bạn',
