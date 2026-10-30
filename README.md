@@ -17,6 +17,9 @@ The office also looks after your Mac: RAM per session, forgotten dev servers, on
 open <http://localhost:4310/?demo>. Or try it online, nothing to install: <https://khanh020905.github.io/my-office/>
 (a static build of the same demo, published by `.github/workflows/pages.yml`).
 
+**Questions or ideas?** Ask in [Discussions → Q&A](https://github.com/khanh020905/my-office/discussions/categories/q-a), suggest something in
+[Ideas](https://github.com/khanh020905/my-office/discussions/categories/ideas), or show your office in [Show and tell](https://github.com/khanh020905/my-office/discussions/categories/show-and-tell).
+
 > My Office is a community project. It is not made by, endorsed by or affiliated with Anthropic.
 
 ## Quick start
