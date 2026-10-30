@@ -1,0 +1,9 @@
+# "New issue" offers these first: a question or an idea goes to Discussions (answered there, findable later), a bug stays an issue
+blank_issues_enabled: true
+contact_links:
+  - name: Hỏi đáp · Questions
+    url: https://github.com/khanh020905/my-office/discussions/categories/q-a
+    about: Cài đặt, cách dùng, dùng trên điện thoại · Setup, how-to, using it from your phone
+  - name: Ý tưởng · Ideas
+    url: https://github.com/khanh020905/my-office/discussions/categories/ideas
+    about: Muốn văn phòng có thêm gì · Something you'd like the office to have
