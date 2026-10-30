@@ -188,6 +188,8 @@ export default {
     parcelGot: ['Em lấy rồi ạ, cảm ơn chị 🥰', 'Dạ em xuống liền'],
     paydayAsk: ['Tối nay đi nhậu thôi 🍻', 'Trả nợ xong là hết sạch 😭', 'Ra ATM liền 🏃', 'Cuối cùng cũng tới ngày này 🥹', 'Lương về ba ngày là hết 😆'],
     atmAsk: ['Rút giùm em 500 nghìn với 😆', 'Hàng dài lắm đó, đi sớm đi', 'Cây đó hay hết tiền lắm nha 😅'],
+    comAsk: ['Cho em theo với 🙋', 'Đợi em xíu, em xuống liền', 'Gọi giùm em đĩa cơm cá kho nha 😋', 'Em ăn cơm hộp rồi, mọi người đi vui nha'],
+    bunDauAsk: ['Có liền 🙋', 'Nhớ gọi thêm chả cốm nha 🤤', 'Mắm tôm phải vắt chanh với ớt 🌶️', 'Mẹt đầy đủ luôn nha 😋'],
   },
   // life in the office (the staff or a session, as it happens)
   life: {
@@ -213,6 +215,8 @@ export default {
     longchauHeadache: ['Lỗi hoài nhức đầu quá, em ra Long Châu mua thuốc đau đầu đây 😵', 'Đỏ cả phòng rồi 😭 ra Long Châu mua vỉ Panadol cái đã', 'Test fail liên tục, đau đầu thiệt sự, em chạy ra Long Châu chút 💊'],
     payday: ['Lương về rồi anh em ơi 💸', 'Ting ting 📲 Lương về rồi anh em ơi 💸', 'Lương về rồi anh em ơi 💸 Trưa nay ai ra ATM không?'],
     atm: ['Em xuống cây ATM Vietcombank rút tiền, ai cần gì không? 💸', 'Ra ATM rút tiền đây, hôm nay hàng dài quá trời 😅'],
+    com: ['Trưa nay xuống quán cơm bình dân không mọi người? 35k một đĩa 🍚', 'Ai đi ăn cơm cô Ba với em không? Hôm nay có cá kho tộ 🍚', 'Đi ăn cơm thôi cả nhà, quán dưới đường nha 🍚'],
+    comFriday: ['Thứ Sáu rồi, bún đậu mắm tôm không anh em? 🤤', 'Thứ Sáu là phải bún đậu mắm tôm! Ai đi? 🤤', 'Trưa nay mẹt bún đậu đầy đủ nha mọi người 🤤'],
     cleaner: ['Cô lau nhà nha, mọi người đi nhẹ thôi kẻo trượt nha con 🧽'],
     altar: ['Hôm nay rằm, chị cúng rồi nha cả nhà 🙏', 'Mùng một đầu tháng, chúc cả nhà làm ăn phát đạt 🙏'],
     trophy: '🏆 Cả nhà vừa đạt “{name}”! Giỏi quá đi 🎉',

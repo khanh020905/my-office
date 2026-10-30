@@ -3,8 +3,8 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { DATA_DIR } from '../../playwright.config';
 
-// Điện Máy Xanh and the ATM booth with its payday line on the street (world/backdrops/shop-dmx.js, street-atm.js;
-// people/payday.js). SHOTS_DIR: where the pictures go.
+// Điện Máy Xanh, the ATM booth with its payday line and the quán cơm bình dân on the street (world/backdrops/shop-dmx.js,
+// street-atm.js, eat-com.js; people/payday.js, comtrua.js). SHOTS_DIR: where the pictures go.
 const SHOTS = process.env.SHOTS_DIR || path.join(DATA_DIR, '..');
 type Door = { key: string, x: number, z: number, face: number };
 type View = { x: number, z: number, yaw: number };
@@ -140,5 +140,55 @@ test('payday at the ATM: "Lương về rồi", a line along the pavement, someon
   await expect(page.locator('#fp-near')).toHaveText(/ATM/, { timeout: 5_000 });
   await page.keyboard.press('KeyE');
   await expect(page.locator('.toast').last()).toHaveText(/2,000,000/, { timeout: 5_000 });
+  expect(errors).toEqual([]);
+});
+
+test('lunch at the quán cơm bình dân: no GrabFood that day, down for a plate, the bill, back up for the nap', async ({ page }) => {
+  test.setTimeout(480_000);
+  const errors = watchErrors(page);
+  await open(page, 'at=2026-11-03T11:25&com');   // (a Tuesday)
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.com?.open())).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.com.planned())).toBe(true);
+  await allResting(page, 8);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.com.go()), { timeout: 45_000 }).toBeGreaterThan(0);
+  await expect.poll(() => chatHas(page, /rice place|cô Ba|Lunch time/), { timeout: 20_000 }).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.outing?.kind ?? null)).not.toBe('lunch');   // (no GrabFood ordered today)
+  // over the street and onto the stools: a plate each on the table
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.com.state()?.stage), { timeout: 200_000 }).toBe('on');
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.state().office.filter((m) => m.stage === 'sit').length), { timeout: 60_000 }).toBeGreaterThan(0);
+  await toStreet(page);
+  await standAt(page, await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.view()));
+  await page.waitForTimeout(1500);
+  await shot(page, 'com-lunch.png');
+  await standAt(page, await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.view(0.35)));
+  await page.waitForTimeout(800);
+  await shot(page, 'com-cabinet.png');
+  // walking up to the cabinet yourself: a plate, with the office's lot there
+  await standBy(page, 'com', await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.view()));
+  await expect(page.locator('#fp-near')).toHaveText(/plate of rice/i, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('.toast').last()).toHaveText(/eat with/i, { timeout: 5_000 });
+  // the bill, and everyone back up
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.com.end())).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.com.state()?.members.every((m) => m.stage === 'gone')), { timeout: 200_000 }).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.state().served)).toBeGreaterThan(1);
+  expect(errors).toEqual([]);
+});
+
+test('Friday at the quán: bún đậu mắm tôm, the board says so, a mẹt on the table', async ({ page }) => {
+  test.setTimeout(360_000);
+  const errors = watchErrors(page);
+  await open(page, 'at=2026-11-06T11:25&bundau');   // (a Friday)
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.com?.friday())).toBe(true);
+  await allResting(page, 8);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.com.go()), { timeout: 45_000 }).toBeGreaterThan(0);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.com.state()?.stage), { timeout: 200_000 }).toBe('on');
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.com.state()?.friday)).toBe(true);
+  await toStreet(page);
+  await standAt(page, await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.view(0.5)));
+  await page.waitForTimeout(1500);
+  await shot(page, 'com-bundau.png');
+  await standBy(page, 'com', await page.evaluate(() => (window as unknown as Win).__office!.street!.comDebug.view()));
+  await expect(page.locator('#fp-near')).toHaveText(/bún đậu/i, { timeout: 5_000 });
   expect(errors).toEqual([]);
 });

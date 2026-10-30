@@ -25,6 +25,7 @@ import { sfx } from '../audio/sfx.js';
 import { chatLife } from '../ui/group-chat.js';
 import { wx } from '../life/weather.js';
 import { joinNhau, nhauNow, updateNhau } from './nhau.js';
+import { comNow, comPlanned, updateCom } from './comtrua.js';
 import { atmNow, updatePayday } from './payday.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
@@ -472,6 +473,7 @@ export function whereabouts(w) {
   if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;
   if (R.kind === 'nhau') return nhauNow(R);
+  if (R.kind === 'com') return comNow(R);
   if (R.kind === 'atm') return atmNow(R);
   if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
@@ -481,7 +483,7 @@ export function whereabouts(w) {
 let bikesAt = 0, shown = '';
 export function updateOutings() {
   updateNhau();   // (an evening at the quán nhậu: people/nhau.js)
-  updatePayday();   // (payday at the ATM: people/payday.js)
+  updateCom(); updatePayday();   // (lunch at the quán cơm: people/comtrua.js; payday at the ATM: people/payday.js)
   const S = street(), d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString();
   if (bags?.visible && (m >= 780 || bags.userData.day !== day)) bags.visible = false;
   // the comings and goings; the row of scooters; the session list when anyone's whereabouts change
@@ -498,7 +500,8 @@ export function updateOutings() {
   }
   if (!S || replay.on || state.sim < 20) return;
   // the team's lunch, ordered between 11:15 and 11:40 once someone is resting to fetch it (the company floor eats in)
-  if (PRO && m >= 675 && m < 700 && lunchDay !== day && [...workers.values()].some(resting)) { lunchDay = day; orderLunch(S, day); return; }
+  // (not on the days they go down to the quán cơm instead: people/comtrua.js)
+  if (PRO && m >= 675 && m < 700 && lunchDay !== day && !comPlanned(d) && [...workers.values()].some(resting)) { lunchDay = day; orderLunch(S, day); return; }
   if (state.sim < lookAt) return;
   lookAt = state.sim + 20;
   // a trip to the shop: in office hours, not over lunch, now and then, someone who has not been out for half an hour;

@@ -296,4 +296,21 @@ export default {
     },
     where: { going: 'Going down to the ATM', line: 'In line at the ATM ({n} ahead)', using: 'Taking money out at the ATM', back: 'Back from the ATM' },
   },
+  // lunch at the quán cơm bình dân across the street (people/comtrua.js, world/backdrops/eat-com.js)
+  com: {
+    hello: ['What will it be? Braised pork and egg, braised fish', 'Come in, sour fish soup today'],
+    helloBd: ['How many trays? The tofu is fresh out of the pan', 'The full bún đậu?'],
+    bill: '{n} plates, {total}!',
+    say: {
+      go: ["Lunch at cô Ba's rice place 🍚", "Let's eat, I'm starving 🍚"],
+      goBd: ["Friday: bún đậu mắm tôm, let's go 🤤", 'Bún đậu mắm tôm, everyone 🤤'],
+      sit: ['Braised pork and egg with rice, please 🍚', 'Braised fish and the sour soup, please 🍲'],
+      sitBd: ['One full tray, please 🤤', 'Extra chả cốm and mắm tôm, please!'],
+      pay: ['The bill, please! 🙋', 'The whole table, please!'],
+      thanks: ['So good, see you tomorrow 😋', 'Stuffed. Nap time 😴'],
+      work: ['Work came in, going up first! 🏃', 'Oh, work: you carry on!'],
+      boss: ['Boss, come and eat with us! 🍚', 'Sit here, boss 😄'],
+    },
+    where: { going: 'Going down to the rice place', goingBd: 'Off for bún đậu mắm tôm', eating: "Having lunch at cô Ba's", eatingBd: 'Eating bún đậu mắm tôm', back: 'Lunch done, on the way back' },
+  },
 };

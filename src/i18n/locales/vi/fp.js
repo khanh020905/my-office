@@ -29,10 +29,15 @@ export default {
   banhmiDone: 'Một ổ bánh mì thịt nóng giòn, 20 nghìn 🥖',
   tea: 'Ngồi làm cốc trà đá',
   teaDone: 'Trà đá mát lạnh, 5 nghìn một cốc 🧊',
-  // the ATM booth (world/backdrops/street-atm.js)
+  // the ATM booth (world/backdrops/street-atm.js) and the quán cơm (eat-com.js)
   atm: 'Rút tiền ở cây ATM ({n} người đang xếp hàng)',
   atmDone: 'Tít! Đã rút 2.000.000đ 💸',
   atmWait: 'Xếp hàng sau {n} người… cuối cùng cũng rút được 2.000.000đ 💸',
+  com: 'Ăn một đĩa cơm · {price}',
+  comBd: 'Ăn một mẹt bún đậu · {price}',
+  comDone: 'Cơm thịt kho trứng, canh chua, trà đá miễn phí: 35.000đ 🍚',
+  comBdDone: 'Một mẹt bún đậu mắm tôm, đậu nóng giòn: 45.000đ 🤤',
+  comJoin: 'Ngồi ăn chung bàn với {names} 🍚',
   bil: {
     you: 'Bạn',
     busy: '{a} và {b} đang đánh, chờ ván sau nhé',
