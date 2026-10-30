@@ -283,4 +283,17 @@ export default {
     open: ['Morning, gate open.'],
     round: ['Quick round of the block.', 'A walk round.'],
   },
+  // payday at the ATM across the street (people/payday.js, world/backdrops/street-atm.js)
+  atm: {
+    dry: ["Huh, it's out of cash 😩", 'Out of cash! Wait for the refill'],
+    done: ['Got it 💸', 'Done, your turn'],
+    say: {
+      go: ["Salary's in, off to the ATM 💸", 'Down to the ATM for the rent money 💸'],
+      long: ['What a line, {n} people ahead 😅', 'So busy, {n} before me 😅'],
+      use: ['Beep beep… PIN in 🏧', 'Just three million, spend it wisely 🏧'],
+      got: ['Cash in hand! Back up 💸', "Three days and it'll be gone 😭"],
+      recall: ['Oh, work! Out of the line, back up 🏃', 'Work came in, cash later!'],
+    },
+    where: { going: 'Going down to the ATM', line: 'In line at the ATM ({n} ahead)', using: 'Taking money out at the ATM', back: 'Back from the ATM' },
+  },
 };

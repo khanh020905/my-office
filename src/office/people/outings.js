@@ -25,6 +25,7 @@ import { sfx } from '../audio/sfx.js';
 import { chatLife } from '../ui/group-chat.js';
 import { wx } from '../life/weather.js';
 import { joinNhau, nhauNow, updateNhau } from './nhau.js';
+import { atmNow, updatePayday } from './payday.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
@@ -52,7 +53,7 @@ export function walk(w, S, pts, cb, face) {
 }
 export const here = (w) => ({ x: w.pos.x, z: w.pos.y });
 // down to the street: the lift (wait for it, step in, the doors shut, down) or out of the door, then unseen a moment
-function goDown(w, R, cb) {
+export function goDown(w, R, cb) {
   const stage = R.stage, gone = () => { if (!live(R, stage)) return; w.offstage = true; later(lift ? 3 : 1, () => live(R, stage) && cb()); };
   w.goTo(DOOR_IN, () => {
     if (!live(R, stage)) return;
@@ -81,7 +82,7 @@ function done(R) {
 }
 // back at the desk: on with whatever came in, or (still resting) what they brought back, eaten or drunk at the desk (the
 // shopping goes under it), then a nap
-function resume(w, item) {
+export function resume(w, item) {
   const s = sessions.get(w.id);
   w.station = 'desk';
   if (s?.status === 'wait') { w.anim = 'hand'; w.say('wait', tr('people.needsApproval'), 'wait'); }
@@ -471,6 +472,7 @@ export function whereabouts(w) {
   if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;
   if (R.kind === 'nhau') return nhauNow(R);
+  if (R.kind === 'atm') return atmNow(R);
   if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
 }
@@ -479,6 +481,7 @@ export function whereabouts(w) {
 let bikesAt = 0, shown = '';
 export function updateOutings() {
   updateNhau();   // (an evening at the quán nhậu: people/nhau.js)
+  updatePayday();   // (payday at the ATM: people/payday.js)
   const S = street(), d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString();
   if (bags?.visible && (m >= 780 || bags.userData.day !== day)) bags.visible = false;
   // the comings and goings; the row of scooters; the session list when anyone's whereabouts change

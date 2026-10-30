@@ -269,4 +269,17 @@ export default {
     open: ['Sáng rồi, mở cửa thôi.'],
     round: ['Đi một vòng cái.', 'Đi tuần chút.'],
   },
+  // payday at the ATM across the street (people/payday.js, world/backdrops/street-atm.js)
+  atm: {
+    dry: ['Ủa, máy hết tiền rồi 😩', 'Hết tiền rồi! Chờ nạp thêm đi'],
+    done: ['Rút được rồi 💸', 'Xong, tới lượt nè'],
+    say: {
+      go: ['Lương về rồi, xuống ATM rút ít tiền 💸', 'Ra cây ATM rút tiền đóng tiền nhà đây 💸'],
+      long: ['Trời ơi hàng dài quá, còn {n} người nữa 😅', 'Đông ghê, {n} người trước mình 😅'],
+      use: ['Tít tít… nhập mã PIN 🏧', 'Rút 3 triệu thôi, tiêu tiết kiệm 🏧'],
+      got: ['Có tiền rồi! Lên thôi 💸', 'Lương về được ba ngày là hết 😭'],
+      recall: ['Ơ có việc, bỏ hàng chạy về! 🏃', 'Có việc rồi, rút sau vậy!'],
+    },
+    where: { going: 'Đang xuống cây ATM rút tiền', line: 'Đang xếp hàng ở cây ATM ({n} người phía trước)', using: 'Đang rút tiền ở cây ATM', back: 'Rút tiền xong, đang về' },
+  },
 };

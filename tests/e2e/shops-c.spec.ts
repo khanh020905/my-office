@@ -3,8 +3,8 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { DATA_DIR } from '../../playwright.config';
 
-// Điện Máy Xanh on the street (world/backdrops/shop-dmx.js): walking in, and its painted front further off. SHOTS_DIR:
-// where the pictures go.
+// Điện Máy Xanh and the ATM booth with its payday line on the street (world/backdrops/shop-dmx.js, street-atm.js;
+// people/payday.js). SHOTS_DIR: where the pictures go.
 const SHOTS = process.env.SHOTS_DIR || path.join(DATA_DIR, '..');
 type Door = { key: string, x: number, z: number, face: number };
 type View = { x: number, z: number, yaw: number };
@@ -37,6 +37,8 @@ async function toStreet(page: Page) {
   await page.evaluate(() => (window as unknown as Win).__office!.fpToStreet());
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.fp.street), { timeout: 10_000 }).toBe(true);
 }
+// everyone done and napping, the demo stopped, time sped up
+const allResting = (page: Page, speed = 6) => page.evaluate((n) => { const o = (window as unknown as Win).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(n); }, speed);
 const standAt = (page: Page, v: View) => page.evaluate((v) => { const o = (window as unknown as Win).__office!; o.fp.pos!.set(v.x, v.z); o.fp.yaw = v.yaw; }, v);
 // stand at a point of a shop (its frame: x along the front, z out to the street), looking in (or at a point of it)
 const atShop = (page: Page, key: string) => (lx: number, lz: number, tx = lx, tz = lz - 1) => page.evaluate(([key, lx, lz, tx, tz]) => {
@@ -51,6 +53,13 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: path.join(SHOTS, name) });
   await tag.evaluate((n) => (n as Element).remove());
 }
+// (the demo's chat runs in the page: what it says is in __office.chat)
+const chatHas = (page: Page, re: RegExp) => page.evaluate((r) => (window as unknown as Win).__office!.chat.msgs.some((m) => new RegExp(r).test(m.text || '')), re.source);
+// right by one of the street's walk-up places (kind: 'atm', 'com'), looking at it, from the side `v` is on
+const standBy = (page: Page, kind: string, v: View) => page.evaluate(([kind, v]) => {
+  const o = (window as unknown as Win).__office!, sp = o.street!.spots().find((p) => p.kind === kind)!, d = Math.hypot(v.x - sp.x, v.z - sp.z), x = sp.x + ((v.x - sp.x) / d) * 0.45, z = sp.z + ((v.z - sp.z) / d) * 0.45;
+  o.fp.pos!.set(x, z); o.fp.yaw = Math.atan2(sp.x - x, sp.z - z);
+}, [kind, v] as const);
 
 test('walking into Điện Máy Xanh: the blue sign with the yellow runner, the người xanh dancing, a kettle paid at the till', async ({ page }) => {
   test.setTimeout(180_000);
@@ -100,5 +109,36 @@ test('Điện Máy Xanh further off: its painted front (the sign, the TV wall be
   const w = (x: number, z: number) => (rot ? [fx + z, fz - x] : [fx + x, fz + z]), [x, z] = w(0, 7), [ax, az] = w(0, 0);
   await standAt(page, { x, z, yaw: Math.atan2(ax - x, az - z) }); await page.waitForTimeout(1500);
   await shot(page, 'dmx-far.png');
+  expect(errors).toEqual([]);
+});
+
+test('payday at the ATM: "Lương về rồi", a line along the pavement, someone from the office waits their turn and withdraws', async ({ page }) => {
+  test.setTimeout(480_000);   // (the booth is a block or two away: ~1½ min there at 8×, then the line)
+  const errors = watchErrors(page);
+  await open(page, 'at=2026-11-05T12:05');   // (the 5th: a payday)
+  // the booth is there, today is a payday, and the line builds up
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.atm?.payday())).toBe(true);
+  await allResting(page, 8);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.street!.atmDebug.state().locals), { timeout: 60_000 }).toBeGreaterThanOrEqual(3);
+  await expect.poll(() => chatHas(page, /Salary’s in|payday, everyone/), { timeout: 60_000 }).toBe(true);
+  // someone resting goes down and joins the line
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.payday.go()), { timeout: 45_000 }).toBe(true);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.payday.state()?.stage), { timeout: 200_000 }).toBe('line');
+  await toStreet(page);
+  await standAt(page, await page.evaluate(() => (window as unknown as Win).__office!.street!.atmDebug.view()));
+  await page.waitForTimeout(1500);
+  await shot(page, 'atm-payday-line.png');
+  await standAt(page, await page.evaluate(() => (window as unknown as Win).__office!.street!.atmDebug.view(0.45)));
+  await page.waitForTimeout(800);
+  await shot(page, 'atm-booth-close.png');
+  // at the front of the line, in the booth, and back up with the cash (the line served in seconds from here: it moves in real time)
+  await page.evaluate(() => (window as unknown as Win).__office!.street!.atmDebug.fast());
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.payday.state()?.k), { timeout: 90_000, intervals: [250] }).toBe(0);
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.payday.state()?.stage), { timeout: 200_000 }).toBe('gone');
+  // walking up to it yourself
+  await standBy(page, 'atm', await page.evaluate(() => (window as unknown as Win).__office!.street!.atmDebug.view()));
+  await expect(page.locator('#fp-near')).toHaveText(/ATM/, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('.toast').last()).toHaveText(/2,000,000/, { timeout: 5_000 });
   expect(errors).toEqual([]);
 });
