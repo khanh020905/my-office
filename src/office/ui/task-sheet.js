@@ -35,7 +35,7 @@ export function dictate(btn, field, onChange) {
 }
 
 /* ---------- photos: made smaller here (1600 px, JPEG) so they go quickly over a phone's connection ---------- */
-async function shrink(file) {
+export async function shrink(file) {
   const bmp = await createImageBitmap(file), k = Math.min(1, 1600 / Math.max(bmp.width, bmp.height));
   const c = document.createElement('canvas'); c.width = Math.round(bmp.width * k); c.height = Math.round(bmp.height * k);
   c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height); bmp.close?.();

@@ -15,14 +15,14 @@ import { icon } from './icons.js';
 import { avatar } from './chat-avatars.js';
 import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
-import { openTaskSheet, dictate } from './task-sheet.js';
+import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { toast } from './activity.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
-let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, quickEl, convEl;
+let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, quickEl, attachEl, convEl;
 let replyTo = null, readTo = null, stickTab = 'sticker';   // the message you answer; the last one read when the window shut; the panel's tab
 const RUN_MS = 3 * 60e3, GAP_MS = 20 * 60e3;   // one run of bubbles: the same person within 3 minutes; a time line after 20 quiet minutes
 const seeVotes = new Set();   // polls whose voters are listed
@@ -376,7 +376,7 @@ function setReply(m) {
 }
 function send() {
   const v = input.value; input.value = ''; syncBar(); mentionEl.hidden = true; input.style.height = '';
-  if (target && v.trim()) { sendTo(v.trim()); setReply(null); return; }
+  if (target && (v.trim() || attach.length)) { sendTo(v.trim() || tr('chat.to.photoOnly')); setReply(null); return; }
   if (v.trim()) chatSend(v, { replyTo: replyTo?.id });
   setReply(null);
   // @ a conversation: give it this as work? (one tap opens the sheet with it filled in: its folder, photos, send)
@@ -419,7 +419,8 @@ function drawTarget() {
   input.placeholder = target ? tr('chat.to.placeholder', { name: target.name }) : tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   root.classList.toggle('is-to', !!target);
   if (target?.sid) { const c = el('button', 'zc-ib zc-to-conv'); c.type = 'button'; c.title = tr('chat.conv.open'); c.append(el('span', null, '📜')); c.addEventListener('click', () => openConv(target)); toEl.insertBefore(c, toEl.querySelector('.zc-to-x')); }
-  drawQuick();
+  for (const b of root.querySelectorAll('.zc-photo-btn')) b.hidden = !state.isLocal && !target;   // (to Claude: a photo from this device; to the group: a photo of the office, the Mac's)
+  drawQuick(); if (!target) { attach = []; drawAttach(); }
 }
 
 /* ---------- quick commands over the input (to a conversation or a project): a tap fills the input, ✎ changes them ----------
@@ -459,6 +460,19 @@ function editQuick() {
     acts.append(add, reset, save); rows.append(acts);
   };
   draw(); pickEl.replaceChildren(rows); pickEl.hidden = false;
+}
+
+/* ---------- photos with what you write to Claude: from the camera or the gallery, made smaller here ---------- */
+let attach = [];
+function drawAttach() {
+  if (!attachEl) return;
+  attachEl.hidden = !attach.length;
+  attachEl.replaceChildren(...attach.map((u, i) => { const t = el('span', 'zc-attach-t'), img = el('img'), x = el('button', null, '✕'); img.src = u; x.type = 'button'; x.addEventListener('click', () => { attach.splice(i, 1); drawAttach(); }); t.append(img, x); return t; }));
+}
+function pickPhotos() {
+  const f = el('input'); f.type = 'file'; f.accept = 'image/*'; f.multiple = true;
+  f.addEventListener('change', async () => { for (const file of [...f.files].slice(0, 4 - attach.length)) { try { attach.push(await shrink(file)); } catch { /* not an image it can read */ } } drawAttach(); input.focus(); });
+  f.click();
 }
 
 /* ---------- one conversation on its own screen: everything said in it and what Claude did, as in the Claude app, kept up to
@@ -547,8 +561,10 @@ async function openPick() {
   pickEl.replaceChildren(...items);
 }
 async function sendTo(text) {
-  const to = target, body = to.dir ? { dir: to.dir, text, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, chat: true };
+  const to = target, images = attach.slice(), body = to.dir ? { dir: to.dir, text, images, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, images, chat: true };
+  attach = []; drawAttach();
   const r = await fetch(`/api/tasks${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => null);
+  if (!r?.ok && images.length) { attach = images; drawAttach(); }   // (not sent: the photos stay)
   if (r?.ok) {
     if (conv) setTimeout(() => { if (conv) conv.sig = ''; }, 1500);   // (the conversation screen: drawn again with it)
     if (to.fresh && target === to) setTarget({ ...to, fresh: false });   // (what you write next carries on that new conversation)
@@ -687,7 +703,7 @@ function build() {
   const replyText = el('span', 'zc-reply-q'); replyText.append(el('b'), el('span', 'zc-reply-t'));
   replyEl.append(icon('reply'), replyText, replyX);
   // a computer's toolbar over the input: stickers, a photo of the office, a file, a card, a poll, @, more
-  const photoBtn = (cls) => { const b = ib('image', tr('chat.sendPhoto'), () => chatSendPhoto(), cls); b.hidden = !state.isLocal; return b; };   // (a photo of the office as it is now: taken on the Mac)
+  const photoBtn = (cls) => { const b = ib('image', tr('chat.sendPhoto'), () => (target ? pickPhotos() : chatSendPhoto()), `${cls} zc-photo-btn`); b.hidden = !state.isLocal; return b; };   // (to the group: a photo of the office as it is now, taken on the Mac; to Claude: one of yours)
   const atBtn = () => { moreEl.hidden = true; input.focus(); input.setRangeText(input.value && !/\s$/.test(input.value) ? ' @' : '@', input.selectionStart, input.selectionEnd, 'end'); mentions(); };
   const toolbar = el('div', 'zc-toolbar zc-pc');
   toolbar.append(ib('smile', tr('chat.stickerTab'), () => openStickers('sticker')), photoBtn(''), ib('clip', ''), ib('card', ''), ib('chart', tr('chat.newPoll'), openMore), ib('at', tr('chat.mention'), atBtn),
@@ -713,11 +729,11 @@ function build() {
   try { hint.hidden = localStorage.getItem('office-chat-hint') === 'seen'; } catch { /* storage blocked */ }
   hintX.addEventListener('click', () => { hint.hidden = true; try { localStorage.setItem('office-chat-hint', 'seen'); } catch { /* storage blocked */ } });
   toEl = el('div', 'zc-to'); toEl.hidden = DEMO_CHAT; pickEl = el('div', 'zc-to-pick'); pickEl.hidden = true;
-  quickEl = el('div', 'zc-quick'); quickEl.hidden = true;
+  quickEl = el('div', 'zc-quick'); quickEl.hidden = true; attachEl = el('div', 'zc-attach'); attachEl.hidden = true;
   convEl = el('div', 'zc-conv'); convEl.hidden = true;
   if (!DEMO_CHAT) loadQuick();
   notifyBar = el('div', 'zc-nbar'); notifyBar.hidden = true;
-  root.append(head, notifyBar, pinEl, body, convEl, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, quickEl, toEl, bar, membersEl);
+  root.append(head, notifyBar, pinEl, body, convEl, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, quickEl, attachEl, toEl, bar, membersEl);
   drawTarget();
   $('app').append(root);
 }

@@ -484,6 +484,15 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-quick-ed .zc-quick-c.is-save').click();
   await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Lint' })).toBeVisible();
   expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Run the linter.');
+  // a photo with what you write: from this device, made smaller, read by Claude from its path
+  const chooser = page.waitForEvent('filechooser');
+  await zc.locator('.zc-bar .zc-photo-btn, .zc-toolbar .zc-photo-btn').first().click();
+  await (await chooser).setFiles({ name: 'shot.png', mimeType: 'image/png', buffer: fs.readFileSync(path.resolve('public/icon-512.png')) });
+  await expect(zc.locator('.zc-attach-t')).toHaveCount(1);
+  await zc.locator('.zc-in').fill('what is in this picture');
+  await zc.locator('.zc-in').press('Enter');
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toContain('task-images');   // (its path, under "Attached image")
+  expect(asked()).toContain('Attached image');
   await zc.locator('.zc-to-x').click();
   await expect(zc.locator('.zc-to-chip')).not.toHaveClass(/is-on/);
   // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it

@@ -76,6 +76,7 @@ export default {
   giveWork: 'App ↗',
   to: {
     newTitle: '＋ A new conversation in a project',
+    photoOnly: 'Have a look at this',
     newPill: 'New',
     subNew: '📁 {folder} · a new conversation, Claude for real',
     subMine: '📁 {folder} · carrying on your new conversation',

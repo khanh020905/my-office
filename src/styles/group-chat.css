@@ -366,7 +366,7 @@
 .zc-to-conv { width: 30px; height: 30px; font-size: 15px; }
 .zc-to-see { flex: none; padding: 4px 6px; border-radius: 8px; font-size: 16px; }
 .zc-to-see:hover { background: var(--zc-hover); }
-/* quick commands over the input */
+/* quick commands over the input; photos waiting to go */
 .zc-quick { flex: none; display: flex; gap: 6px; padding: 6px 10px 0; overflow-x: auto; background: #fff; scrollbar-width: none; }
 .zc-quick::-webkit-scrollbar { display: none; }
 .zc .zc-quick-c { all: unset; flex: none; padding: 5px 11px; border-radius: 999px; background: #F1F3F6; color: var(--zc-ink); font-size: 13px; font-weight: 500; white-space: nowrap; cursor: pointer; }
@@ -377,3 +377,7 @@
 .zc-quick-row { display: grid; grid-template-columns: 1fr auto; gap: 4px; padding: 8px; border-radius: 8px; background: #F7F8FA; }
 .zc-quick-row textarea { grid-column: 1 / -1; resize: vertical; font: inherit; font-size: 13px; }
 .zc-quick-acts { display: flex; gap: 6px; justify-content: flex-end; }
+.zc-attach { flex: none; display: flex; gap: 6px; padding: 6px 10px 0; background: #fff; }
+.zc-attach-t { position: relative; width: 54px; height: 54px; border-radius: 8px; overflow: hidden; }
+.zc-attach-t img { width: 100%; height: 100%; object-fit: cover; }
+.zc .zc-attach-t button { all: unset; position: absolute; top: 2px; right: 2px; width: 18px; height: 18px; display: grid; place-items: center; border-radius: 50%; background: rgba(0, 0, 0, .55); color: #fff; font-size: 10px; cursor: pointer; }
