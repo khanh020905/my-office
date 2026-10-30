@@ -30,6 +30,8 @@ import * as worldPropsArcade from './world/props/arcade.js';
 import * as worldPropsPrinter from './world/props/printer.js';
 import * as worldPropsTv from './world/props/tv.js';
 import * as worldPropsGameTv from './world/props/game-tv.js';
+import * as worldPropsBilliards from './world/props/billiards.js';
+import * as worldPropsKaraoke from './world/props/karaoke.js';
 import * as worldPropsNeon from './world/props/neon.js';
 import * as worldPropsStringLights from './world/props/string-lights.js';
 import * as worldPropsCat from './world/props/cat.js';
@@ -56,6 +58,8 @@ import * as peopleGuard from './people/guard.js';
 import * as peopleHr from './people/hr.js';
 import * as peopleFoosball from './people/foosball.js';
 import * as peopleGaming from './people/gaming.js';
+import * as peopleBilliards from './people/billiards.js';
+import * as peopleKaraoke from './people/karaoke.js';
 import * as lifeTrophies from './life/trophies.js';
 import * as lifeSeasons from './life/seasons.js';
 import * as lifeRain from './life/rain.js';
@@ -81,6 +85,8 @@ import * as uiSettings from './ui/settings.js';
 import * as uiWrapped from './ui/wrapped.js';
 import * as uiPhoto from './ui/photo.js';
 import * as uiTimelapse from './ui/timelapse.js';
+import * as uiGroupChat from './ui/group-chat.js';
+import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
 import * as netLive from './net/live.js';
@@ -88,6 +94,7 @@ import * as lifeYourTurn from './life/your-turn.js';
 import * as lifeIncidents from './life/incidents.js';
 import * as audioSfx from './audio/sfx.js';
 import * as uiPermissions from './ui/permissions.js';
+import * as uiPhone from './ui/phone.js';
 import * as demoDemo from './demo/demo.js';
 import * as replayReplay from './replay/replay.js';
 import * as replayTimeline from './replay/timeline.js';
@@ -126,6 +133,8 @@ const MODULES = [
   worldPropsPrinter,
   worldPropsTv,
   worldPropsGameTv,
+  worldPropsBilliards,
+  worldPropsKaraoke,
   worldPropsNeon,
   worldPropsStringLights,
   worldPropsCat,
@@ -152,6 +161,8 @@ const MODULES = [
   peopleHr,
   peopleFoosball,
   peopleGaming,
+  peopleBilliards,
+  peopleKaraoke,
   lifeTrophies,
   lifeSeasons,
   lifeRain,
@@ -177,6 +188,8 @@ const MODULES = [
   uiWrapped,
   uiPhoto,
   uiTimelapse,
+  uiGroupChat,
+  uiGroupChatView,
   uiTips,
   interactFirstPerson,
   netLive,
@@ -184,6 +197,7 @@ const MODULES = [
   lifeIncidents,
   audioSfx,
   uiPermissions,
+  uiPhone,
   demoDemo,
   replayReplay,
   replayTimeline,

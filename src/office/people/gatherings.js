@@ -3,6 +3,7 @@
 // applause from the people sitting nearby.
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { chatLife } from '../ui/group-chat.js';
 import { PRO, officeNow, rand, reduceMotion, replay, short } from '../core/env.js';
 import { scene } from '../scene/renderer.js';
 import { cyl, mat, put } from '../scene/blocks.js';
@@ -87,6 +88,7 @@ export function mondayStandup(force = false) {
   standupDay = day;
   if (!ringBell(line('people.meet.monday'))) return false;
   toast(tr('people.meet.mondayToast'), 5000);
+  chatLife('standup');
   return true;
 }
 // just the ring, no meeting (life/quota.js: the plan's limit has reset, back to the desks)

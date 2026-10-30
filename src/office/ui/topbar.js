@@ -20,27 +20,75 @@ export function notifyWait(s, e) {
   try { const n = new Notification(tr('topbar.waitTitle', { name: dn(s) }), { body: e.label || tr('topbar.waitBody'), tag: 'wait-' + s.id }); n.onclick = () => { window.focus(); openSession(s.id); n.close(); }; } catch { /* unsupported */ }
 }
 
+/* ---------- the phone window: phones on the home network (a switch, the QR code, the PIN), approving from a phone,
+   using it when you're out (a Tailscale network), and giving Claude work from the phone (Remote Control). Everything
+   is switched here, on the Mac: nothing to type in a terminal. ---------- */
+const post = (url, body) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json()).catch(() => null);
+function phoneSwitch(text, on, disabled, fn) {
+  const row = el('label', 'pm-approve'), cb = el('input'); cb.type = 'checkbox'; cb.checked = on; cb.disabled = disabled;
+  cb.addEventListener('change', async () => { cb.disabled = true; if (!(await fn(cb.checked))) { cb.checked = !cb.checked; cb.disabled = false; } });
+  row.append(cb, el('b', null, text));
+  return row;
+}
+let tun = null, tunPoll = 0;   // the tunnel's state (GET /api/tunnel), asked again while it starts
+async function loadTunnel() {
+  tun = await fetch('/api/tunnel').then((r) => r.json()).catch(() => null);
+  clearTimeout(tunPoll);
+  if (tun && ['download', 'starting'].includes(tun.state) && !$('phone-modal').hidden) tunPoll = setTimeout(() => loadTunnel().then(renderPhone), 1500);
+}
+function renderPhone() {
+  const body = $('pm-body'); body.replaceChildren();
+  const qr = (text) => { const box = el('div', 'qr'); try { new window.QRCode(box, { text, width: 200, height: 200 }); } catch { return el('span'); } return box; };
+  const lanOn = !!state.lanUrl, tunOn = !!tun?.on;
+  // 1. the home network
+  body.append(phoneSwitch(tr('topbar.phone.lanSwitch'), lanOn, !!state.lanFixed, async (want) => {
+    const r = await post('/api/lan', { on: want }); if (!r?.ok) return false;
+    state.lanUrl = r.lan; state.lanBase = r.lanBase; state.tsUrl = r.ts; state.phonePin = r.pin; state.lanFixed = r.fixed;
+    renderPhone(); return true;
+  }));
+  if (!lanOn) body.append(el('p', 'muted pm-note', tr('topbar.phone.lanOffNote')));
+  else {
+    if (state.lanFixed) body.append(el('p', 'muted pm-note', tr('topbar.phone.lanFixed')));
+    body.append(el('p', 'muted', tr('topbar.phone.scan')), qr(state.lanUrl));
+    const at = el('div', 'pm-pin'); at.append(el('span', 'muted', tr('topbar.phone.orType')), el('b', 'url', state.lanBase)); body.append(at);
+  }
+  // 2. away from home: the Cloudflare tunnel (or a Tailscale network, if the Mac is on one)
+  body.append(el('h4', 'pm-h', tr('topbar.phone.awayTitle')));
+  body.append(phoneSwitch(tr('topbar.phone.tunSwitch'), tunOn, ['download', 'starting'].includes(tun?.state), async (want) => {
+    const r = await post('/api/tunnel', { on: want }); if (!r?.ok) return false;
+    tun = r; renderPhone(); if (want) loadTunnel().then(renderPhone); return true;
+  }));
+  if (!tunOn) body.append(el('p', 'muted pm-note', tr('topbar.phone.tunOffNote')));
+  else if (tun.state === 'on' && tun.url) body.append(el('p', 'muted', tr('topbar.phone.tunOn')), qr(tun.url), el('b', 'url pm-url', tun.url), el('p', 'muted pm-note', tr('topbar.phone.tunNote')));
+  else if (tun.state === 'error') body.append(el('p', 'pm-err', tr('topbar.phone.tunError', { error: tun.error || '' })));
+  else body.append(el('p', 'muted pm-wait', tr(tun.state === 'download' ? 'topbar.phone.tunDownload' : 'topbar.phone.tunStarting')));
+  // the Mac kept awake while it's on (the power adapter only): what that means right now
+  if (tunOn && tun.awake) body.append(el('p', `pm-awake${tun.awake.ac === false ? ' is-battery' : ''}`, tr(tun.awake.ac === false ? 'topbar.phone.awakeBattery' : 'topbar.phone.awakeOn')));
+  if (state.tsUrl) body.append(el('p', 'muted pm-note', tr('topbar.phone.tsOn')), el('b', 'url pm-url', state.tsUrl));
+  // 3. the PIN, for either way in; a new one signs every phone out
+  const pinNow = tun?.pin || state.phonePin;
+  if ((lanOn || tunOn) && pinNow) {
+    const pin = el('div', 'pm-pin'), again = el('button', 'btn btn--sm pm-newpin', tr('topbar.phone.newPin')); again.type = 'button'; again.title = tr('topbar.phone.newPinTitle');
+    again.addEventListener('click', async () => {
+      if (again.dataset.armed !== '1') { again.dataset.armed = '1'; again.textContent = tr('topbar.phone.newPinSure'); setTimeout(() => { if (again.isConnected) { again.dataset.armed = ''; again.textContent = tr('topbar.phone.newPin'); } }, 4000); return; }
+      const r = await post('/api/pin', {}); if (r?.ok) { state.phonePin = r.pin; if (tun) tun.pin = r.pin; renderPhone(); }
+    });
+    pin.append(el('span', 'muted', tr('topbar.phone.pinLabel')), el('b', 'pm-digits', `${pinNow.slice(0, 3)} ${pinNow.slice(3)}`), again);
+    body.append(el('h4', 'pm-h', tr('topbar.phone.pinTitle')), pin);
+    // 4. approving from the phone: off until you turn it on here (the server only takes this switch from the Mac)
+    body.append(phoneSwitch(tr('topbar.phone.approve'), !!state.phoneApprove, false, async (want) => { const r = await post('/api/phone', { approve: want }); if (!r?.ok) return false; state.phoneApprove = r.approve; renderPhone(); return true; }),
+      el('p', 'muted pm-note', tr('topbar.phone.approveNote')));
+  }
+  // 5. giving Claude work from the phone: Claude Code's own Remote Control, on by itself in every new session if you like
+  body.append(el('h4', 'pm-h', tr('topbar.phone.rcTitle')));
+  if (tun) body.append(phoneSwitch(tr('topbar.phone.rcSwitch'), !!tun.rc, false, async (want) => { const r = await post('/api/rc', { on: want }); if (!r?.ok) return false; tun.rc = r.rc; renderPhone(); return true; }));
+  body.append(el('p', 'muted pm-note', tr(tun?.rc ? 'topbar.phone.rcOn' : 'topbar.phone.rcText')));
+}
+
 export function setup() {
   /* ---------- phone modal, bell, night, closing ---------- */
   state.lanUrl = null; state.lanBase = null; state.phonePin = null;
-  $('btn-phone').addEventListener('click', () => {
-    const body = $('pm-body'); body.replaceChildren();
-    if (state.lanUrl) {
-      const box = el('div', 'qr');
-      body.append(el('p', 'muted', tr('topbar.phone.scan')), box);
-      try { new window.QRCode(box, { text: state.lanUrl, width: 200, height: 200 }); } catch { box.remove(); }
-      if (state.phonePin) {
-        const pin = el('div', 'pm-pin');
-        pin.append(el('span', 'muted', tr('topbar.phone.orType')), el('b', 'url', state.lanBase), el('span', 'muted', tr('topbar.phone.thenPin')), el('b', 'pm-digits', `${state.phonePin.slice(0, 3)} ${state.phonePin.slice(3)}`));
-        body.append(pin, el('p', 'muted pm-note', tr('topbar.phone.viewOnly')));
-      }
-    } else {
-      body.append(el('p', 'muted', tr('topbar.phone.localOnly')),
-        el('pre', 'pm-cmd', 'node bin/cli.mjs install --service --lan'),
-        el('p', 'muted pm-note', tr('topbar.phone.lanNote')));
-    }
-    $('phone-modal').hidden = false;
-  });
+  for (const id of ['btn-phone', 'btn-phone-top']) $(id)?.addEventListener('click', () => { $('phone-modal').hidden = false; renderPhone(); loadTunnel().then(renderPhone); });
   try { bellOn = localStorage.getItem('office-bell') === '1' && Notification.permission === 'granted'; } catch { /* storage blocked */ }
   $('btn-bell').addEventListener('click', async () => {
     if (!bellOn && Notification.permission !== 'granted') { const p = await Notification.requestPermission(); if (p !== 'granted') { toast(tr('topbar.bellBlocked')); return; } }

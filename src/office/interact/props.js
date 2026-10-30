@@ -24,6 +24,10 @@ import { PRN, paper, printPage } from '../world/props/printer.js';
 import { tvG } from '../world/props/tv.js';
 import { GTV } from '../world/props/game-tv.js';
 import { tvClick } from '../people/gaming.js';
+import { BIL } from '../world/props/billiards.js';
+import { tableClick } from '../people/billiards.js';
+import { KTV } from '../world/props/karaoke.js';
+import { boothClick } from '../people/karaoke.js';
 import { neonG, neonM } from '../world/props/neon.js';
 import { SOFA, cat, catGo, petCat } from '../world/props/cat.js';
 import { vac } from '../world/props/vacuum.js';
@@ -161,6 +165,8 @@ export function buildProps() {
     prop('wc', { name: tr('props.wc.name'), hint: tr('props.wc.hint'), place: 'wc', meshes: meshesIn([-8.0, 0, 5.4, -6.7, 2.0, 8.1]) });
     prop('foosball', { name: tr('props.foosball.name'), hint: tr('props.foosball.hint'), place: 'lounge', meshes: meshesOf(PRO_FX.foosball), bounce: PRO_FX.foosball, act: () => sfx.play('click') });
     if (GTV) prop('gametv', { name: tr('props.gametv.name'), hint: tr('props.gametv.hint'), meshes: meshesOf(GTV.g), act: tvClick });
+    if (BIL) prop('billiards', { name: tr('props.billiards.name'), hint: tr('props.billiards.hint'), place: 'lounge', meshes: [...meshesOf(BIL.g), ...meshesOf(BIL.rack)], act: tableClick });
+    if (KTV) prop('karaoke', { name: tr('props.karaoke.name'), hint: tr('props.karaoke.hint'), meshes: meshesOf(KTV.g), act: boothClick });
   }
   if (seasonProp) prop('season', { name: tr('props.season.' + SEASON), hint: tr('props.season.hint', { season: seasonName(SEASON) }), meshes: meshesOf(seasonProp),
     act: () => { if (!reduceMotion) confetti(SEASON_SPOT.centre[0], 2.6, SEASON_SPOT.centre[1]); sfx.play('pop'); } });

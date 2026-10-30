@@ -293,13 +293,15 @@ let cache = null;
 let cacheAt = 0;
 let building = null;
 let cacheLang = '';
-export async function sysSnapshot() {
-  if (cache && Date.now() - cacheAt < 3000 && cacheLang === langOf()) return cache;
-  building ??= buildSnapshot().then((s) => { cache = s; cacheAt = Date.now(); cacheLang = langOf(); return s; }).finally(() => { building = null; });
+// open: the Mac panel is open, so the memory footprints are read again if older than 25 s (top costs ~1.3 s of CPU);
+// for the top bar's reading alone (every 30 s from each open page) the 15-second sampler's, up to 2 minutes old, do
+export async function sysSnapshot({ open = false } = {}) {
+  if (cache && Date.now() - cacheAt < 3000 && cacheLang === langOf() && (!open || cache.open)) return cache;
+  building ??= buildSnapshot(open).then((s) => { s.open = open; return s; }).then((s) => { cache = s; cacheAt = Date.now(); cacheLang = langOf(); return s; }).finally(() => { building = null; });
   return building;
 }
-async function buildSnapshot() {
-  const [P, mem, dsk, ports, files, est] = await Promise.all([processes(), memory(), disk(), listeners(), claudeFiles(), established()]);
+async function buildSnapshot(open = true) {
+  const [P, mem, dsk, ports, files, est] = await Promise.all([processes(open ? 25_000 : 120_000), memory(), disk(), listeners(), claudeFiles(), established()]);
   const cores = os.cpus().length;
   const guard = protectedPids(P);
   noteOwners(P, files);

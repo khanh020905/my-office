@@ -86,70 +86,80 @@ engine switches to demo mode and talks to no API.
 
 | Module | Lines | What it is |
 | --- | ---: | --- |
-| `audio/sfx.js` | 60 | Sounds, synthesized in the browser. |
+| `audio/sfx.js` | 61 | Sounds, synthesized in the browser. |
 | `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
-| `core/loop.js` | 183 | The render loop and its frame budget. |
+| `core/loop.js` | 222 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
-| `demo/demo.js` | 247 | Demo mode: fictional projects and a fictional Mac. |
+| `demo/demo.js` | 253 | Demo mode: fictional projects and a fictional Mac. |
 | `interact/first-person.js` | 261 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
-| `interact/props.js` | 270 | Furniture you can point at: highlight, tooltip, click actions. |
+| `interact/props.js` | 276 | Furniture you can point at: highlight, tooltip, click actions. |
 | `interact/rings.js` | 16 | Selection and hover rings on the floor. |
-| `life/altar.js` | 171 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
-| `life/incidents.js` | 87 | Incidents: repeated failures turn the office red. |
-| `life/nap.js` | 61 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
+| `life/altar.js` | 172 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
+| `life/incidents.js` | 89 | Incidents: repeated failures turn the office red. |
+| `life/nap.js` | 63 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
 | `life/post.js` | 113 | The post box: every commit is a letter in it. |
 | `life/quota.js` | 139 | Out of Claude: an account's plan limit used up, its people on a break until it resets. |
 | `life/rain.js` | 77 | Umbrellas and a wet-floor sign when it rains. |
 | `life/seasons.js` | 234 | Seasonal decorations: Halloween, Christmas, Tết. |
 | `life/tests.js` | 116 | The test board: a screen on a stand in the server room (in the small office, on the wall by the racks) with a row for each session at a desk. |
-| `life/trophies.js` | 118 | The trophy cabinet and the opening plaque. |
+| `life/trophies.js` | 119 | The trophy cabinet and the opening plaque. |
 | `life/weather.js` | 90 | Real weather outside (Open-Meteo). |
 | `life/your-turn.js` | 37 | "Your turn": sessions that finished or wait for you. |
 | `net/live.js` | 147 | The live connection: sessions, desks, teams, events. |
 | `people/accountant.js` | 255 | The accountant (company floor): her desk in the director's office, the day's API cost on her screen, the report to the director at 17:30, and a word with whoever spends the most when the plan's limit gets near. |
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
+| `people/billiards.js` | 484 | Pool in the lounge (company floor; the table: world/props/billiards.js). |
 | `people/breaks.js` | 64 | Lunch and the afternoon coffee queue. |
-| `people/chibi-rig.js` | 734 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
+| `people/chibi-rig.js` | 772 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
 | `people/errands.js` | 283 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
 | `people/foosball.js` | 166 | Foosball in the lounge (the company floor): now and then two people who are resting play a game at the table (one asks, the other comes over), rods spinning, the ball rattling up and down the pitch, the goals counted out loud, the winner pleased with themselves. |
 | `people/gaming.js` | 277 | Video games on the lounge TV (company floor). |
-| `people/gatherings.js` | 150 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
+| `people/gatherings.js` | 152 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
 | `people/guard.js` | 217 | The building's security guard (bảo vệ) at the office's street door, with the city outside. |
-| `people/hr.js` | 358 | HR and the attendance terminal (company floor). |
+| `people/hr.js` | 360 | HR and the attendance terminal (company floor). |
+| `people/karaoke-songs.js` | 51 | The karaoke box's songs (people/karaoke.js): words written for the office, nobody else's. |
+| `people/karaoke.js` | 342 | Karaoke in the box on the dev floor (company floor; the booth: world/props/karaoke.js). |
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
 | `people/navigation.js` | 255 | The walking graph, desk spots and stations people go to. |
-| `people/outings.js` | 485 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
+| `people/nhau.js` | 231 | An evening at the quán nhậu across the street (world/backdrops/street-nhau.js). |
+| `people/outings.js` | 498 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
 | `people/rounds.js` | 130 | The director's rounds (company floor): twice a day out of the corner office and round the desks. |
-| `people/staff.js` | 381 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
+| `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
-| `people/teatime.js` | 87 | Friday 16:00: afternoon tea. |
-| `people/workers.js` | 521 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/teatime.js` | 89 | Friday 16:00: afternoon tea. |
+| `people/workers.js` | 522 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
 | `scene/lights.js` | 35 | Sun, sky light and the room lamps (per-room night lighting on the company floor). |
-| `scene/quality.js` | 73 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
+| `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
 | `ui/activity.js` | 300 | The activity column and the session list. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
+| `ui/chat-avatars.js` | 71 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
+| `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 123 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
-| `ui/icons.js` | 64 | Stroke icons (24 px grid) and the icon helper. |
+| `ui/group-chat-view.js` | 393 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
+| `ui/group-chat.js` | 164 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
+| `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 47 | List mode: the sessions as cards, no 3D. |
 | `ui/look-switch.js` | 19 | Switching the character look. |
-| `ui/mac-drawer.js` | 639 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
-| `ui/permissions.js` | 158 | Approve / deny cards and Claude's questions. |
+| `ui/mac-drawer.js` | 669 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
+| `ui/permissions.js` | 148 | Approve / deny cards and Claude's questions. |
+| `ui/phone.js` | 90 | The office on a phone: an app-like layout for small screens, upright or held sideways. |
 | `ui/photo.js` | 138 | Photo mode: the office alone over the whole window, the camera free (any angle, closer or further, pan with the right button), then a PNG at the screen's size, Full HD or 4K. |
 | `ui/portraits.js` | 62 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
-| `ui/session-drawer.js` | 368 | The session drawer: chat, steps, subagents. |
+| `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
+| `ui/session-drawer.js` | 382 | The session drawer: chat, steps, subagents. |
 | `ui/settings.js` | 122 | Settings popover: backdrop, floor plan, look, time, toggles. |
-| `ui/timelapse.js` | 117 | A 15-second clip of the office to share: square (1080 × 1080), the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds. |
+| `ui/timelapse.js` | 156 | A 15-second clip of the office to share: square (1080 × 1080) for a feed or vertical (1080 × 1920) for Reels, TikTok and Shorts, the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds, with an original lo-fi tune under it (clip-music.js; it can be turned off). |
 | `ui/tips.js` | 111 | The first visit: a short tour of what you can click. |
-| `ui/topbar.js` | 60 | Phone modal, notifications, the night switch. |
+| `ui/topbar.js` | 108 | Phone modal, notifications, the night switch. |
 | `ui/whiteboard.js` | 282 | The whiteboard: agents' tasks and your own sticky notes. |
 | `ui/wrapped.js` | 107 | The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as a PNG or copy, for sharing. |
 | `world/backdrops/beach.js` | 117 | Beach backdrop: sand, surf, palms, umbrellas and loungers. |
@@ -159,10 +169,12 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/shared.js` | 82 | Pieces shared by the countryside and beach backdrops. |
 | `world/backdrops/shops.js` | 763 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
 | `world/backdrops/street-corner.js` | 143 | … |
+| `world/backdrops/street-csgt.js` | 738 | … |
 | `world/backdrops/street-folk.js` | 139 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
-| `world/backdrops/street-life.js` | 1129 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
+| `world/backdrops/street-life.js` | 1164 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
 | `world/backdrops/street-lunar.js` | 84 | … |
 | `world/backdrops/street-morning.js` | 103 | … |
+| `world/backdrops/street-nhau.js` | 272 | … |
 | `world/backdrops/street-park.js` | 360 | … |
 | `world/backdrops/street-repair.js` | 120 | … |
 | `world/backdrops/street-riders.js` | 148 | … |
@@ -182,16 +194,18 @@ engine switches to demo mode and talks to no API.
 | `world/furniture/rocket.js` | 22 | The deploy rocket on its launch pad. |
 | `world/furniture/room-pieces.js` | 107 | Wall clock, framed art, bookshelf, sofa corner and the globe. |
 | `world/furniture/server-racks.js` | 65 | Server racks with LEDs and fans that follow the Mac's CPU. |
-| `world/layout.js` | 42 | The floor plans (cozy, pro, hq): where the shared furniture stands, and the headquarters wing. |
-| `world/pro/floor.js` | 339 | The company floor: rooms, partitions and furniture. |
+| `world/layout.js` | 43 | The floor plans (cozy, pro, hq): where the shared furniture stands, and the headquarters wing. |
+| `world/pro/floor.js` | 341 | The company floor: rooms, partitions and furniture. |
 | `world/pro/pieces.js` | 142 | Company floor building pieces: floor finishes, walls, glass, chairs, dining sets. |
 | `world/pro/wing.js` | 134 | Headquarters' wing: in front of the company floor, a corridor along it, a corridor down the middle and four department rooms of two pods each (the desks, pods' screens and carpets come from the shared code). |
 | `world/props/aquarium.js` | 44 | The aquarium. |
 | `world/props/arcade.js` | 62 | The arcade cabinet and its little game. |
+| `world/props/billiards.js` | 124 | The pool table (company floor), on the lounge's right side between the sofa and the arcade: a 7-foot table (green cloth with its spots, cushions, walnut rails inlaid with pearl diamonds, six leather pockets, turned legs), a rug under it, chalk on the rail, and a round cue stand by the arcade. |
 | `world/props/bins.js` | 41 | Context waste bins beside each desk. |
 | `world/props/cat.js` | 103 | The office cat. |
 | `world/props/dev-servers.js` | 85 | Mini servers for each running dev server, and forgotten ones. |
 | `world/props/game-tv.js` | 94 | The lounge TV (company floor): a 55" TV on a low walnut media unit against the back wall, facing the sofa, with a games console standing beside it, two controllers lying on top, a soundbar, a plant, and a glow on the wall behind it that takes the colour of the picture. |
+| `world/props/karaoke.js` | 109 | The karaoke box (company floor), where the front phone booth was, like the coin-op booths in Vietnamese malls: a soundproof cabin on a dark base, black frame, purple acoustic felt at the back and on the side toward the phone booth, glass toward the room so you can watch the singers, a lit KARAOKE band over the glass and over the door, an LED strip round the roof and the base. |
 | `world/props/neon.js` | 22 | The neon sign. |
 | `world/props/printer.js` | 25 | The printer that prints a page when a session finishes. |
 | `world/props/shredder.js` | 178 | Paper by context: an in-tray on every desk whose stack grows with its session's context window (loose sheets and a red flag past 85 %), and a paper shredder by the printer. |

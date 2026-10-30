@@ -47,3 +47,5 @@
 .pc-acts .pc-skip:hover { color: var(--ink); background: rgba(255, 255, 255, .05); }
 .pc-bar { height: 3px; margin: 0 -15px; background: rgba(255, 255, 255, .06); }
 .pc-bar i { display: block; height: 100%; background: var(--amber); transition: width .25s linear; }
+/* on a phone: where to answer instead (the Mac hasn't allowed phones), or why a risky command can't be allowed here */
+.pc-phone-note { flex-basis: 100%; font-size: .74rem; color: var(--muted); line-height: 1.4; }

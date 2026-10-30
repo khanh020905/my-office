@@ -1,4 +1,6 @@
 export default {
+  riskyOnMac: 'Lệnh nguy hiểm: chỉ cho phép được trên {mac}.',
+  phoneOff: 'Duyệt trên {mac}. Muốn duyệt từ điện thoại: trên {mac}, mở “Điện thoại” và bật “Duyệt lệnh từ điện thoại”.',
   danger: {
     rmRf: 'xoá cả thư mục, không hỏi lại',
     gitPush: 'ghi đè hoặc xoá nhánh trên máy chủ git',

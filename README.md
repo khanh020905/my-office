@@ -90,6 +90,18 @@ Then open <http://localhost:4310>.
   through Saigon at sunset, a rooftop fighter, all pixel art made for the office): they cheer their goals, groan at
   the other's, and get up when work comes in. Click the TV to call two free people over. In first person, press E at
   the TV to sit down and play yourself, against a colleague who comes over or the console; a real gamepad works too.
+- **Pool in the lounge** (company floor): a 7-foot table with walnut rails, pearl diamonds and leather pockets, the
+  balls really rolling (cushions, kisses, pockets). Now and then two people who are resting take a cue each and play
+  a frame: they walk round the table to get behind the white, bend over the cue, take a few practice strokes and play
+  through; whoever pots goes again, the white going down hands the table over, first to five wins. Click the table to
+  call two free people over. In first person, E at the table picks up a cue: ←/→ (or drag) to aim along the guide
+  line, hold Space for power and let go, against a colleague who comes over or on your own.
+- **The karaoke box** (company floor, beside the phone booth): a soundproof cabin like the coin-op ones in Vietnamese
+  malls, with neon, a screen, two mics and a bench. Now and then someone resting (two, more often on a Friday evening)
+  goes in and sings one of the office's own songs: the words run across the screen and fill with colour as they are
+  sung, notes rise over the box, its lights pulse, and the machine gives a score at the end, to applause and a post in
+  the group chat. The tune follows the Vietnamese words' tones, as folk songs do, and is synthesized in the browser,
+  quietly, only with sounds on. Click the box to send someone in; in first person, E at it takes you in to sing.
 - **The week's rhythm**: Monday 9:00 the bell rings for the stand-up by itself and everyone free goes round the meeting
   table saying what they're on; Friday 16:00 there's milk tea and bánh tráng trộn in the pantry for whoever is resting.
 - **Staff who aren't sessions**: on the company floor a receptionist sits at the lobby reception from 7:45 to 18:15,
@@ -139,6 +151,28 @@ Then open <http://localhost:4310>.
   - concrete poles with sagging bundles of power cables along the streets, coils of spare cable and a transformer box.
     Now and then an ambulance (115) or a fire engine (114) comes through with lights flashing and siren sounding;
     traffic pulls over to let it by (`?siren` to see one);
+  - the traffic police (CSGT), as they work today: now and then two officers in the yellow uniform ride by on white
+    patrol bikes (C.S.G.T / TRAFFIC POLICE, lights flashing). Some mornings and late afternoons they set up a
+    checkpoint on the office's pavement just after a crossing: the bikes up on the pavement, a sign, cones along the
+    kerb, one officer at the lane's edge with the baton, the other by the bikes (reflective vests after dark). They stop a
+    rider without a helmet, three on a scooter, one on the phone or one through the red light: a whistle, the scooter
+    pulls in, the officer salutes, says why, checks the licence and registration on VNeID, writes the record and the
+    rider signs. Some evenings (more on Fridays and Saturdays) it is an alcohol check: anyone may be asked to blow, and a
+    high reading means the scooter is held and the rider walks. The chip over the checkpoint opens a card with the
+    steps (Circular 73/2024/TT-BCA), the fine range and clause (Decree 168/2024/NĐ-CP, article 7) and the record itself,
+    a pretend one with made-up names and plates. In first person, E by them does the same (`?csgt` to see one);
+  - a quán nhậu (a street-side beer place) on the park's edge across the street, 16:30–23:00: low blue plastic tables,
+    red and blue stools, an ice chest and crates of beer (a made-up "BIA", no real brand), peanuts, grilled dried
+    squid, snails and a hotpot steaming on its burner, a charcoal grill smoking with the owner fanning it, a waiter going
+    to and fro, a hand-painted sign and a string of bulbs after dark; the regulars raise their glasses now and then
+    ("Một, hai, ba, dô!"), more of them on Fridays and Saturdays. On Fridays at about 18:30 (and one evening in four on
+    other weekdays) a few people from the office who are resting go down for a few rounds: an invitation in the group
+    chat, the long table by the kerb, a clink each round and cheeks a little redder each time; work coming in calls one
+    back up. Nobody rides home after a drink: "Đã uống rượu bia thì không lái xe" in the chat, a GrabBike, a Xanh SM bike
+    or taxi to the kerb, and the scooter stays in the row till the morning. On the alcohol checkpoint's evenings the
+    police stand on the quán's street, and a regular who rides off on his own scooter is stopped and breath-tested. The
+    quán's chip opens its menu (illustrative prices) and who from the office is at the table; in first person, E to sit
+    down with them (`?nhau` to see it any time);
   - traffic lights have Vietnam's countdown boxes beside them, red or green digits counting down the light. On a hot
     sunny day (33 °C+, from the real weather) scooters wait at a red light back in a street tree's shade instead of at
     the stop line;
@@ -158,8 +192,9 @@ Then open <http://localhost:4310>.
   traffic stops for you), get a drink at the convenience store, a bánh mì at the cart, and E at the door to go back up.
 - **A short tour on the first visit** points at what you can click (the lamp, the switch, the coffee machine, the
   printer, the cat, the bell, a person, walking in). Settings → More → "Show the tour again".
-- **A 15-second clip** (in photo mode): a square video of the office from morning to evening, the camera turning
-  slowly, with a title and the day's numbers. MP4 in Chrome, ready for a post.
+- **A 15-second clip** (in photo mode): a video of the office from morning to evening, square for a feed or vertical
+  (9:16) for Reels, TikTok and Shorts, the camera turning slowly, with a title and the day's numbers, and an original
+  lo-fi tune made in the browser (no samples, nothing to clear; it can be turned off). MP4 in Chrome, ready for a post.
 - **Photo mode** (P): hide every panel, turn the camera any way you like, and save a PNG up to 4K with the names
   painted in.
 
@@ -172,6 +207,12 @@ Then open <http://localhost:4310>.
   - a push launches the rocket;
   - a failing CI run shows a red notice (with a siren, if sounds are on).
 - **The whiteboard** lists each session's task and progress, plus your own sticky notes.
+- **The team chat** (top bar), drawn like a group chat on a Vietnamese messenger: people post about what really
+  happens (a task done, a commit, a push, CI going red, the plan running out, a parcel at reception, the lunch poll,
+  the Friday tea with a photo of the table, birthdays), type for a moment first, react and answer each other, and answer
+  you: @ someone and they say what they're on, "meeting" rings the bell, "milk tea" brings the Friday tea out. Each
+  person's picture is their own chibi; stickers, polls, reactions, a pinned message, the unread count. Kept on this
+  computer only (localStorage); nothing you write reaches Claude.
 - **Timeline and replay**: one lane per session; replay the last hour or day at up to ×120; export it as a video.
 - **Weekly recap**: a picture card of your week with Claude, ready to save or paste into a post. It shows the hours,
   prompts, edits and commands, the cost at API prices, and your busiest project.
@@ -197,7 +238,12 @@ Then open <http://localhost:4310>.
   its grip to set the order. With "Switch accounts when one runs out" on, new sessions move down that order when one
   runs out, and come back to the top one once it resets. It works through the editor's Claude Code extension (`claudeCode.claudeProcessWrapper`, set
   and removed by the office) or a shell alias the card shows; the accounts share history, settings and memory by links
-  to `~/.claude`. Sessions already open keep their account. macOS and Linux.
+  to `~/.claude`. macOS and Linux.
+- **Moving an open session to another account**: click its person, then "Change account" and pick one. A session in
+  the editor stops for a moment while it rests, and carries on with the new account, the same conversation, as soon as
+  you write in it again (the office starts it there through the same script; its person waits at the desk meanwhile).
+  A session in a terminal gets the command that resumes it there. With switching on, the sessions open on an account
+  that runs out for a while (not a short rate limit) move by themselves too; a box under the switch turns that off.
 - **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
   most) with one button to close every idle Claude session, and suggests the rest: stop a forgotten dev server, quit a
   heavy app, clear caches. Idle sessions can also be closed on a timer (off by default). Every action is checked first
@@ -211,7 +257,12 @@ Then open <http://localhost:4310>.
 - Graphics: Auto, Low, Medium or High. Auto steps down by itself when frames come late, and remembers it per device.
 - Streamer mode blurs commands, paths and chat for recording.
 - List mode turns the 3D off and shows sessions as cards. It saves battery and works without WebGL.
-- Open on your phone: same Wi-Fi, 6-digit PIN, watch only.
+- Open on your phone: same Wi-Fi (or your Tailscale network when you're out), 6-digit PIN. Watching, plus approving
+  if you turn on "Approve from a phone" on the Mac. To give Claude work from the phone, Claude Code's own Remote
+  Control (`/rc`): the session's QR code in its drawer opens it in the Claude app.
+- On a phone the office lays itself out like an app, upright or held sideways: a compact top bar (plan, Mac, settings),
+  the office filling the screen, and a tab bar (Office · Sessions · Activity · Approve · Chat, with counts) whose tabs
+  open each panel as a full-screen sheet. A waiting approval floats just above the tabs with thumb-sized buttons.
 
 ## Privacy and safety
 
@@ -235,9 +286,19 @@ Then open <http://localhost:4310>.
 - **Stop buttons** re-check the process ID **and its start time** just before acting. A new process that reused an
   old ID is never stopped by mistake. Every stop, cleanup and approval is written to `data/actions.log`.
 - **Phones**:
-  - The server listens on `127.0.0.1` unless you install with `--lan`.
+  - The server listens on `127.0.0.1` only, until you turn on "Open on phones" in the phone window (or install with
+    `--lan`). Then it also listens on the Mac's own network addresses (Wi-Fi, Ethernet, Tailscale), never on all of
+    them, and turning it off closes them and cuts the phones off. "New PIN" there signs every phone out.
   - Phones need the PIN; five wrong tries lock that address for 15 minutes.
-  - Phones can only watch: approvals and hooks come from the Mac alone.
+  - Phones watch. They approve only once you turn on "Approve from a phone" on the Mac (off by default; only the Mac
+    can switch it): allow once or deny, answer a question or a plan; never "always", and a risky (red) command can
+    only be denied from a phone. Each answer from a phone is logged with its address. Hooks come from the Mac alone.
+  - Away from home (mobile data, another Wi-Fi): "Use it when you're out" in the phone window starts a Cloudflare quick
+    tunnel (cloudflared, downloaded once; no account, no domain) and shows its https address and QR code, new each
+    time. What comes through it is from the internet whatever its address: the PIN only (no token links), an
+    https-only cookie, and nothing but the PIN, approvals (if allowed) and presence may be sent; hooks, stopping
+    processes, accounts and the switches are refused. Off: cloudflared stops and the phones are cut off. A Tailscale
+    network works too (the window shows its address).
   - The page is plain HTTP, so only use `--lan` on a network you trust.
 
 ## Settings from the environment

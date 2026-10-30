@@ -33,6 +33,7 @@ export function setup() {
       siren: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * 0.6, 0.3, 'square', 0.05, 880); tone(880, t + i * 0.6 + 0.3, 0.3, 'square', 0.05, 620); } },
       meow: (t) => { tone(740, t, 0.35, 'sine', 0.1, 520); tone(1480, t, 0.3, 'sine', 0.025, 1040); },
       pop: (t) => tone(520, t, 0.08, 'sine', 0.08, 900),
+      chat: (t) => { tone(1568, t, 0.11, 'sine', 0.07); tone(2093, t + 0.08, 0.2, 'sine', 0.06); },
       bloop: (t) => { tone(320, t, 0.12, 'sine', 0.1, 760); tone(420, t + 0.14, 0.12, 'sine', 0.08, 900); },
       brew: (t) => { noise(t, 1.4, 0.035, 2600); tone(110, t, 1.2, 'sine', 0.04, 90); },
       rustle: (t) => { noise(t, 0.12, 0.04, 3200); noise(t + 0.1, 0.16, 0.03, 3800); },

@@ -2,7 +2,8 @@
 //   High:   up to 2× resolution on Retina screens, soft shadows, 4× MSAA, bloom at night.
 //   Medium: up to 1.5×, plain shadows from a smaller map, 2× MSAA, bloom at night.
 //   Low:    1×, no shadows, no post-processing (one plain draw), 30 frames a second.
-// Auto starts from what the device looks like (a phone: Medium; no GPU: Low; else High). When frames keep arriving late
+// Auto starts from what the device looks like (a phone: Low, its CPU is what runs out first, measured at 15 fps on
+// Medium with the main thread full; a tablet or a narrow window: Medium; no GPU: Low; else High). When frames keep arriving late
 // even at the lowest resolution step, it goes down one level and remembers that for this device. A remembered level is
 // tried one step higher again after three days, so a busy afternoon does not cap the office for good.
 import * as THREE from 'three';
@@ -22,10 +23,13 @@ export const quality = { choice: 'auto', level: 'high', plain: false, fps: 60, p
 const listeners = new Set();
 
 const store = { get: (k) => { try { return localStorage.getItem(k); } catch { return null; } }, set: (k, v) => { try { localStorage.setItem(k, v); } catch { /* storage blocked */ } } };
+/** A phone: a touch screen whose short side is under 600 px (a tablet is not one). */
+let phone = null;
+export const phoneLike = () => (phone ??= matchMedia('(pointer: coarse)').matches && Math.min(screen.width, screen.height) < 600);
 function autoStart() {
   if (SOFTWARE_GL) return 'low';
   let saved = null; try { saved = JSON.parse(store.get(AUTO_KEY) || 'null'); } catch { /* old value */ }
-  const base = small.matches ? 'medium' : 'high';
+  const base = phoneLike() ? 'low' : small.matches || matchMedia('(pointer: coarse)').matches ? 'medium' : 'high';
   if (!saved || !LEVELS.includes(saved.level)) return base;
   if (Date.now() - (saved.at || 0) > RETRY_MS) return LEVELS[Math.min(LEVELS.indexOf(saved.level) + 1, LEVELS.indexOf(base))];
   return saved.level;

@@ -19,6 +19,7 @@ import { t as tr } from '../../i18n/index.js';
 import { shredAction } from '../world/props/shredder.js';
 import { onTest } from './tests.js';
 import { onCommit, onPush, postAction } from './post.js';
+import { chatEvent } from '../ui/group-chat.js';
 
 /* ---------- incidents: three failures in five minutes turn the office red for a while ---------- */
 export const fails = [];
@@ -34,6 +35,7 @@ export function updateIncident(t) {
   if (!on && !$('incident').hidden) { $('incident').hidden = true; $('stage-wrap').classList.remove('is-incident'); }
 }
 export function onEvent(e) {
+  chatEvent(e);   // (the group chat: ui/group-chat.js)
   if (e.type === 'stop' || e.type === 'commit') printPage();   // every finished turn and every commit prints a page
   if (e.type === 'test' || e.type === 'testok' || e.type === 'testfail') onTest(e);   // the test board's lamps (tests.js)
   if (e.type === 'commit') onCommit(e); if (e.type === 'push') onPush(e);   // a letter in the post box; the postman (post.js)

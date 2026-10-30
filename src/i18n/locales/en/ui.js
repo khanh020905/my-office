@@ -29,6 +29,7 @@ export default {
     settings: 'Settings',
     settingsTitle: 'Settings: office, scenery, characters, notifications, open on your phone',
     phone: 'Open on your phone',
+    phoneTitle: 'Phones: open the office on your phone, approve from it, use it when you’re out',
     bell: 'Notify me when approval is needed',
     scenery: 'Scenery',
     scenes: {
@@ -112,6 +113,18 @@ export default {
     refresh: 'Refresh',
     loading: 'Measuring RAM, CPU and disk…',
   },
+  // the tab bar and sheets on a phone (ui/phone.js)
+  phone: {
+    tabs: 'Sections',
+    office: 'Office',
+    sessions: 'Sessions',
+    activity: 'Activity',
+    approve: 'Approve',
+    chat: 'Chat',
+    close: 'Close',
+    approveEmpty: 'Nothing waiting for you',
+    approveEmptySub: 'When a session needs your OK, its card shows here and floats just above the bottom bar.',
+  },
   phoneModal: {
     title: 'Open on your phone',
   },
@@ -181,7 +194,12 @@ export default {
   // the 15-second clip (ui/timelapse.js), made from photo mode
   clip: {
     button: 'Clip 15 s',
-    buttonTitle: 'A 15-second square video of the office, from morning to evening, to share',
+    buttonTitle: 'A 15-second video of the office, from morning to evening, to share',
+    shapeTitle: 'Clip shape: square for a feed, vertical 9:16 for Reels, TikTok and Shorts',
+    square: 'Square 1:1',
+    tall: 'Vertical 9:16',
+    music: 'Music',
+    musicTitle: 'Original lo-fi music, made right in the browser: no copyright to worry about',
     title: 'A day at the office',
     endTitle: { one: '{n} person at work', other: '{n} people at work' },
     prompts: { one: '{n} prompt', other: '{n} prompts' },

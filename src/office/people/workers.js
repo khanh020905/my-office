@@ -266,7 +266,8 @@ export function setup() {
       if (this.leaving || this.phase === 'walk' || this.after || this.liftWait || this.liftRide || this.homeBound) return;
       if (this.away) {
         const s = sessions.get(this.id), d = officeNow(), m = (d.getHours() - 8) * 60 + d.getMinutes();
-        if (this.want || (s && (s.status !== 'rest' || s.bg?.length)) || (m >= hash(this.id) % 40 && d.getHours() < 21)) this.comeBack();
+        // (offDay: gone home for the day from the quán nhậu, people/nhau.js: back for work, or in the morning)
+        if (this.want || (s && (s.status !== 'rest' || s.bg?.length)) || (m >= hash(this.id) % 40 && d.getHours() < 21 && this.offDay !== d.toDateString())) this.comeBack();
         return;
       }
       if (this.inStall || this.wcBusy) { this.wcTick(); return; }

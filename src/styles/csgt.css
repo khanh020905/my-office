@@ -1,0 +1,60 @@
+/* The traffic police on the street (src/office/world/backdrops/street-csgt.js): the chip over the checkpoint, what
+   they say, and the card with the stop and its record (biên bản), drawn like the paper form. */
+.csgt-chip .z-ico { color: #F2C230; background: rgba(200, 16, 46, .28); }
+.csgt-chip { border-color: rgba(242, 194, 48, .45); }
+.csgt-say { max-width: 230px; white-space: normal; line-height: 1.35; border-color: rgba(242, 194, 48, .7); }
+
+.csgt-card { position: absolute; right: 14px; top: 14px; z-index: 4; width: min(400px, calc(100% - 28px)); max-height: calc(100% - 28px); display: flex; flex-direction: column; background: rgba(19, 25, 34, .97); border: 1px solid var(--line-2); border-radius: 16px; box-shadow: 0 18px 48px rgba(0, 0, 0, .5); animation: plc-in .18s cubic-bezier(.2, .8, .2, 1); }
+.csgt-head { display: flex; align-items: flex-start; gap: 11px; padding: 14px 8px 10px 14px; }
+.csgt-ico { width: 34px; height: 34px; flex: none; display: grid; place-items: center; border-radius: 10px; background: rgba(200, 16, 46, .2); color: #F2C230; }
+.csgt-ico svg { width: 17px; height: 17px; }
+.csgt-title { flex: 1; min-width: 0; }
+.csgt-title h3 { margin: 0; font-size: .95rem; font-weight: 800; line-height: 1.25; }
+.csgt-sub { margin: 3px 0 0; font-size: .72rem; color: var(--muted); }
+.csgt-close { width: 30px; height: 30px; }
+.csgt-body { min-height: 0; overflow-y: auto; padding: 0 14px 14px; display: flex; flex-direction: column; gap: 10px; }
+.csgt-empty { margin: 0; font-size: .76rem; color: var(--muted); }
+.csgt-stop { display: flex; flex-direction: column; gap: 2px; padding: 9px 11px; border-radius: 10px; background: rgba(242, 194, 48, .1); border: 1px solid rgba(242, 194, 48, .3); }
+.csgt-stop b { font-size: .86rem; }
+.csgt-stop span { font: 600 .72rem/1.3 var(--mono); color: var(--muted); }
+.csgt-steps { margin: 0; padding: 0; list-style: none; counter-reset: st; display: flex; flex-direction: column; gap: 3px; }
+.csgt-steps li { counter-increment: st; display: flex; gap: 8px; align-items: baseline; font-size: .75rem; color: var(--faint); }
+.csgt-steps li::before { content: counter(st); flex: none; width: 17px; height: 17px; display: inline-grid; place-items: center; border-radius: 50%; font: 700 .62rem/1 var(--font); background: rgba(255, 255, 255, .06); }
+.csgt-steps li[data-state="done"] { color: var(--muted); }
+.csgt-steps li[data-state="done"]::before { content: "✓"; background: rgba(61, 220, 132, .18); color: var(--green); }
+.csgt-steps li[data-state="now"] { color: var(--ink); font-weight: 700; }
+.csgt-steps li[data-state="now"]::before { background: #F2C230; color: #1B1E24; }
+.csgt-law { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 4px 10px; font-size: .74rem; }
+.csgt-law dt { color: var(--muted); }
+.csgt-law dd { margin: 0; }
+.csgt-clear { margin: 0; font-size: .76rem; color: var(--green); }
+.csgt-foot { margin: 0; font-size: .66rem; line-height: 1.45; color: var(--faint); }
+/* the record: the paper form, black on off-white, its national header and signatures */
+.csgt-paper { padding: 14px 14px 12px; border-radius: 4px; background: #FBFAF4; color: #15171A; font: 400 .72rem/1.5 "Times New Roman", "Noto Serif", Georgia, serif; box-shadow: 0 2px 10px rgba(0, 0, 0, .35); }
+.csgt-paper p { margin: 0 0 3px; text-align: justify; }
+.csgt-paper-top { display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; text-align: center; margin-bottom: 8px; font-size: .64rem; line-height: 1.3; }
+.csgt-paper-top > div { display: flex; flex-direction: column; align-items: center; gap: 1px; }
+.csgt-paper-top b { font-weight: 700; }
+.csgt-motto { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.csgt-no { margin-top: 3px; }
+.csgt-paper-top i { margin-top: 3px; }
+.csgt-paper h4 { margin: 6px 0 0; text-align: center; font-size: .86rem; font-weight: 700; letter-spacing: .02em; }
+.csgt-paper p.csgt-paper-sub { text-align: center; font-style: italic; margin-bottom: 8px; }
+.csgt-signs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px; text-align: center; }
+.csgt-signs > div { display: flex; flex-direction: column; align-items: center; gap: 1px; min-height: 64px; }
+.csgt-signs small { font-style: italic; font-size: .62rem; }
+.csgt-scrawl { min-height: 22px; font: italic 600 1.05rem/1.2 "Brush Script MT", "Segoe Script", cursive; color: #1C3F8C; }
+.csgt-paper p.csgt-mock { margin-top: 8px; padding-top: 6px; border-top: 1px dashed rgba(0, 0, 0, .25); font: italic .62rem/1.4 var(--font); color: #7A5A12; text-align: left; }
+@media (max-width: 640px) { .csgt-card { right: 8px; left: 8px; top: auto; bottom: 8px; width: auto; max-height: 70%; } }
+
+/* the quán nhậu across the street (street-nhau.js): its chip, what they say, its card (the menu, the office's table) */
+.nhau-chip .z-ico { color: #F7D23E; background: rgba(181, 18, 27, .3); }
+.nhau-chip { border-color: rgba(247, 210, 62, .45); }
+.nhau-say { border-color: rgba(247, 210, 62, .7); }
+.nhau-card .csgt-ico { background: rgba(247, 210, 62, .16); color: #F7D23E; }
+.nhau-h { margin: 4px 0 0; font: 700 .62rem/1 var(--font); letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
+.nhau-who { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 3px; }
+.nhau-who li { display: flex; justify-content: space-between; gap: 10px; font-size: .78rem; }
+.nhau-who li span { color: var(--muted); }
+.nhau-menu { margin: 0; display: grid; grid-template-columns: 1fr max-content; gap: 3px 12px; font-size: .76rem; }
+.nhau-menu dd { margin: 0; font-family: var(--mono); color: #F7D23E; text-align: right; }

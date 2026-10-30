@@ -54,5 +54,5 @@ export function setup() {
     if (document.fullscreenElement) document.exitFullscreen?.();
     else document.documentElement.requestFullscreen?.().catch(() => toast(tr('ui.cameraToolbar.noFullscreen')));
   });
-  setInterval(() => { $('zoom-val').textContent = `${Math.round((camera.zoom / BASE_ZOOM) * 100)}%`; }, 200);
+  setInterval(() => { const v = `${Math.round((camera.zoom / BASE_ZOOM) * 100)}%`, z = $('zoom-val'); if (z.textContent !== v) z.textContent = v; }, 200);   // (written only when it changes: a write costs a style pass)
 }

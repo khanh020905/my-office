@@ -17,9 +17,11 @@ import '@/styles/labels.css';
 import '@/styles/lite.css';
 import '@/styles/timeline.css';
 import '@/styles/places.css';
+import '@/styles/csgt.css';
 import '@/styles/todos.css';
 import '@/styles/drawers.css';
 import '@/styles/chat.css';
+import '@/styles/group-chat.css';
 import '@/styles/mac.css';
 import '@/styles/modal.css';
 import '@/styles/replay.css';
@@ -27,6 +29,7 @@ import '@/styles/photo.css';
 import '@/styles/tips.css';
 import '@/styles/settings.css';
 import '@/styles/responsive.css';
+import '@/styles/phone.css';
 
 /* The page's title, description and share card (the image and icons are files in app/: opengraph-image.jpg,
    twitter-image.jpg, icon.svg, favicon.ico, apple-icon.png). The online demo knows its address (OFFICE_SITE_URL, set by

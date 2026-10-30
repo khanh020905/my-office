@@ -1,6 +1,23 @@
 // Words the server writes: event and tool labels, chat notes, API errors, the phone PIN page, plan-limit labels, replies
 // to Claude's hooks, and the Mac drawer's cleanup tips (server/system.mjs). The server translates when it makes them.
 export default {
+  tunnel: {
+    noPlatform: 'There is no cloudflared for this system yet.',
+    downloadFailed: "Couldn't download cloudflared (status {status}). Check the network and turn it on again.",
+    ready: 'Away from home: {url}',
+    dropped: 'The tunnel dropped, connecting again…',
+  },
+  move: {
+    notOpen: 'This session is no longer open.',
+    noAccount: "Can't find that account.",
+    same: 'This session is on {to} already.',
+    busy: 'The session is working. Change its account once it has finished.',
+    noShare: "The two accounts don't share their history, so it can't move: the other account couldn't open this conversation.",
+    noScript: "Couldn't put the account script in the editor. The Claude plan card shows how to do it by hand.",
+    failed: "Couldn't stop the session to move it. Try again later.",
+    terminal: 'This session runs in a terminal: type /exit there, then run the command below to go on with {to}.',
+    done: '“{name}” moved to {to}. Write in its chat to go on.',
+  },
   account: {
     noCli: "Couldn't find Claude Code on this computer.",
     badName: 'Use letters and numbers, e.g. work.',
@@ -47,6 +64,7 @@ export default {
     modelError: 'model call failed',
     limitHit: 'out of Claude usage',
     limitSwitch: 'out of Claude usage · new sessions use {to}, reopen this one to go on',
+    limitMove: 'out of Claude usage · this one moves to {to}, write in it to go on',
   },
   originApp: 'Claude app',
   note: {
@@ -94,6 +112,7 @@ export default {
   },
   api: {
     approveOnMac: 'Approvals only work on the {mac}.',
+    riskyOnMac: 'From a phone: allow once or deny; a risky command can only be allowed on the {mac}.',
     expired: 'This request has expired or was already answered.',
     answerAll: 'Please answer every question.',
     openOnMac: 'This only opens on the {mac}.',

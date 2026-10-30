@@ -1,5 +1,6 @@
 // Approve / deny cards and Claude's questions.
 import { state } from '../core/state.js';
+import { dangerKey } from '../../shared/danger.js';
 import { $, STATIC, el } from '../core/env.js';
 import { icon } from './icons.js';
 import { colorOf, dn, sessions, workers } from '../people/workers.js';
@@ -20,23 +21,8 @@ export function reportPresence() {
   const focused = !DEMO && state.permOn && document.visibilityState === 'visible' && document.hasFocus();
   fetch(`/api/presence${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ page: PAGE_ID, focused }), keepalive: true }).catch(() => {});
 }
-// Shell commands that deserve a second look before "allow": a red warning, a second click, no "always".
-// Patterns adapted from cubicle-crew (MIT, public/util.js). The reason is a key under perm.danger.
-const DANGER = [
-  [/\brm\b(?=[^|;&]*\s-\w*r)(?=[^|;&]*\s-\w*f)/i, 'rmRf'],
-  [/\bgit\s+push\b[^|;&]*\s(?:--force|-f\b|--delete\b)/i, 'gitPush'],
-  [/\bgit\s+(?:reset\s+--hard|clean\s+-\w*f|branch\s+-D\b|filter-(?:branch|repo)\b)/, 'gitReset'],
-  [/\b(?:terraform|tofu|pulumi)\s+(?:apply|destroy|up)\b/i, 'infra'],
-  [/\bkubectl\s+(?:delete|apply|drain)\b|\bhelm\s+(?:uninstall|delete)\b/i, 'kube'],
-  [/\bdocker\s+(?:system\s+prune|volume\s+(?:rm|prune))\b/i, 'docker'],
-  [/\b(?:drop\s+(?:table|database|schema)|truncate\s+table)\b/i, 'sql'],
-  [/\b(?:npm|pnpm|yarn|cargo)\s+publish\b|\bgh\s+(?:repo|release)\s+delete\b/i, 'publish'],
-  [/\b(?:curl|wget)\b[^|]*\|\s*(?:sudo\s+)?(?:ba|z)?sh\b/i, 'pipeSh'],
-  [/\bchmod\s+-R\s+777\b|\bmkfs\b|\bdd\s+if=/i, 'system'],
-  [/\bsudo\b/, 'sudo'],
-  [/\bprod(?:uction)?\b/i, 'prod'],
-];
-const dangerOf = (p) => { if ((p.kind || 'perm') !== 'perm' || p.type !== 'bash') return null; const k = DANGER.find(([re]) => re.test(p.detail || ''))?.[1]; return k ? tr(`perm.danger.${k}`) : null; };
+// a risky shell command (src/shared/danger.js): a red warning, a second click, no "always"
+const dangerOf = (p) => { const k = dangerKey(p); return k ? tr(`perm.danger.${k}`) : null; };
 // tool types with their own wording under perm.wants; any other tool gets perm.wants.other
 const PERM_VERB = new Set(['bash', 'edit', 'write', 'web', 'fetch', 'mcp', 'agent', 'read']);
 // Claude's question (AskUserQuestion): pick an option per question, or type your own; several picks when allowed.
@@ -94,14 +80,18 @@ function permCard(p) {
     acts.append(btn('approve', tr('perm.approvePlan'), 'pc-allow'), btn('revise', tr('perm.revise'), 'pc-always'), btn('skip', tr('perm.viewInIde'), 'pc-skip'));
     card.append(head, plan, note, acts, bar);
   } else {
-    const risky = dangerOf(p), kbd = (b, k) => { b.append(el('kbd', null, k)); return b; };
-    acts.append(kbd(btn('allow', tr('perm.allow'), 'pc-allow'), 'Y'));
-    if (p.remember && !risky) { const b = btn('always', tr('perm.always'), 'pc-always'); b.title = tr('perm.ruleTitle', { rule: p.remember }); acts.append(kbd(b, 'A')); }
+    // from a phone (when the Mac allows it): allow once or deny; never "always", and a risky command only deny
+    const risky = dangerOf(p), kbd = (b, k) => { b.append(el('kbd', null, k)); return b; }, phone = !state.isLocal;
+    if (!phone || !risky) acts.append(kbd(btn('allow', tr('perm.allow'), 'pc-allow'), 'Y'));
+    if (p.remember && !risky && !phone) { const b = btn('always', tr('perm.always'), 'pc-always'); b.title = tr('perm.ruleTitle', { rule: p.remember }); acts.append(kbd(b, 'A')); }
     acts.append(kbd(btn('deny', tr('perm.deny'), 'pc-deny'), 'N'));
+    if (phone && risky) acts.append(el('small', 'pc-phone-note', tr('perm.riskyOnMac')));
     if (risky) { card.classList.add('perm-card--danger'); card.dataset.risky = '1'; }
     card.append(head, el('pre', 'pc-detail', p.detail), risky ? el('p', 'pc-danger', tr('perm.dangerNote', { reason: risky })) : '',
       p.remember && !risky ? el('p', 'pc-rule', tr('perm.ruleNote', { rule: p.remember })) : '', acts, bar);
   }
+  // a phone, while the Mac doesn't let phones approve: the card says where to answer it instead of offering buttons
+  if (!state.isLocal && !state.phoneApprove && !DEMO) acts.replaceChildren(el('small', 'pc-phone-note', tr('perm.phoneOff')));
   card._tick = () => { const ms = Math.max(0, p.until - Date.now()); left.textContent = tr('time.sec', { n: Math.ceil(ms / 1000) }); fill.style.width = `${(ms / 45000) * 100}%`; };
   card._tick();
   return card;

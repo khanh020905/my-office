@@ -23,7 +23,7 @@ export let floorLampGroups;
 export function setup() {
   /* room plants */
   roomPlants = PRO
-    ? [potPlant(13.55, 7.3, 1.2, 'monstera'), potPlant(-3.15, -7.5, 1.0, 'monstera'), potPlant(-4.1, 4.95, 0.95, 'snake'), HQ ? potPlant(-1.25, 8.6, 0.9, 'bush') : potPlant(-2.0, 8.55, 0.95, 'bush'),
+    ? [potPlant(11.95, 8.55, 1.2, 'monstera'), potPlant(-3.15, -7.5, 1.0, 'monstera'), potPlant(-4.1, 4.95, 0.95, 'snake'), HQ ? potPlant(-1.25, 8.6, 0.9, 'bush') : potPlant(-2.0, 8.55, 0.95, 'bush'),
       potPlant(8.2, -3.55, 0.9, 'snake'), potPlant(2.65, -7.55, 0.85, 'monstera'), potPlant(13.55, -2.9, 0.95, 'bush'), HQ ? potPlant(8.28, 8.72, 0.7, 'snake') : potPlant(7.95, 8.55, 1.0, 'snake')]   // headquarters: clear of the wing's doors
     : [potPlant(7.3, 5.3, 1.25, 'monstera'), potPlant(2.75, -5.4, 1.05, 'monstera'), potPlant(-7.45, 5.45, 0.95, 'snake'), potPlant(7.4, -1.4, 1.0, 'bush'),
       potPlant(-3.6, -5.5, 0.9, 'snake')];

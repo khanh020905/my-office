@@ -1,6 +1,8 @@
 // Approve / deny cards and Claude's question cards (ui/permissions.js).
 export default {
   // why a shell command gets a red warning: "Possibly dangerous command: <reason>."
+  riskyOnMac: 'Risky command: only the {mac} can allow it.',
+  phoneOff: 'Answer it on the {mac}. To approve from a phone: on the {mac}, open “Phone” and turn on “Approve from a phone”.',
   danger: {
     rmRf: 'deletes whole folders without asking',
     gitPush: 'overwrites or deletes a branch on the git server',

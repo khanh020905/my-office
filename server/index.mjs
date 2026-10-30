@@ -10,7 +10,7 @@ import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
-import { execFile, spawn } from 'node:child_process';
+import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
@@ -18,6 +18,8 @@ import { testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
+import { dangerKey } from '../src/shared/danger.js';
+import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
@@ -230,7 +232,7 @@ function gitEvent(r, type, label) {
   const s = sessionsIn(r.root)[0]; if (!s) return;
   if (type === 'commit') { rollDay(); stats.commit = (stats.commit || 0) + 1; dirty = true; }   // (today's letters in the lobby's post box)
   const e = { id: ++seq, ts: Date.now(), sess: s.id, name: s.name, type, label, repo: r.name, branch: r.branch, url: r.ciUrl || undefined };
-  pushFeed(e); broadcast({ k: 'ev', e, s: pub(s), stats });
+  pushFeed(e); broadcast({ k: 'ev', e, s: pub(s), stats }); chat.onEvent(e);
 }
 const git = createGit({
   onRepo: (r) => { for (const s of sessionsIn(r.root)) broadcast({ k: 'sess', s: pub(s) }); },
@@ -256,6 +258,7 @@ function freeDesk() {
 const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0 });
 const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
+  entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
   dayFirst: s.dayFirst || null,
@@ -469,6 +472,27 @@ async function replayRange(day, from, to, max = 80_000) {
   return { items, truncated };
 }
 
+/* ---------- the company group chat (src/shared/chat-engine.js; the window: src/office/ui/group-chat*.js) ----------
+   One conversation for every page, kept here (data/chat.json): what the sessions say about their work comes straight
+   from the events below, so it goes on with no page open and a phone sees it too; the office's life is told by the
+   Mac's page (POST /api/chat say); you write from any page. Pages get { k: 'chat', op, m | typing } and { k: 'chatact' }. */
+const CHAT_FILE = path.join(DATA_DIR, 'chat.json');
+let chat = null, chatSaveT = null;
+const STAFF_NAME = { __reception: 'people.staff.receptionist', __hr: 'people.staff.hr', __cleaner: 'people.staff.cleaner', __accountant: 'people.accountant.name', __guard: 'people.guard.name', __director: 'people.director', __courier: 'people.staff.shipper' };
+chat = createChatEngine({
+  tr, now: () => Date.now(),
+  members: () => [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name || 'claude', status: s.status, task: s.lastPrompt ? clip(oneLine(unwrapPaste(s.lastPrompt)), 80) : '', last: s.last, project: path.basename(s.cwd || '') })),
+  staffName: (key) => (STAFF_NAME[key] ? tr(STAFF_NAME[key]) : null),
+  store: {
+    load: () => { try { return JSON.parse(fs.readFileSync(CHAT_FILE, 'utf8')); } catch { return null; } },
+    save: (d) => { clearTimeout(chatSaveT); chatSaveT = setTimeout(() => { fsp.writeFile(`${CHAT_FILE}.tmp`, JSON.stringify(d)).then(() => fsp.rename(`${CHAT_FILE}.tmp`, CHAT_FILE)).catch(() => {}); }, 800); },
+  },
+  emit: (op, x) => broadcast(op === 'typing' ? { k: 'chat', op, typing: x } : { k: 'chat', op, m: x, pinned: chat?.state.pinned ?? null }),
+  act: (what) => broadcast({ k: 'chatact', what }),
+});
+setInterval(() => chat.clock(), 30_000).unref();
+const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pinned, typing: chat.state.typing });
+
 /* ---------- session discovery ---------- */
 let scanning = null;
 function scanSessions() { return (scanning ??= doScan().finally(() => { scanning = null; })); }
@@ -499,7 +523,7 @@ async function doScan() {
     let changed = false;
     if (!s) {
       const prevKey = j.sessionId && sidToKey.get(j.sessionId);
-      if (prevKey && sessions.has(prevKey)) { s = sessions.get(prevKey); sessions.delete(prevKey); s.key = key; }
+      if (prevKey && sessions.has(prevKey)) { s = sessions.get(prevKey); sessions.delete(prevKey); s.key = key; unpark(s); }
       else { s = newSession(key); s.createdAt = j.startedAt || Date.now(); }
       sessions.set(key, s);
       changed = true;
@@ -509,7 +533,7 @@ async function doScan() {
     const link = j.bridgeSessionId ? 'https://claude.ai/code/' + j.bridgeSessionId : null;
     const name = j.name || base(j.cwd) || 'claude';
     if (s.name !== name || s.cwd !== j.cwd || s.link !== link) { s.name = name; s.cwd = j.cwd || ''; s.link = link; changed = true; }
-    s.pid = j.pid; s.fromFile = true; s.busy = j.status === 'busy';
+    s.pid = j.pid; s.fromFile = true; s.busy = j.status === 'busy'; s.entry = j.entrypoint || '';
     // Claude's own session file says busy: trust it even if we missed the hook (e.g. the server restarted mid-turn).
     if (s.busy && s.status === 'rest') { s.status = 'work'; if (!s.taskStart) s.taskStart = j.statusUpdatedAt || Date.now(); s.lastEventAt = Math.max(s.lastEventAt, Date.now()); changed = true; }
     if (changed) broadcast({ k: 'sess', s: pub(s) });
@@ -517,7 +541,7 @@ async function doScan() {
     if (s.sid && s.cwd && !s.titleAt) { refreshTitle(s, true); originOf(s).then((o) => { if (o && o !== s.origin) { s.origin = o; broadcast({ k: 'sess', s: pub(s) }); } }); }
   }
   for (const [key, s] of sessions) {
-    if (s.fromFile && !live.has(key)) dropSession(key, s);
+    if (s.fromFile && !live.has(key) && !(s.parked && Date.now() - s.parked.at < PARK_MS)) dropSession(key, s);   // (a moved one waits at its desk)
   }
 }
 // The chat's title as the IDE shows it: your rename (`custom-title`) wins over the generated one (`ai-title`). Both are
@@ -562,6 +586,7 @@ async function recallTask(s) {
   broadcast({ k: 'sess', s: pub(s) });
 }
 function dropSession(key, s) {
+  if (s.fromFile) chat.onLeft(s.title || s.name);
   sessions.delete(key);
   if (s.sid && sidToKey.get(s.sid) === key) sidToKey.delete(s.sid);
   broadcast({ k: 'gone', id: s.id });
@@ -660,7 +685,7 @@ async function onHook(p) {
       const runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);   // a test run: the test board lights up for it
       if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
-      else { const x = s.subs[agent]; x.last = { type: c.type, label: c.label }; x.steps++; }
+      else { const x = s.subs[agent]; if (x) { x.last = { type: c.type, label: c.label }; x.steps++; } }   // (it may have stopped while the call was being read)
       const img = imageId(c.file);
       e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent, ...(c.runner ? { runner: c.runner } : {}), ...(img ? { img } : {}) });
       if (agent) toFeed = false;
@@ -720,8 +745,10 @@ async function onHook(p) {
     case 'StopFailure': {
       s.status = 'rest';
       // out of usage: that account takes no new session until it resets; with switching on, the next one takes over
-      const out = p.error === 'rate_limit' ? limitHit(acctOf(s)) : null;
-      e = mk('fail', !out ? tr('server.event.modelError') : out.to ? tr('server.event.limitSwitch', { to: out.to }) : tr('server.event.limitHit'));
+      const acct = acctOf(s), out = p.error === 'rate_limit' ? limitHit(acct) : null;
+      if (out) autoMoveSoon(acct);   // (with switching on, this conversation and the others resting on it move over)
+      const moves = out?.to && prefs.get('autoMove') !== false && s.entry === 'claude-vscode' && untilOf(acct) - Date.now() >= 15 * 60e3;
+      e = mk('fail', !out ? tr('server.event.modelError') : out.to ? tr(moves ? 'server.event.limitMove' : 'server.event.limitSwitch', { to: out.to }) : tr('server.event.limitHit'), { limit: !!out });
       break;
     }
     case 'PreCompact':
@@ -733,6 +760,7 @@ async function onHook(p) {
   if (e) {
     if (toFeed) pushFeed(e);
     broadcast({ k: 'ev', e, s: pub(s), stats });
+    chat.onEvent(e);
   } else if (s.status !== prevStatus) {
     broadcast({ k: 'sess', s: pub(s), stats });
   } else if (ev === 'PostToolUse') {
@@ -791,10 +819,19 @@ async function readLog(s, n = 120, agentId = null) {
 }
 
 /* ---------- HTTP ---------- */
-const isLoopback = (req) => ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+// (a request through the Cloudflare tunnel comes from cloudflared on 127.0.0.1 but is from the internet: never this Mac)
+const isLoopback = (req) => !req.viaTunnel && ['127.0.0.1', '::1', '::ffff:127.0.0.1'].includes(req.socket.remoteAddress);
+// who is asking, for the PIN's lockouts and the action log: through the tunnel, the address Cloudflare saw
+const clientIp = (req) => (req.viaTunnel ? String(req.headers['cf-connecting-ip'] || 'tunnel').slice(0, 64) : req.socket.remoteAddress);
+// a POST from this office's own page (not another site's): http on this computer and the LAN, https through the tunnel
+function sameOriginOf(req) {
+  const o = req.headers.origin;
+  return !o || o === `http://${req.headers.host}` || (req.viaTunnel && !!tunnel.url && o === tunnel.url);
+}
 // Only answer to our own host names: stops DNS-rebinding pages from reaching this server.
 function hostAllowed(req) {
   const h = String(req.headers.host || '').replace(/:\d+$/, '').replace(/^\[|\]$/g, '').toLowerCase();
+  if (req.viaTunnel) return h === tunnel.host || h === '127.0.0.1';   // (the tunnel's own name, or its listener as cloudflared calls it)
   if (['localhost', '127.0.0.1', '::1', `${os.hostname().toLowerCase()}`, `${os.hostname().toLowerCase().replace(/\.local$/, '')}.local`].includes(h)) return true;
   return Object.values(os.networkInterfaces()).flat().some((n) => n && n.address === h);
 }
@@ -828,6 +865,14 @@ async function autoCloseIdle() {
   broadcast({ k: 'sysauto', message });
 }
 setInterval(() => { autoCloseIdle().catch(() => {}); }, 5 * 60_000).unref();
+// The Mac's address on a Tailscale network (100.64.0.0/10), when it is on one: the office from anywhere, privately
+function tsUrl() {
+  for (const n of Object.values(os.networkInterfaces()).flat()) {
+    const m = n && n.family === 'IPv4' && /^100\.(\d+)\./.exec(n.address);
+    if (m && +m[1] >= 64 && +m[1] <= 127) return `http://${n.address}:${PORT}/`;
+  }
+  return null;
+}
 function lanUrl(withToken = true) {
   const nets = os.networkInterfaces();
   const order = ['en0', 'en1', ...Object.keys(nets)];
@@ -837,15 +882,15 @@ function lanUrl(withToken = true) {
 const COOKIE = 'office_pin', COOKIE_DAYS = 30;
 const sign = (exp) => crypto.createHmac('sha256', TOKEN).update(`pin:${exp}:${currentPin()}`).digest('base64url');
 const sameBytes = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
-function pinCookie() {
+function pinCookie(req) {
   const exp = Date.now() + COOKIE_DAYS * 86400e3;
-  return `${COOKIE}=${exp}.${sign(exp)}; Max-Age=${COOKIE_DAYS * 86400}; Path=/; HttpOnly; SameSite=Strict`;
+  return `${COOKIE}=${exp}.${sign(exp)}; Max-Age=${COOKIE_DAYS * 86400}; Path=/; HttpOnly; SameSite=Strict${req?.viaTunnel ? '; Secure' : ''}`;
 }
 function cookieOk(req) {
   const m = new RegExp(`(?:^|;\\s*)${COOKIE}=(\\d+)\\.([\\w-]+)`).exec(String(req.headers.cookie || ''));
   return !!m && Number(m[1]) > Date.now() && sameBytes(m[2], sign(m[1]));
 }
-function authorized(req, url) { return isLoopback(req) || sameBytes(url.searchParams.get('k') || '', TOKEN) || cookieOk(req); }
+function authorized(req, url) { return isLoopback(req) || (!req.viaTunnel && sameBytes(url.searchParams.get('k') || '', TOKEN)) || cookieOk(req); }
 
 // 6 digits is a million guesses: 5 wrong tries lock that address for 15 minutes, and 20 wrong tries from anywhere
 // lock the PIN page for everyone for 15 minutes, so guessing it would take years.
@@ -875,8 +920,8 @@ function readForm(req, max = 2_000) {
     req.on('end', () => resolve(new URLSearchParams(body.slice(0, max))));
   });
 }
-const PIN_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;display:grid;place-items:center;background:#f4f1ea;color:#1d1b16;
-font:16px/1.5 system-ui,-apple-system,sans-serif;padding:16px}@media (prefers-color-scheme:dark){body{background:#16151a;color:#ece9e2}
+const PIN_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:#f4f1ea;color:#1d1b16;
+font:16px/1.5 system-ui,-apple-system,sans-serif;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}@media (prefers-color-scheme:dark){body{background:#16151a;color:#ece9e2}
 .card{background:#211f26!important;border-color:#3a3742!important}input{background:#16151a!important;color:#ece9e2!important;border-color:#4a4654!important}}
 .card{width:100%;max-width:360px;background:#fff;border:1px solid #e3ddd0;border-radius:20px;padding:28px 24px;box-shadow:0 10px 40px rgba(0,0,0,.08)}
 h1{font-size:1.25rem;margin:0 0 4px}p{margin:0 0 18px;color:#7a7468;font-size:.92rem}
@@ -1089,7 +1134,7 @@ function fetchPlanUsage(force = false) {
     if (!login?.accessToken) { usageNote = ['server.usage.keychain']; return; }
     try {
       const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { Authorization: `Bearer ${login.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
-      if (r.status === 429) { usageBackoff = Math.min(30, (usageBackoff || 2.5) * 2); usageWait = Date.now() + usageBackoff * 60e3; usageNote = ['server.usage.rateLimited', { n: usageBackoff }]; return; }
+      if (r.status === 429) { usageBackoff = Math.min(30, (usageBackoff || 2.5) * 2); usageWait = Date.now() + Math.max(usageBackoff * 60e3, (Number(r.headers.get('retry-after')) || 0) * 1000); usageNote = ['server.usage.rateLimited', { n: usageBackoff }]; return; }
       if (!r.ok) { usageNote = r.status === 401 ? ['server.usage.expired'] : ['server.usage.httpError', { status: r.status }]; return; }
       usageBackoff = 0;
       const body = await r.json();
@@ -1102,7 +1147,7 @@ function fetchPlanUsage(force = false) {
     if (usageNote) broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
   })().finally(() => { planBusy = null; }));
 }
-setInterval(() => { if (clients.size) { fetchPlanUsage(); for (const d of otherDirs) fetchOtherUsage(d); } }, 120_000).unref();
+setInterval(() => { if (clients.size) { fetchPlanUsage(); for (const d of otherDirs) setTimeout(() => fetchOtherUsage(d), Math.random() * 40e3).unref(); } }, 120_000).unref();
 
 /* ---------- other accounts on this machine ----------
    A second Claude Code login lives in its own config folder (CLAUDE_CONFIG_DIR, e.g. ~/.claude-org2): found as the
@@ -1112,6 +1157,7 @@ setInterval(() => { if (clients.size) { fetchPlanUsage(); for (const d of otherD
 // (switching accounts, further down: kept up here because the first scan below already reads them)
 const hits = new Map();   // account ('' = the main one) -> until when a session was told it is out of usage
 const NOW_FILE = path.join(DATA_DIR, 'account-now'), SWITCH_FILE = path.join(DATA_DIR, 'claude-switch.sh');
+const PIN_DIR = path.join(DATA_DIR, 'resume-on'), PARK_MS = 24 * 3600e3;   // a conversation moved to another account: <its id> -> that account's folder
 const FULL_PCT = 98;   // a limit this used: no new session on that account
 // what an account's folder takes from the main one, by a link (when the main one has it): a session on any account has
 // the same history (resume), memory, settings, skills and plugins
@@ -1138,25 +1184,35 @@ function othersOut() {
     return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
 }
 const otherBusy = new Map();
+const OTHERS_FILE = path.join(DATA_DIR, 'others-usage.json');
+function saveOthers() {
+  const keep = Object.fromEntries([...others].filter(([, o]) => o.windows).map(([d, o]) => [d, { windows: o.windows, at: o.at, account: o.account }]));
+  fsp.writeFile(OTHERS_FILE, JSON.stringify(keep)).catch(() => {});
+}
+try { for (const [d, o] of Object.entries(JSON.parse(fs.readFileSync(OTHERS_FILE, 'utf8')))) others.set(d, { ...o }); } catch { /* none yet */ }
 function fetchOtherUsage(dir, force = false) {
   if (process.env.OFFICE_USAGE === '0') return Promise.resolve();
   const o = others.get(dir) || {}; others.set(dir, o);
-  if (Date.now() < (o.wait || 0) || (!force && o.at && Date.now() - o.at < 110_000) || otherBusy.has(dir)) return Promise.resolve();
+  // the endpoint rate-limits each account: every 5 minutes at most (a forced read, when one runs out, still goes), and
+  // after a 429 Anthropic's own wait or 5, 10, then up to 30 minutes; the last reading stays on show meanwhile
+  if (Date.now() < (o.wait || 0) || (!force && o.at && Date.now() - o.at < 290_000) || otherBusy.has(dir)) return Promise.resolve();
   const job = (async () => {
     const login = await OS.claudeLogin(dir);
     if (!login?.accessToken) { o.note = ['server.usage.keychain']; return; }
     try {
       const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { Authorization: `Bearer ${login.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
-      if (r.status === 429) { o.backoff = Math.min(30, (o.backoff || 2.5) * 2); o.wait = Date.now() + o.backoff * 60e3; o.note = ['server.usage.rateLimited', { n: o.backoff }]; return; }
+      if (r.status === 429) { o.backoff = Math.min(30, (o.backoff || 2.5) * 2); const ms = Math.max(o.backoff * 60e3, (Number(r.headers.get('retry-after')) || 0) * 1000); o.wait = Date.now() + ms; o.note = ['server.usage.rateLimited', { n: Math.ceil(ms / 60e3) }]; return; }
       if (!r.ok) { o.note = r.status === 401 ? ['server.usage.expired'] : ['server.usage.httpError', { status: r.status }]; return; }
       o.backoff = 0; o.note = null; o.windows = usageWindows(await r.json()); o.at = Date.now(); o.account = loginAccount(login, path.join(dir, '.claude.json'));
+      saveOthers();
     } catch { o.note = ['server.usage.offline']; }
   })().finally(() => { otherBusy.delete(dir); broadcast({ k: 'limits', limits: limitsOut(), note: noteText() }); repick(); });
   otherBusy.set(dir, job);
   return job;
 }
-// the account a session belongs to, by its transcript's folder ('' for the main one)
-const acctOf = (s) => { const t = s.transcript || ''; const d = otherDirs.find((x) => t.startsWith(x + path.sep)); return d ? accName(d) : ''; };
+// the account a session belongs to, by its transcript's folder ('' for the main one); one moved to another account and
+// not started again yet: that one
+const acctOf = (s) => { if (s.parked) return s.parked.to; const t = s.transcript || ''; const d = otherDirs.find((x) => t.startsWith(x + path.sep)); return d ? accName(d) : ''; };
 scanAccounts();
 setInterval(scanAccounts, 60_000).unref();   // (a login made in a terminal shows up without a restart)
 
@@ -1317,6 +1373,7 @@ function repick(why = 'auto') {
   if (next.dir) shareWithMain(next.dir);
   writeNow(next.dir);
   if (cur !== next) broadcast({ k: 'acctswitch', why, from: cur ? acctShown(cur.slug) : '', to: acctShown(next.slug), until: cur?.until || 0 });
+  if (cur && cur !== next && cur.until) autoMoveSoon(cur.slug);
   broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
 }
 setInterval(repick, 60_000).unref();   // (a reset time passing frees an account without a new reading)
@@ -1357,11 +1414,33 @@ function shareWithMain(dir) {
     if (servers && JSON.stringify(merged) !== JSON.stringify(acc.mcpServers || {})) { acc.mcpServers = merged; fs.writeFileSync(`${f}.office-tmp`, JSON.stringify(acc, null, 2), { mode: 0o600 }); fs.renameSync(`${f}.office-tmp`, f); }
   } catch { /* not logged in yet, or busy */ }
 }
-// the script each new Claude Code goes through: the account picked, else what it would have used
+// the script each new Claude Code goes through: the account picked, else what it would have used. A conversation moved
+// to another account (moveSession) is resumed by the editor with --resume=<its id>: that one starts on its own account.
+const shq = (s) => `'${String(s).replace(/'/g, `'\\''`)}'`;
 function switchScript() {
-  const q = (s) => `'${s.replace(/'/g, `'\\''`)}'`;
+  const pin = `${shq(PIN_DIR + path.sep)}"$sid"`;
   fs.mkdirSync(DATA_DIR, { recursive: true });
-  fs.writeFileSync(SWITCH_FILE, `#!/bin/sh\n# My Office: Claude Code started on the account the office picked (the plan card). The editor passes the claude\n# program first (claudeCode.claudeProcessWrapper). A CLAUDE_CONFIG_DIR set already is kept.\nif [ -z "$CLAUDE_CONFIG_DIR" ] && [ -r ${q(NOW_FILE)} ]; then\n  d=$(head -n 1 ${q(NOW_FILE)})\n  if [ -n "$d" ] && [ -d "$d" ]; then CLAUDE_CONFIG_DIR=$d; export CLAUDE_CONFIG_DIR; fi\nfi\nexec "$@"\n`);
+  fs.writeFileSync(SWITCH_FILE, [
+    '#!/bin/sh',
+    '# My Office: Claude Code started on the account the office picked (the plan card). The editor passes the claude',
+    '# program first (claudeCode.claudeProcessWrapper). A CLAUDE_CONFIG_DIR set already is kept. A conversation the office',
+    '# moved to another account (its id in data/resume-on) starts on that one when the editor resumes it.',
+    'if [ -z "$CLAUDE_CONFIG_DIR" ]; then',
+    '  sid= prev=',
+    '  for a in "$@"; do',
+    '    case "$a" in --resume=*) sid=${a#--resume=} ;; *) [ "$prev" = --resume ] && sid=$a ;; esac',
+    '    prev=$a',
+    '  done',
+    '  case "$sid" in *[!0-9A-Fa-f-]*) sid= ;; esac',
+    `  if [ -n "$sid" ] && [ -f ${pin} ]; then d=$(head -n 1 ${pin})`,
+    `  elif [ -r ${shq(NOW_FILE)} ]; then d=$(head -n 1 ${shq(NOW_FILE)})`,
+    '  else d=',
+    '  fi',
+    '  if [ -n "$d" ] && [ -d "$d" ]; then CLAUDE_CONFIG_DIR=$d; export CLAUDE_CONFIG_DIR; fi',
+    'fi',
+    'exec "$@"',
+    '',
+  ].join('\n'));
   fs.chmodSync(SWITCH_FILE, 0o755);
   return SWITCH_FILE;
 }
@@ -1390,15 +1469,17 @@ function setEditorWrapper(on) {
   });
 }
 function autoOut() {
-  return { on: !!prefs.get('autoSwitch'), pick: pickSlug(), order: orderOf(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
+  return { on: !!prefs.get('autoSwitch'), move: prefs.get('autoMove') !== false, pick: pickSlug(), order: orderOf(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
 }
 // the card's switch, "use this one" (it goes to the top) and the order dragged into place: the editors' script goes in
-// while switching is on or the top account isn't the main one, and out again after
-function setSwitch({ auto, pick, order } = {}) {
+// while switching is on, the top account isn't the main one or a moved conversation is still to start again, and out
+// again after. move: whether the conversations open on an account that runs out move too (on unless turned off)
+function setSwitch({ auto, pick, order, move } = {}) {
   if (auto !== undefined) prefs.set('autoSwitch', auto || undefined);
+  if (move !== undefined) prefs.set('autoMove', move ? undefined : false);
   if (pick !== undefined) order = [pick, ...orderOf().filter((s) => s !== pick)];
   if (order !== undefined) { prefs.set('accountOrder', order); prefs.set('accountPick', undefined); }
-  const on = switching();
+  const on = switching() || pinned().length > 0;
   editorsNow = setEditorWrapper(on);
   const bin = on && findClaude();
   switchAlias = bin ? `alias claude='${SWITCH_FILE} "${bin.file}"'` : '';
@@ -1407,7 +1488,85 @@ function setSwitch({ auto, pick, order } = {}) {
   broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
   return { ok: true, ...autoOut() };
 }
-if (switching()) setSwitch();   // (the script written again, in case the office moved)
+if (switching() || pinned().length) setSwitch();   // (the script written again, in case the office moved)
+
+/* ---------- an open conversation, to another account ----------
+   Claude Code reads its account once, at start, so a conversation stays on its account while its process lives. The
+   editor's extension starts a new process for a conversation whose process has gone, with --resume=<its id>, as soon
+   as you write in it again, and through the office's script: so the office notes the account for that conversation
+   (data/resume-on/<id>, read by the script) and stops its process while it rests, the same safe way as "Close session"
+   (only the process seen, matched by its start time; never one at work). The conversation is the same file on every
+   account (projects/ is shared by a link), so it goes on where it was, on the new account. Its person stays at the desk
+   meanwhile (parked) and is the same person when it starts again. A session in a terminal can't be started again from
+   here: the command that resumes it there is handed back instead. With switching on, the conversations resting on an
+   account out for a while move by themselves to the one new sessions start on now (autoMove). */
+const SID_RE = /^[0-9a-f-]{36}$/i;
+function pinned() { try { return fs.readdirSync(PIN_DIR).filter((f) => SID_RE.test(f)); } catch { return []; } }
+const homeOf = (slug) => (slug ? dirOfSlug(slug) : CLAUDE_DIR);
+function sharesHistory(slug) { try { return fs.realpathSync(path.join(homeOf(slug), 'projects')) === fs.realpathSync(path.join(CLAUDE_DIR, 'projects')); } catch { return false; } }
+const untilOf = (slug) => blockedUntil(slug ? others.get(dirOfSlug(slug))?.windows : planLimits?.windows, hits.get(slug));
+async function moveSession(s, to, why = 'you') {
+  if (s.moving) return { ok: false, message: tr('server.move.busy') };
+  s.moving = true;
+  try { return await moveNow(s, to, why); } finally { s.moving = false; }
+}
+async function moveNow(s, to, why) {
+  const from = acctOf(s), name = s.title || s.name;
+  if (!s.pid || !s.sid || !SID_RE.test(s.sid) || s.parked) return { ok: false, message: tr('server.move.notOpen') };
+  if (to && !dirOfSlug(to)) return { ok: false, message: tr('server.move.noAccount') };
+  if (to === from) return { ok: false, message: tr('server.move.same', { to: acctShown(to) }) };
+  if (s.status !== 'rest' || s.busy || [...pending.values()].some((p) => p.sess === s.id)) return { ok: false, message: tr('server.move.busy') };
+  if (to) shareWithMain(dirOfSlug(to));
+  if (!sharesHistory(from) || !sharesHistory(to)) return { ok: false, message: tr('server.move.noShare') };
+  if (s.entry !== 'claude-vscode') {
+    const cmd = `cd ${shq(s.cwd)} && ${to ? `CLAUDE_CONFIG_DIR=${shq(dirOfSlug(to))} ` : ''}claude --resume ${s.sid}`;
+    return { ok: true, terminal: true, cmd, message: tr('server.move.terminal', { to: acctShown(to) }) };
+  }
+  // the script in the editor that hosts it (else in any), or the new start would not go through it
+  const eds = setEditorWrapper(true), host = eds.find((e) => e.app === s.origin);
+  if (!(host ? host.ok : eds.some((e) => e.ok))) return { ok: false, message: tr('server.move.noScript') };
+  editorsNow = eds;
+  const proc = (await sysSnapshot().catch(() => null))?.claude?.find((c) => c.pid === s.pid);
+  if (!proc) return { ok: false, message: tr('server.move.notOpen') };
+  const pin = path.join(PIN_DIR, s.sid);
+  try { fs.mkdirSync(PIN_DIR, { recursive: true }); fs.writeFileSync(pin, `${to ? dirOfSlug(to) : ''}\n`); } catch { return { ok: false, message: tr('server.move.failed') }; }
+  s.parked = { to, at: Date.now() };   // (before the process goes: the scan must not see it leave)
+  const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
+  if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
+  s.pid = null;
+  chat.onMoved(s.id, acctShown(to));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} move ${name} ${from || 'main'} -> ${to || 'main'} (${why})\n`).catch(() => {});
+  broadcast({ k: 'sess', s: pub(s) });
+  return { ok: true, name, to: acctShown(to), message: tr('server.move.done', { name, to: acctShown(to) }) };
+}
+// switching on: the editor's conversations resting on an account out for a while (not a short rate limit) move to the
+// one new sessions start on now, if it has room. Called a few seconds after the account ran out (the session that
+// hit the limit needs a moment to rest), and once more a little later for one that was still finishing.
+async function autoMove(slug) {
+  const to = nowSlug(), now = Date.now();
+  if (!prefs.get('autoSwitch') || prefs.get('autoMove') === false || to === slug || untilOf(slug) - now < 15 * 60e3 || untilOf(to)) return;
+  const moved = [];
+  for (const s of [...sessions.values()]) {
+    if (acctOf(s) !== slug || s.entry !== 'claude-vscode' || s.status !== 'rest' || s.parked || !s.pid) continue;
+    const r = await moveSession(s, to, 'auto');
+    if (r.ok) moved.push(r.name);
+  }
+  if (moved.length) broadcast({ k: 'acctmove', names: moved, from: acctShown(slug), to: acctShown(to) });
+}
+function autoMoveSoon(slug) { for (const ms of [5000, 30000]) setTimeout(() => { autoMove(slug).catch(() => {}); }, ms).unref(); }
+// and every minute while an account stays out: a conversation that was busy when it ran out (a long turn, agents of its
+// own running in the background) moves as soon as it comes to rest
+setInterval(() => { for (const slug of ['', ...otherDirs.map(accName)]) if (untilOf(slug) - Date.now() >= 15 * 60e3) autoMove(slug).catch(() => {}); }, 60_000).unref();
+// a parked conversation started again (the same id, a new process): the note is spent. Notes left for a day go.
+function unpark(s) {
+  if (!s.parked) return;
+  s.transcript = path.join(homeOf(s.parked.to), 'projects', s.cwd.replace(/[^A-Za-z0-9-]/g, '-'), `${s.sid}.jsonl`);
+  delete s.parked;
+  fs.rmSync(path.join(PIN_DIR, s.sid), { force: true });
+}
+setInterval(() => {
+  for (const f of pinned()) { try { const p = path.join(PIN_DIR, f); if (Date.now() - fs.statSync(p).mtimeMs > PARK_MS) fs.rmSync(p, { force: true }); } catch { /* gone */ } }
+}, 3600e3).unref();
 
 /* ---------- bring a session's own window to the front ----------
    Walk up from the session's claude process to the app that hosts it (the IDE, Terminal, iTerm…) and `open -a` it,
@@ -1468,19 +1627,22 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
+  // through the tunnel (the internet), only what a phone may send: the PIN, its answers to approvals (when the Mac allows
+  // them) and the page's presence. Everything else that changes something stays on the Mac and the home network.
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/perm', '/api/presence', '/api/chat'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
-    const ip = req.socket.remoteAddress;
+    const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
     const until = pinLockedUntil(ip);
     if (until) { pinPage(res, 429, lockMsg(until), true); return; }
     if (req.method === 'GET') { pinPage(res, 200); return; }
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!sameOrigin) { res.writeHead(403).end(); return; }
     readForm(req).then((f) => {
       if (sameBytes(String(f.get('pin') || '').replace(/\D/g, ''), currentPin())) {
         pinFails.delete(ip);
         fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} pin ok ${ip}\n`).catch(() => {});
-        res.writeHead(303, { Location: '/', 'Set-Cookie': pinCookie(), 'Cache-Control': 'no-store' }).end();
+        res.writeHead(303, { Location: '/', 'Set-Cookie': pinCookie(req), 'Cache-Control': 'no-store' }).end();
         return;
       }
       const left = pinFailed(ip);
@@ -1492,12 +1654,15 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && (url.pathname === '/api/presence' || url.pathname === '/api/perm')) {
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     readJson(req).then((b) => {
       if (!b) { json(res, 400, { ok: false }); return; }
-      // Approving tool calls stays on the Mac: a phone never holds a request and cannot answer one.
-      if (!isLoopback(req)) { json(res, url.pathname === '/api/presence' ? 200 : 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+      // Approving tool calls stays on the Mac unless you turned on approving from a phone (on the Mac: POST /api/phone).
+      // Then a phone looking at the office holds requests too, and may allow once, deny, answer a question or a plan;
+      // never "always", and a risky command (src/shared/danger.js) only deny.
+      const phone = !isLoopback(req);
+      if (phone && !prefs.get('phoneApprove')) { json(res, url.pathname === '/api/presence' ? 200 : 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
       if (url.pathname === '/api/presence') {
         const page = String(b.page || '').slice(0, 64);
         if (b.focused) presence.set(page, { focused: true, at: Date.now() }); else presence.delete(page);
@@ -1506,19 +1671,92 @@ const server = http.createServer((req, res) => {
         return;
       }
       const p = pending.get(String(b.id || ''));
-      const CHOICES = { perm: ['allow', 'always', 'deny'], ask: ['answer', 'skip'], plan: ['approve', 'revise', 'skip'] }[p?.kind || 'perm'];
+      let CHOICES = { perm: ['allow', 'always', 'deny'], ask: ['answer', 'skip'], plan: ['approve', 'revise', 'skip'] }[p?.kind || 'perm'];
+      if (phone && p) CHOICES = (p.kind || 'perm') !== 'perm' ? CHOICES : dangerKey(p) ? ['deny', 'skip'] : ['allow', 'deny', 'skip'];
+      if (phone && p && !CHOICES.includes(b.choice)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }
       if (!p || !CHOICES.includes(b.choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
       if (b.choice === 'skip') { settlePerm(p.id); json(res, 200, { ok: true }); return; }   // Claude Code asks in the IDE as usual
       const out = p.kind === 'ask' ? askDecision(p, b) : p.kind === 'plan' ? planDecision(p, b.choice, b.note) : permDecision(p, b.choice);
       if (!out) { json(res, 400, { ok: false, message: tr('server.api.answerAll') }); return; }
       settlePerm(p.id, JSON.stringify(out));
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${p.kind || 'perm'} ${b.choice} ${p.name} ${p.tool} ${p.kind === 'perm' || !p.kind ? p.detail.slice(0, 120) : ''}\n`).catch(() => {});
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${phone ? `phone ${clientIp(req)} ` : ''}${p.kind || 'perm'} ${b.choice} ${p.name} ${p.tool} ${p.kind === 'perm' || !p.kind ? p.detail.slice(0, 120) : ''}\n`).catch(() => {});
       json(res, 200, { ok: true });
     });
     return;
   }
+  if (req.method === 'POST' && (url.pathname === '/api/lan' || url.pathname === '/api/pin')) {   // phones on the home network: { on }; a new PIN (this computer only)
+    const sameOrigin = sameOriginOf(req);
+    if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      if (url.pathname === '/api/pin') {   // every phone signed out: the cookie's signature covers the PIN; open pages are cut off now
+        fs.writeFileSync(PIN_FILE, String(crypto.randomInt(0, 1e6)).padStart(6, '0'), { mode: 0o600 });
+        for (const srv of lanServers.values()) srv.closeAllConnections?.();
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone pin new\n`).catch(() => {});
+        json(res, 200, { ok: true, pin: currentPin() });
+        return;
+      }
+      if (!lanFixed) { prefs.set('lan', b?.on ? true : undefined); syncLan(); }
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone lan ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
+      const on = lanIsOn();
+      json(res, 200, { ok: true, on, fixed: lanFixed, lan: on ? lanUrl() : null, lanBase: on ? lanUrl(false) : null, ts: on ? tsUrl() : null, pin: currentPin() });
+    });
+    return;
+  }
+  if (url.pathname === '/api/chat' && req.method === 'POST') {   // the group chat: { op, … } (say and photo only from this computer)
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    readJson(req, 600_000).then((b) => {
+      const mac = isLoopback(req), op = String(b?.op || ''), str = (x, n) => String(x ?? '').slice(0, n);
+      if (op === 'send') chat.send({ text: str(b.text, 600), sticker: Number.isInteger(b.sticker) ? b.sticker : null, replyTo: str(b.replyTo, 40) || null });
+      else if (op === 'react') chat.react(str(b.id, 40), 'me', str(b.emoji, 8));
+      else if (op === 'vote') chat.vote(str(b.id, 40), 'me', Number(b.i));
+      else if (op === 'rsvp') chat.rsvp(str(b.id, 40), 'me', !!b.yes);
+      else if (op === 'recall') chat.recall(str(b.id, 40));
+      else if (op === 'poll') chat.poll('me', str(b.q, 120), (Array.isArray(b.opts) ? b.opts : []).slice(0, 6).map((x) => str(x, 60)));
+      else if (op === 'photo' && mac && /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(String(b.data || '')) && b.data.length < 500_000) chat.photo(b.data);
+      else if (op === 'say' && mac) {
+        const photo = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]+$/.test(String(b.photo || '')) && b.photo.length < 500_000 ? b.photo : null;
+        chat.say(str(b.from, 60), str(b.text, 600), { key: str(b.key, 120) || undefined, sticker: Number.isInteger(b.sticker) ? b.sticker : undefined, photo, pin: !!b.pin, delay: Number.isFinite(b.delay) ? Math.min(60_000, Math.max(0, b.delay)) : undefined,
+          react: (Array.isArray(b.react) ? b.react : []).filter((e) => REACTIONS.includes(e)), reacts: Math.min(6, Number(b.reacts) || 2),
+          answer: (Array.isArray(b.answer) ? b.answer : []).slice(0, 4).map((a) => ({ key: str(a?.key, 30).replace(/[^\w]/g, ''), chance: Math.min(1, Math.max(0, Number(a?.chance ?? 1))) })).filter((a) => a.key) });
+      } else { json(res, 400, { ok: false }); return; }
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/rc') {   // every new session with Remote Control: { on } (this computer only)
+    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      const ok = setRcAtStartup(!!b?.on);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} remote control at startup ${b?.on ? 'on' : 'off'} -> ${ok ? 'ok' : 'failed'}\n`).catch(() => {});
+      json(res, ok ? 200 : 500, { ok, rc: rcAtStartup() });
+    });
+    return;
+  }
+  if (url.pathname === '/api/tunnel' && (req.method === 'POST' || req.method === 'GET')) {   // the office from anywhere: { on } (this computer only)
+    const sameOrigin = sameOriginOf(req);
+    if (!isLoopback(req) || !sameOrigin || (req.method === 'POST' && !String(req.headers['content-type'] || '').startsWith('application/json'))) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    if (req.method === 'GET') { json(res, 200, tunnelOut()); return; }
+    readJson(req).then((b) => {
+      prefs.set('tunnel', b?.on ? true : undefined);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tunnel ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
+      if (b?.on) startTunnel(); else stopTunnel();
+      json(res, 200, tunnelOut());
+    });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/phone') {   // approving from a phone: { approve } (this computer only)
+    const sameOrigin = sameOriginOf(req);
+    if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      prefs.set('phoneApprove', b?.approve ? true : undefined);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone approve ${b?.approve ? 'on' : 'off'}\n`).catch(() => {});
+      broadcast({ k: 'phone', approve: !!b?.approve });
+      json(res, 200, { ok: true, approve: !!b?.approve });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/sys/auto') {   // close idle sessions on a timer: { hours: 0 | 2 | 4 | 8 }
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
     readJson(req).then((b) => {
       if (!b || !prefs.setAutoClose(Number(b.hours))) { json(res, 400, { ok: false, message: tr('server.badRequest') }); return; }
@@ -1529,7 +1767,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/sys/action') {
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
     readJson(req).then(async (body) => {
       if (!body) { json(res, 400, { ok: false, message: tr('server.badRequest') }); return; }
@@ -1540,7 +1778,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/open') {
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.openOnMac') }); return; }
     readJson(req).then(async (b) => {
       const s = [...sessions.values()].find((x) => x.id === String(b?.id || ''));
@@ -1550,12 +1788,17 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order))?$/.test(url.pathname)) {   // (this computer only, from this page)
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order|move))?$/.test(url.pathname)) {   // (this computer only, from this page)
+    const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
     readJson(req).then(async (b) => {
       if (url.pathname === '/api/accounts') { json(res, 200, await prepareAccount(b?.name)); return; }
-      if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ auto: !!b?.on })); return; }
+      if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ ...(b?.on !== undefined && { auto: !!b.on }), ...(b?.move !== undefined && { move: !!b.move }) })); return; }
+      if (url.pathname === '/api/accounts/move') {   // { id: the session, to: the account ('' = the main one) }
+        const s = [...sessions.values()].find((x) => x.id === String(b?.id || '')), to = b?.to ? slugOf(b.to) : '';
+        json(res, 200, s ? await moveSession(s, to) : { ok: false, message: tr('server.move.notOpen') });
+        return;
+      }
       if (url.pathname === '/api/accounts/order') {   // (every account once: '' is the main one)
         const all = orderOf(), order = Array.isArray(b?.order) ? b.order.map((s) => (s ? slugOf(s) : '')) : [];
         if (order.length !== all.length || !all.every((s) => order.includes(s))) { json(res, 400, { ok: false }); return; }
@@ -1583,7 +1826,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/prefs') {
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
     readJson(req).then((b) => {
       if (!b || !prefs.setLang(b.lang)) { json(res, 400, { ok: false, message: tr('server.badRequest') }); return; }
@@ -1593,7 +1836,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/todos') {
-    const sameOrigin = !req.headers.origin || req.headers.origin === `http://${req.headers.host}`;
+    const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
     readJson(req).then((b) => {
       const err = b ? todoOp(b) : tr('server.badRequest');
@@ -1611,6 +1854,7 @@ const server = http.createServer((req, res) => {
     else json(res, 401, { ok: false, message: tr('server.pin.needed') });
     return;
   }
+  if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];
     if (!type) { res.writeHead(404).end(); return; }
@@ -1629,9 +1873,10 @@ const server = http.createServer((req, res) => {
     fetchPlanUsage();   // skipped when the saved reading is fresh
     pollGit().then(() => git.pollCi());
     scanSessions().then(() => {
-      const lanOn = HOST !== '127.0.0.1' && HOST !== 'localhost';
+      const lanOn = lanIsOn();
       send(res, { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), trophies: trophies.pub(),
-        lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null });
+        lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
+        ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), lanFixed: local && lanFixed });
     });
     const ping = setInterval(() => res.write(': ping\n\n'), 20_000);
     req.on('close', () => { clearInterval(ping); clients.delete(client); });
@@ -1664,13 +1909,13 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/sys') {
-    sysSnapshot().then((snap) => json(res, 200, { ...snap, auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
+    sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
   }
   if (url.pathname === '/' || url.pathname === '/index.html') {
     // the office page itself is rendered by Next.js (app/page.tsx); our headers go on before it starts the response
     res.setHeader('Referrer-Policy', 'no-referrer');
-    if (!isLoopback(req) && !cookieOk(req)) res.setHeader('Set-Cookie', pinCookie());
+    if (!isLoopback(req) && !cookieOk(req)) res.setHeader('Set-Cookie', pinCookie(req));
     if (url.pathname === '/index.html') req.url = '/' + url.search;
     req.headers['x-office-lang'] = pickLang(url.searchParams.get('lang') || prefs.lang());   // ?lang=vi: one visit in another language
     nextHandle(req, res);
@@ -1690,7 +1935,148 @@ catch (err) {
   process.exit(1);
 }
 
+/* ---------- phones on the home network, switched on in the office (the phone window) ----------
+   Besides 127.0.0.1 the office then listens on each of the Mac's own network addresses (Wi-Fi, Ethernet, a Tailscale
+   network), never on "every address", and only while the switch is on (prefs lan; `install --lan` / OFFICE_HOST still
+   works the old way, and the switch then shows it on for good). Phones still need the PIN. The Mac's addresses change
+   with its network: looked at again every 30 seconds. Off: the listeners close and the phones' pages are cut off. */
+const lanFixed = HOST !== '127.0.0.1' && HOST !== 'localhost';
+const lanServers = new Map();   // address -> its http.Server
+function syncLan() {
+  const want = new Set(!lanFixed && prefs.get('lan') ? Object.values(os.networkInterfaces()).flat().filter((n) => n && n.family === 'IPv4' && !n.internal).map((n) => n.address) : []);
+  for (const [addr, srv] of lanServers) if (!want.has(addr)) { srv.close(); srv.closeAllConnections?.(); lanServers.delete(addr); }
+  for (const addr of want) {
+    if (lanServers.has(addr)) continue;
+    const srv = http.createServer(server.listeners('request')[0]);
+    srv.on('error', () => { if (lanServers.get(addr) === srv) lanServers.delete(addr); });   // (the address went away, or the port is taken on it)
+    srv.listen(PORT, addr); lanServers.set(addr, srv);
+  }
+}
+function lanIsOn() { return lanFixed || lanServers.size > 0; }
+setInterval(syncLan, 30_000).unref();
+
+/* ---------- the office from anywhere (mobile data, another Wi-Fi): a Cloudflare quick tunnel, switched on in the phone
+   window ----------
+   cloudflared (the one installed, else downloaded once from Cloudflare's GitHub releases into data/bin) connects out to
+   Cloudflare and gets an https address, *.trycloudflare.com: no account and no domain, a new address each time it
+   starts. It leads to a listener of its own on 127.0.0.1, and everything that comes that way is from the internet
+   whatever its address looks like (req.viaTunnel): it needs the PIN (no token links), its cookie is https-only, and all
+   that only the Mac may do (hooks, stopping processes, accounts, these switches) refuses it, as it refuses a phone.
+   Off: cloudflared stops and the listener closes, cutting off whoever was in. OFFICE_TUNNEL_CMD: a stand-in (tests). */
+const tunnel = { state: 'off', url: '', host: '', error: '', proc: null, srv: null, port: 0, tries: 0, gen: 0 };
+const TUNNEL_PID = path.join(DATA_DIR, 'tunnel.pid'), CF_BIN = path.join(DATA_DIR, 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
+const tunnelOut = () => ({ ok: true, on: !!prefs.get('tunnel'), state: tunnel.state, url: tunnel.url, error: tunnel.error, port: tunnel.port, pin: currentPin(),
+  awake: process.platform === 'darwin' ? { held: !!awakeProc, ac: powerAC } : null, rc: rcAtStartup() });
+// Giving Claude work from a phone is Claude Code's own Remote Control: with remoteControlAtStartup in its settings every
+// new session opens its bridge by itself (the other accounts share these settings by a link), and the office shows each
+// session's link. Switched in the phone window, by you, on the Mac; the rest of the file is left as it is.
+const CC_SETTINGS = path.join(CLAUDE_DIR, 'settings.json');
+function rcAtStartup() { try { return JSON.parse(fs.readFileSync(CC_SETTINGS, 'utf8')).remoteControlAtStartup === true; } catch { return false; } }
+function setRcAtStartup(on) {
+  let real = CC_SETTINGS, cfg = {};
+  try { real = fs.realpathSync(CC_SETTINGS); cfg = JSON.parse(fs.readFileSync(real, 'utf8') || '{}'); } catch (e) { if (e.code !== 'ENOENT') return false; }   // (a file it can't read, with comments say: left alone)
+  if (on) cfg.remoteControlAtStartup = true; else delete cfg.remoteControlAtStartup;
+  try { fs.mkdirSync(path.dirname(real), { recursive: true }); fs.writeFileSync(`${real}.office-tmp`, `${JSON.stringify(cfg, null, 2)}\n`); fs.renameSync(`${real}.office-tmp`, real); return true; } catch { return false; }
+}
+// While the tunnel is on, the Mac stays awake so it can be reached (macOS): `caffeinate -s` holds off system sleep on the
+// power adapter only (on battery it sleeps as usual), and the display still turns off; `-w` ends it with this server,
+// however that ends. Turning the tunnel off lets it go. Nothing is changed in the system settings.
+let awakeProc = null, powerAC = null, powerT = null;
+function readPower() { execFile('pmset', ['-g', 'batt'], { timeout: 4000 }, (err, out) => { powerAC = err ? null : /AC Power/.test(String(out)); }); }
+function keepAwake(on) {
+  if (process.platform !== 'darwin') return;
+  if (on && !awakeProc) {
+    const p = awakeProc = spawn('caffeinate', ['-s', '-w', String(process.pid)], { stdio: 'ignore' });
+    p.on('error', () => { if (awakeProc === p) awakeProc = null; }); p.on('exit', () => { if (awakeProc === p) awakeProc = null; });
+    readPower(); clearInterval(powerT); powerT = setInterval(readPower, 60_000); powerT.unref();
+  } else if (!on) {
+    if (awakeProc) { try { awakeProc.kill(); } catch { /* gone */ } awakeProc = null; }
+    clearInterval(powerT); powerT = null;
+  }
+}
+async function cloudflared() {
+  if (process.env.OFFICE_TUNNEL_CMD) return process.env.OFFICE_TUNNEL_CMD;
+  if (fs.existsSync(CF_BIN)) return CF_BIN;
+  const onPath = await new Promise((resolve) => execFile(process.platform === 'win32' ? 'where' : 'which', ['cloudflared'], { timeout: 4000 }, (err, out) => resolve(err ? '' : String(out).split('\n')[0].trim())));
+  if (onPath) return onPath;
+  const arch = process.arch === 'arm64' ? 'arm64' : 'amd64';
+  const asset = { darwin: `cloudflared-darwin-${arch}.tgz`, linux: `cloudflared-linux-${arch}`, win32: 'cloudflared-windows-amd64.exe' }[process.platform];
+  if (!asset) throw new Error(tr('server.tunnel.noPlatform'));
+  tunnel.state = 'download';
+  const r = await fetch(`https://github.com/cloudflare/cloudflared/releases/latest/download/${asset}`, { signal: AbortSignal.timeout(180_000) });
+  if (!r.ok) throw new Error(tr('server.tunnel.downloadFailed', { status: r.status }));
+  fs.mkdirSync(path.dirname(CF_BIN), { recursive: true });
+  const tmp = `${CF_BIN}.download`;
+  fs.writeFileSync(tmp, Buffer.from(await r.arrayBuffer()));
+  if (asset.endsWith('.tgz')) { await new Promise((resolve, reject) => execFile('tar', ['-xzf', tmp, '-C', path.dirname(CF_BIN)], (err) => (err ? reject(err) : resolve()))); fs.rmSync(tmp, { force: true }); }
+  else fs.renameSync(tmp, CF_BIN);
+  fs.chmodSync(CF_BIN, 0o755);
+  return CF_BIN;
+}
+// a cloudflared left running by an office that stopped without stopping it (only if that pid is still a cloudflared:
+// pids get reused)
+function killStaleTunnel() {
+  try {
+    const pid = Number(fs.readFileSync(TUNNEL_PID, 'utf8'));
+    const comm = pid > 1 && alive(pid) && process.platform !== 'win32' ? execFileSync('ps', ['-o', 'comm=', '-p', String(pid)], { timeout: 4000 }).toString() : '';
+    if (/cloudflared|tunnel/i.test(path.basename(comm.trim()))) process.kill(pid, 'SIGTERM');
+  } catch { /* none, or gone */ }
+  fs.rmSync(TUNNEL_PID, { force: true });
+}
+async function startTunnel() {
+  if (tunnel.proc || tunnel.state === 'download' || tunnel.state === 'starting') return;
+  keepAwake(true);
+  const gen = ++tunnel.gen;
+  tunnel.state = 'starting'; tunnel.error = ''; tunnel.url = ''; tunnel.host = '';
+  try {
+    const cmd = await cloudflared();
+    if (gen !== tunnel.gen || !prefs.get('tunnel')) return;
+    tunnel.state = 'starting';
+    if (!tunnel.srv) {
+      const handle = server.listeners('request')[0];
+      tunnel.srv = http.createServer((req, res) => { req.viaTunnel = true; handle(req, res); });
+      await new Promise((resolve, reject) => { tunnel.srv.once('error', reject); tunnel.srv.listen(0, '127.0.0.1', resolve); });
+      tunnel.port = tunnel.srv.address().port;
+    }
+    killStaleTunnel();
+    const proc = tunnel.proc = spawn(cmd, ['tunnel', '--no-autoupdate', '--url', `http://127.0.0.1:${tunnel.port}`], { stdio: ['ignore', 'pipe', 'pipe'], windowsHide: true });
+    try { fs.writeFileSync(TUNNEL_PID, String(proc.pid)); } catch { /* read-only data */ }
+    const read = (chunk) => {
+      const m = /https:\/\/[a-z0-9-]+\.trycloudflare\.com/.exec(String(chunk));
+      if (m && !tunnel.url) { tunnel.url = m[0]; tunnel.host = new URL(m[0]).host; tunnel.state = 'on'; tunnel.tries = 0; console.log(`[my-office] ${tr('server.tunnel.ready', { url: tunnel.url })}`); }
+    };
+    proc.stdout.on('data', read); proc.stderr.on('data', read);
+    proc.on('error', (err) => { tunnel.error = String(err.message || err).slice(0, 200); });
+    proc.on('exit', () => {
+      if (tunnel.proc !== proc) return;
+      tunnel.proc = null; tunnel.url = ''; tunnel.host = '';
+      fs.rmSync(TUNNEL_PID, { force: true });
+      if (!prefs.get('tunnel')) { tunnel.state = 'off'; return; }
+      // it dropped while on (the network went away, Cloudflare closed it): again, a little later each time
+      tunnel.state = 'error'; tunnel.error ||= tr('server.tunnel.dropped');
+      if (++tunnel.tries <= 6) setTimeout(() => { if (prefs.get('tunnel')) startTunnel(); }, Math.min(60_000, 3000 * 2 ** tunnel.tries)).unref();
+    });
+  } catch (err) {
+    if (gen !== tunnel.gen) return;
+    tunnel.state = 'error'; tunnel.error = String(err.message || err).slice(0, 200);
+  }
+}
+function stopTunnel() {
+  tunnel.gen++;
+  keepAwake(false);
+  const proc = tunnel.proc; tunnel.proc = null;
+  if (proc) { try { proc.kill('SIGTERM'); } catch { /* gone */ } }
+  fs.rmSync(TUNNEL_PID, { force: true });
+  if (tunnel.srv) { tunnel.srv.close(); tunnel.srv.closeAllConnections?.(); tunnel.srv = null; tunnel.port = 0; }
+  Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0 });
+}
+// (the office stopping: cloudflared stops with it)
+process.on('exit', () => { try { tunnel.proc?.kill('SIGTERM'); awakeProc?.kill(); } catch { /* gone */ } });
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { try { tunnel.proc?.kill('SIGTERM'); } catch { /* gone */ } process.exit(0); });
+
 server.listen(PORT, HOST, () => {
+  syncLan();
+  if (prefs.get('tunnel')) startTunnel(); else killStaleTunnel();
   scanSessions();
   scanCleanups().catch(() => {});   // macOS paths; elsewhere there may be nothing to scan
   trackOwners();

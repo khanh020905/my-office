@@ -29,6 +29,8 @@ import { updateGuard } from '../people/guard.js';
 import { updateHr } from '../people/hr.js';
 import { updateFoosball } from '../people/foosball.js';
 import { updateGaming } from '../people/gaming.js';
+import { updateBilliards } from '../people/billiards.js';
+import { updateKaraoke } from '../people/karaoke.js';
 import { shadowStandIns } from '../people/chibi-rig.js';
 import { updateTips } from '../ui/tips.js';
 import { updatePlaces } from '../interact/place-chips.js';
@@ -40,26 +42,47 @@ import { REPLAY_MOTION, replayTick } from '../replay/replay.js';
 import { recorder } from '../replay/timeline.js';
 import { clipCamera, clipFrame } from '../ui/timelapse.js';
 import { THEME } from '../world/backdrops/index.js';
-import { drawFrame, onQualityChange, quality, stepDown } from '../scene/quality.js';
+import { drawFrame, onQualityChange, phoneLike, quality, stepDown } from '../scene/quality.js';
 import { toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let focusTarget;
 const clock = new THREE.Clock();
-// Frame budget: 60 fps while you move the camera, point or walk in first person; 40 while people walk about; 30 when
-// the office is calm; 10 when the window sits in the background (a hidden tab pauses on its own). Shadows only change
-// when something moves, so the shadow map is redrawn every other frame unless someone is walking.
+// Frame budget. The office is a thing you leave open, so it runs smooth while you use it and light the rest of the
+// time: 60 fps while you move the camera, point, type or walk in first person (never more, even on a 120 Hz screen); 30
+// while something moves on its own (people walking, a rocket, a replay, a clip being recorded); 20 when the office is
+// calm (a phone: 20 and 12); 8 when the window sits in the background (a hidden tab pauses on its own). Someone on the
+// staff is nearly always walking somewhere, so "something moves" is the usual case: 30 instead of 60 halves what an open
+// office costs. Shadows only change when something moves: the shadow map is redrawn every other frame while someone
+// walks, else every fourth.
 let lastFrame = 0, lastInput = 0, frameNo = 0;
 const _camDelta = new THREE.Vector3();
 const walkingNow = () => { for (const w of workers.values()) if (w.phase === 'walk') return true; for (const w of subs.values()) if (w.phase === 'walk') return true; for (const w of npcs) if (w.phase === 'walk') return true; return leaving.size > 0 || flights.length > 0; };
 function frameGap(now) {
   if (SOFTWARE_GL) return 1000 / 5;
-  if (fp.on) return 0;
-  if (recorder) return 1000 / 30;
-  if (!document.hasFocus()) return 1000 / 10;
+  if (fp.on) return 1000 / 60;
+  if (recorder || state.clip) return 1000 / 30;
+  if (!document.hasFocus()) return 1000 / 8;
   if (now - lastInput < 1500 || state.zoomGoal !== null || focusTarget.distanceToSquared(controls.target) > 1e-4) return 1000 / 60;
-  return walkingNow() || particles.length || rocketState.t >= 0 || (replay.on && replay.playing) ? 1000 / 60 : 1000 / 40;
+  const moving = walkingNow() || particles.length || rocketState.t >= 0 || (replay.on && replay.playing);
+  if (phoneLike()) return moving ? 1000 / 20 : 1000 / 12;   // a phone: its battery and its CPU first (a glance at the office, not a game)
+  return moving ? 1000 / 30 : 1000 / 20;
 }
+/* World matrices, once a frame, for what is drawn. Left to three, the whole scene is updated twice a frame (the 3D pass
+   and the label pass each do it), hidden things included: ~3,600 objects, a tenth of the frame's script time. Here a
+   hidden branch is skipped (nothing in it is drawn or casts a shadow; it is brought up to date the frame it shows
+   again, the root being updated every frame), except the labels in it, whose pass looks at them anyway. */
+function updateWorld(o, force) {
+  if (!o.visible) { labelsIn(o); return; }
+  if (o.matrixAutoUpdate) o.updateMatrix();
+  if (o.matrixWorldNeedsUpdate || force) {
+    if (o.parent === null) o.matrixWorld.copy(o.matrix); else o.matrixWorld.multiplyMatrices(o.parent.matrixWorld, o.matrix);
+    o.matrixWorldNeedsUpdate = false; force = true;
+  }
+  const ch = o.children;
+  for (let i = 0; i < ch.length; i++) if (ch[i].matrixWorldAutoUpdate === true || force === true) updateWorld(ch[i], force);
+}
+function labelsIn(o) { const ch = o.children; for (let i = 0; i < ch.length; i++) { if (ch[i].isCSS2DObject) ch[i].updateWorldMatrix(true, false); if (ch[i].children.length) labelsIn(ch[i]); } }
 let PR_STEPS;
 let prIdx = 0, prSlow = 0, prFast = 0, prHoldUntil = 0;
 function adaptResolution(gap, target, dt) {
@@ -96,6 +119,10 @@ function holdAboveGround() {
   const far = Math.max(200, want + 230);
   if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
 }
+// ?debug: where a frame's time goes (ms summed since the page opened; frameMs in window.__office divides by frames)
+let PERF = false, tLast = 0;
+const T = { people: 0, life: 0, street: 0, world: 0, draw: 0, labels: 0 };
+const lap = (k) => { const t = performance.now(); T[k] += t - tLast; tLast = t; };
 export function loop(now = 0) {
   requestAnimationFrame(loop);
   const g = frameGap(now), gap = lite ? 1000 : quality.fps < 60 ? Math.max(g, 1000 / quality.fps) : g;   // list mode: the office keeps its state, barely draws
@@ -109,10 +136,12 @@ export function loop(now = 0) {
   replayTick();
   const dt = dt0 * (replay.on && replay.playing ? REPLAY_MOTION : 1) * (state.speed || 1);   // (state.speed: a timelapse clip)
   state.sim += dt;
+  if (PERF) tLast = performance.now();
   for (const w of workers.values()) w.update(dt, state.sim);
   for (const w of subs.values()) w.update(dt, state.sim);
   for (const w of leaving) { w.update(dt, state.sim); if (!w.root.parent) leaving.delete(w); }
   for (const w of npcs) w.update(dt, state.sim);
+  if (PERF) lap('people');
   updateFlights(dt);
   updateRoom(dt, state.sim);
   updateExtras(dt, state.sim);
@@ -128,6 +157,8 @@ export function loop(now = 0) {
   updateHr();
   updateFoosball(dt);
   updateGaming(dt);
+  updateBilliards(dt);
+  updateKaraoke(dt);
   updateBoard(state.sim);
   updatePlaces(now);
   updateTeam();
@@ -138,14 +169,17 @@ export function loop(now = 0) {
   updateTests(state.sim);
   updatePost(dt);
   updateIncident(state.sim);
+  if (PERF) lap('life');
   if (THEME.live) THEME.live.update(dt, state.sim);
+  if (PERF) lap('street');
   updateZs(dt);
   updateMarkers(state.sim);
   updateTips();
   if (fp.on) {
     fpUpdate(dt0);
-    drawFrame(fpCam);
-    labels.render(scene, fpCam); placePlc();
+    updateWorld(scene, false); if (PERF) lap('world');
+    drawFrame(fpCam); if (PERF) lap('draw');
+    labels.render(scene, fpCam); placePlc(); if (PERF) lap('labels');
     return;
   }
   const sel = state.selectedId && workers.get(state.selectedId);
@@ -156,10 +190,11 @@ export function loop(now = 0) {
   controls.update();
   holdAboveGround();
   clipCamera();
-  drawFrame(camera);
+  updateWorld(scene, false); if (PERF) lap('world');
+  drawFrame(camera); if (PERF) lap('draw');
   clipFrame();
   labels.render(scene, camera);
-  placePlc();
+  placePlc(); if (PERF) lap('labels');
 }
 
 export function setup() {
@@ -169,6 +204,10 @@ export function setup() {
   controls.addEventListener('start', () => { state.zoomGoal = null; setView(null); });
   for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
   renderer.shadowMap.autoUpdate = false;
+  scene.matrixWorldAutoUpdate = false;   // (updateWorld above does it, once a frame)
+  // the tests' and the performance checks' hooks (?debug): frames drawn so far, the renderer (its info: draw calls…)
+  PERF = new URLSearchParams(location.search).has('debug');
+  if (PERF) setTimeout(function hook() { if (!window.__office) { setTimeout(hook, 200); return; } Object.defineProperties(window.__office, { frames: { get: () => frameNo }, renderer: { get: () => renderer }, frameTimes: { get: () => ({ ...T, frames: frameNo }) } }); }, 0);
   shadowStandIns(renderer);   // (characters' shadows from low-poly stand-ins: people/chibi-rig.js)
    renderer.shadowMap.needsUpdate = true;
   // Dynamic resolution: on a Retina screen the GPU draws four times the pixels. When frames keep arriving late while the

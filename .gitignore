@@ -7,10 +7,13 @@ com.claude-office.plist
 .DS_Store
 # Next.js
 .next/
+.next-e2e/
 next-env.d.ts
 *.tsbuildinfo
 # tests
 test-results/
+test-results-*/
+.next-*/
 playwright-report/
 
 # the online demo build (scripts/build-demo.mjs)

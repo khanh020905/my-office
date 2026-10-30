@@ -21,32 +21,34 @@ import { clockHooks, hash, sessions, streetHooks, workers } from './workers.js';
 import { guardPost } from './guard.js';
 import { ANIM_AT, verb } from '../ui/event-text.js';
 import { sfx } from '../audio/sfx.js';
+import { chatLife } from '../ui/group-chat.js';
+import { joinNhau, nhauNow, updateNhau } from './nhau.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
 let run = null;     // the outing under way: { kind: 'shop' | 'lunch', w, stage, … }
 let lookAt = 90;    // (sim seconds) the next look for a trip to the shop: not in the first minute and a half
 let lunchDay = '';  // the day the lunch was ordered
-const street = () => (THEMES && THEME === THEMES.city && THEME.live?.street) || null;
+export const street = () => (THEMES && THEME === THEMES.city && THEME.live?.street) || null;
 const say = (w, text) => { w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, 4500); };
 // asleep at their own place, nothing else going on: free to go out
-const resting = (w) => !w.sub && w.root.parent && !w.leaving && !w.away && !w.homeBound && !w.chore && !w.after && !w.want && w.phase !== 'walk'
+export const resting = (w) => !w.sub && w.root.parent && !w.leaving && !w.away && !w.homeBound && !w.chore && !w.after && !w.want && w.phase !== 'walk'
   && !w.liftHold && !w.liftWait && !w.inStall && !w.wcBusy && !w.queued && w.anim === 'sleep' && w.station === 'desk'
   && sessions.get(w.id)?.status === 'rest' && !sessions.get(w.id)?.bg?.length;
-const called = (w) => { const s = sessions.get(w.id); return !!w.want || !s || s.status !== 'rest' || !!s.bg?.length; };   // work came in
-const live = (R, stage) => !R.dead && R.stage === stage;
+export const called = (w) => { const s = sessions.get(w.id); return !!w.want || !s || s.status !== 'rest' || !!s.bg?.length; };   // work came in
+export const live = (R, stage) => !R.dead && R.stage === stage;
 // where you leave the office from inside: the lift, or the door
 const indoors = () => (lift ? { x: LIFT_X, z: DZ } : { x: DOOR_OUT.x, z: DOOR_OUT.z });
 
 // the street's points as a path to walk: each leg's ground (pavement, or the road on a crossing) and the crossings' gates
-function walk(w, S, pts, cb, face) {
+export function walk(w, S, pts, cb, face) {
   if (!pts?.length) { cb(); return; }
   w.path = pts.map((p) => Object.assign(new V2(p.x, p.z), { y0: p.road ? S.road : S.pavement, gate: p.gate }));
   const end = pts[pts.length - 1];
   w.spot = { x: end.x, z: end.z, face: face ?? w.face };
   w.pose = 'stand'; w.phase = 'walk'; w.onArrive = cb;
 }
-const here = (w) => ({ x: w.pos.x, z: w.pos.y });
+export const here = (w) => ({ x: w.pos.x, z: w.pos.y });
 // down to the street: the lift (wait for it, step in, the doors shut, down) or out of the door, then unseen a moment
 function goDown(w, R, cb) {
   const stage = R.stage, gone = () => { if (!live(R, stage)) return; w.offstage = true; later(lift ? 3 : 1, () => live(R, stage) && cb()); };
@@ -57,9 +59,9 @@ function goDown(w, R, cb) {
     w.liftWait = () => w.goTo(DOOR_OUT, () => { w.faceTarget = Math.PI / 2; w.liftRide = gone; });
   });
 }
-function outside(w, S, at) { w.offstage = false; w.street = true; w.ground = S.pavement; w.pos.set(at.x, at.z); w.spot = { x: at.x, z: at.z, face: w.face }; }
+export function outside(w, S, at) { w.offstage = false; w.street = true; w.ground = S.pavement; w.pos.set(at.x, at.z); w.spot = { x: at.x, z: at.z, face: w.face }; }
 // in at the street door and up: unseen a moment, then out of the lift (or in at the door) and on to where `to()` says
-function goUp(w, R, to, cb) {
+export function goUp(w, R, to, cb) {
   R.stage = 'up'; w.offstage = true; w.street = false; w.path = []; w.phase = 'idle'; w.onArrive = null;
   later(lift ? 2.5 : 1, () => {
     if (!live(R, 'up')) return;
@@ -164,6 +166,7 @@ function shopTrip(w, S, { key = '', night = false } = {}) {
   const d = best.door, item = night ? 'noodle' : pick(TAKE[keyOf(d)] || ['cup']);
   const R = { kind: 'shop', stage: 'go', exit: best.ex, shop: d.name, door: d, item, night };
   begin(R, w);
+  chatLife('store', { id: w.id, shop: d.name, every: 90 * 60e3 });
   w.hush(); w.anim = 'wake'; w.afterAt = state.sim + 1.6;   // a stretch first
   w.after = () => {
     if (!live(R, 'go')) return;
@@ -226,6 +229,7 @@ function collect(R, S) {
   if (!w) { if (state.sim - R.since > 150) abort(R); return; }   // nobody to fetch it: lunch the usual way
   begin(R, w); R.stage = 'go';
   sfx.play('pop');   // (the phone)
+  chatLife('lunchOrder', { id: w.id });
   w.hush(); w.anim = 'wake'; w.afterAt = state.sim + 1.6;
   w.after = () => {
     if (!live(R, 'go')) return;
@@ -291,9 +295,9 @@ function showBags(sp, seven = false) {
 const trips = new Set();
 const WAYS = ['bike', 'bike', 'bike', 'bike', 'bike', 'grab', 'grab', 'xsm', 'xsm', 'taxi'];
 const BIKE_COLORS = ['#D9534F', '#F2F2F2', '#2E86DE', '#3B3B3B', '#F2C200', '#7A1F2B', '#1E9E4A', '#C9CED6'];
-const wayOf = (w) => WAYS[hash(w.id) % WAYS.length], bikeColor = (w) => BIKE_COLORS[(hash(w.id) >>> 5) % BIKE_COLORS.length];
-const coatOf = (w) => w.cfg.coat || w.cfg.shirt;
-const mainExit = (S) => { const from = indoors(); return S.exits(from.x, from.z).find((e) => e.L) || null; };
+export const wayOf = (w) => WAYS[hash(w.id) % WAYS.length], bikeColor = (w) => BIKE_COLORS[(hash(w.id) >>> 5) % BIKE_COLORS.length];
+export const coatOf = (w) => w.cfg.coat || w.cfg.shirt;
+export const mainExit = (S) => { const from = indoors(); return S.exits(from.x, from.z).find((e) => e.L) || null; };
 // the row of scooters: along the building's side of the pavement from the way out, both ways, 2 m apart, clear of the corners
 let row = null;
 function bikeRow(S) {
@@ -312,7 +316,8 @@ function syncBikes(S) {
   for (const sp of R.spots) {
     if (!sp.by || sp.busy) continue;
     const w = workers.get(sp.by);
-    if (!w || w.away) { S.unparkBike(sp.id); sp.by = null; sp.id = -1; } else if (sp.id < 0) sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w));
+    // (leftBike: home by Grab after a drink, the scooter stays the night)
+    if (!w || (w.away && !w.leftBike)) { S.unparkBike(sp.id); sp.by = null; sp.id = -1; } else if (sp.id < 0) sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w));
   }
   for (const w of workers.values()) {
     if (w.sub || w.away || wayOf(w) !== 'bike' || R.spots.some((sp) => sp.by === w.id)) continue;
@@ -323,17 +328,21 @@ function syncBikes(S) {
 // where a rider waits at the kerb: by the way out, the next one along a little further each time
 const kerbAt = (ex) => { const n = [...trips].filter((t) => t.rider).length; return ex.s + (n % 2 ? -1 : 1) * (1.4 + Math.floor(n / 2) * 2.8); };
 const ride = (way) => (way === 'taxi' ? 'taxi' : way);
-function settleIn(w) {
+export function settleIn(w) {
   const d = sessions.get(w.id)?.desk ?? -1, home = w.homeSpot();
   w.station = 'desk'; w.anim = 'type';
   if (home === DESK_SPOTS[d] && Math.hypot(w.pos.x - home.x, w.pos.y - home.z) < 0.2) w.unpack(d); else w.dress(false);
 }
 // out of the lift (the doors have shut behind them on the way down) and off home; false: not by the street this time
 function goHome(w, gone) {
+  if (w.nhau && joinNhau(w, gone)) return true;   // (off to the quán nhậu across the street first: people/nhau.js)
   const S = street();
   if (!S || replay.on || w.sub || trips.size >= 6) return false;
   const ex = mainExit(S); if (!ex) return false;
-  const way = wayOf(w), T = { kind: 'home', w, way, stage: 'down', gone, since: state.sim };
+  // after a drink, never their own scooter: a GrabBike, and the scooter stays in the row till the morning
+  const drank = w.drank === officeNow().toDateString() && wayOf(w) === 'bike';
+  if (drank) w.leftBike = true;
+  const way = drank ? 'grab' : wayOf(w), T = { kind: 'home', w, way, stage: 'down', gone, since: state.sim };
   T.drop = () => abort(T);
   if (way === 'bike') {
     const R = bikeRow(S);
@@ -342,6 +351,7 @@ function goHome(w, gone) {
     T.spot.busy = true;
   } else if (!(T.rider = S.callRider(ex.L, kerbAt(ex), { livery: ride(way), far: 60 }))) return false;
   trips.add(T); w.outing = T; w.offstage = true;
+  chatLife('bye', { id: w.id, every: 8 * 3600e3 });
   later(lift ? 3 : 1, () => {
     if (!live(T, 'down')) return;
     T.stage = 'street'; outside(w, S, ex);
@@ -385,7 +395,8 @@ function arrive(w) {
   const S = street();
   if (!S || replay.on || w.sub || trips.size >= 6) return false;
   const ex = mainExit(S); if (!ex) return false;
-  const way = wayOf(w), T = { kind: 'come', w, way, stage: 'ride', since: state.sim };
+  const way = w.leftBike ? 'grab' : wayOf(w), T = { kind: 'come', w, way, stage: 'ride', since: state.sim };   // (the scooter left here last night: in by Grab)
+  w.leftBike = false;
   T.drop = () => abort(T);
   if (way === 'bike') {
     const R = bikeRow(S), sp = R.spots.find((x) => x.by === w.id) || R.spots.find((x) => !x.by);
@@ -435,6 +446,7 @@ export function whereabouts(w) {
   // (at the till: what they are buying there; on the way down late at night: the noodles)
   if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;
+  if (R.kind === 'nhau') return nhauNow(R);
   if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
 }
@@ -442,6 +454,7 @@ export function whereabouts(w) {
 /* ---------- each frame ---------- */
 let bikesAt = 0, shown = '';
 export function updateOutings() {
+  updateNhau();   // (an evening at the quán nhậu: people/nhau.js)
   const S = street(), d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString();
   if (bags?.visible && (m >= 780 || bags.userData.day !== day)) bags.visible = false;
   // the comings and goings; the row of scooters; the session list when anyone's whereabouts change

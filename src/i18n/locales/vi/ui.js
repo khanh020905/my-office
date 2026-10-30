@@ -29,6 +29,7 @@ export default {
     settings: 'Cài đặt',
     settingsTitle: 'Cài đặt: văn phòng, cảnh nền, nhân vật, thông báo, mở trên điện thoại',
     phone: 'Mở trên điện thoại',
+    phoneTitle: 'Điện thoại: mở văn phòng trên điện thoại, duyệt lệnh, dùng khi ra ngoài',
     bell: 'Báo khi chờ duyệt',
     scenery: 'Cảnh nền',
     scenes: {
@@ -112,6 +113,18 @@ export default {
     refresh: 'Đo lại',
     loading: 'Đang đo RAM, CPU và ổ đĩa…',
   },
+  // the tab bar and sheets on a phone (ui/phone.js)
+  phone: {
+    tabs: 'Các mục',
+    office: 'Văn phòng',
+    sessions: 'Phiên',
+    activity: 'Hoạt động',
+    approve: 'Duyệt',
+    chat: 'Chat',
+    close: 'Đóng',
+    approveEmpty: 'Không có gì chờ duyệt',
+    approveEmptySub: 'Khi một phiên cần bạn cho phép, thẻ duyệt hiện ở đây và nổi ngay trên thanh dưới cùng.',
+  },
   phoneModal: {
     title: 'Mở trên điện thoại',
   },
@@ -180,7 +193,12 @@ export default {
   },
   clip: {
     button: 'Clip 15 giây',
-    buttonTitle: 'Video vuông 15 giây quay văn phòng từ sáng tới tối, để chia sẻ',
+    buttonTitle: 'Video 15 giây quay văn phòng từ sáng tới tối, để chia sẻ',
+    shapeTitle: 'Khung clip: vuông để đăng bảng tin, dọc 9:16 cho Reels, TikTok, Shorts',
+    square: 'Vuông 1:1',
+    tall: 'Dọc 9:16',
+    music: 'Nhạc nền',
+    musicTitle: 'Nhạc lo-fi tự soạn, tạo ngay trong trình duyệt, không lo bản quyền',
     title: 'Một ngày ở văn phòng',
     endTitle: '{n} người làm việc',
     prompts: '{n} prompt',

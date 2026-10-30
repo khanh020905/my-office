@@ -11,6 +11,7 @@ import { closeMac, doAction, loadMac, macSnap } from './mac-drawer.js';
 import { TOKEN } from '../net/live.js';
 import { unseenDone } from '../life/your-turn.js';
 import { DEMO, demoLog } from '../demo/demo.js';
+import { acctActions } from './session-account.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 /* ---------- session drawer ---------- */
@@ -50,6 +51,7 @@ export function renderSessionHead() {
   $('ds-cost').textContent = u ? fmtUsd(u.cost) : '–'; $('ds-cost').parentElement.title = tr('drawer.priceNote');
   const n = s.subs?.length || 0;
   $('tab-subs').textContent = n ? tr('drawer.tabSubsN', { n }) : tr('drawer.tabSubs');
+  if (actionsSig(s) !== drawnSig) renderActions();   // (it came to rest, went to work, or moved to another account)
 }
 export async function openWindowOf(s) {
   if (DEMO) { toast(tr('drawer.demoNoWindow')); return; }
@@ -58,17 +60,29 @@ export async function openWindowOf(s) {
     toast(r.ok ? tr('drawer.opened', { app: r.app }) : r.message || tr('drawer.openFailed'));
   } catch { toast(tr('drawer.unreachable')); }
 }
+// what the buttons below depend on
+let drawnSig = '', qrFor = null;   // (qrFor: the session whose Remote Control QR code is shown)
+const actionsSig = (s) => [s.id, s.status === 'rest', s.pid, s.moved?.to, s.acct, state.limits?.others?.length].join('|');
 function renderActions() {
   const s = sessions.get(state.selectedId); if (!s) return;
-  const box = $('ds-actions'); box.replaceChildren();
+  const box = $('ds-actions'); box.replaceChildren(); drawnSig = actionsSig(s);
   if (state.isLocal && s.pid) {
     const b = el('button', 'btn btn--sm'); b.type = 'button'; b.append(icon('monitor'), tr(s.origin === 'Terminal' ? 'drawer.openWindowTerminal' : s.origin ? 'drawer.openWindowIde' : 'drawer.openWindow'));
     b.title = tr('drawer.openWindowTitle'); b.addEventListener('click', () => openWindowOf(s)); box.append(b);
   }
   if (state.isLocal && s.pid && s.status === 'rest') box.append(closeSessionButton(s));
+  box.append(...acctActions(s, renderActions));
   if (s.link) {
     const a = el('a', 'btn btn--primary btn--sm', tr('drawer.openOnClaude')); a.href = s.link; a.target = '_blank'; a.rel = 'noopener';
-    box.append(a, el('p', 'dr-note', tr('drawer.openOnClaudeNote')));
+    box.append(a);
+    // on the Mac: a QR code of the session's Remote Control link, to carry on from the phone (the Claude app opens it)
+    if (state.isLocal && window.QRCode) {
+      const q = el('button', 'btn btn--sm'); q.type = 'button'; q.title = tr('drawer.qrTitle'); q.textContent = tr('drawer.qr'); q.setAttribute('aria-pressed', String(qrFor === s.id));
+      q.addEventListener('click', () => { qrFor = qrFor === s.id ? null : s.id; renderActions(); });
+      box.append(q);
+      if (qrFor === s.id) { const code = el('div', 'qr dr-qr'); try { new window.QRCode(code, { text: s.link, width: 180, height: 180 }); box.append(code, el('p', 'dr-note', tr('drawer.qrNote'))); } catch { /* no QR */ } }
+    }
+    if (qrFor !== s.id) box.append(el('p', 'dr-note', tr('drawer.openOnClaudeNote')));
   } else {
     const [before, after = ''] = tr('drawer.rcHint').split('{cmd}');
     const p = el('p', 'dr-note'); p.append(before, el('code', null, '/rc'), after);

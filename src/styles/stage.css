@@ -43,6 +43,14 @@
 .fp-exit:hover { background: var(--card-2); }
 .fp-near { all: unset; pointer-events: auto; position: absolute; left: 50%; top: calc(50% + 34px); transform: translateX(-50%); padding: 8px 14px; border-radius: 999px; background: rgba(17, 23, 32, .9); border: 1px solid var(--green); color: var(--ink); font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; max-width: 80%; overflow: hidden; text-overflow: ellipsis; }
 .is-gaming .fp-near, .is-gaming .fp-cross, .is-gaming .fp-help { display: none !important; }   /* (on the sofa with a controller: the TV is the view) */
+/* first person at the pool table (people/billiards.js): the score, whose shot it is, the power while Space is held, the keys */
+.bil-hud { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; display: grid; justify-items: center; gap: 6px; min-width: 260px;
+  padding: 10px 16px; border-radius: 14px; background: rgba(10, 14, 22, .8); color: #FFFFFF; font-size: .8rem; pointer-events: none; }
+.bil-hud .bil-score { font-size: .95rem; font-variant-numeric: tabular-nums; }
+.bil-hud .bil-turn { color: #FFD27A; font-weight: 600; }
+.bil-power { display: block; width: 220px; height: 8px; border-radius: 4px; background: rgba(255, 255, 255, .18); overflow: hidden; }
+.bil-power > i { display: block; width: 0; height: 100%; background: linear-gradient(90deg, #4ADE80, #FACC15, #EF4444); }
+.bil-hud .bil-help { color: #C9D4E3; font-size: .7rem; }
 .fp-near kbd { display: inline-grid; place-items: center; min-width: 20px; height: 20px; margin-right: 8px; border-radius: 6px; background: var(--green); color: #06210F; font: 800 .72rem/1 inherit; }
 .fp-joy { display: none; pointer-events: auto; position: absolute; left: 22px; bottom: 96px; width: 116px; height: 116px; border-radius: 50%; background: rgba(17, 23, 32, .45); border: 1px solid var(--line-2); touch-action: none; }
 .fp-joy i { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; border-radius: 50%; background: var(--accent); opacity: .9; }

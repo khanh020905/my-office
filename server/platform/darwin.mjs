@@ -39,12 +39,13 @@ export function footprints(maxAge) {
 }
 export const footprintAt = () => footAt;
 
-/** Every process: pid, ppid, pgid, uid, cpu (%), rss, mem (footprint), up (s), start (unix s), comm, args. */
-export async function processes() {
+/** Every process: pid, ppid, pgid, uid, cpu (%), rss, mem (footprint), up (s), start (unix s), comm, args. footAge: how
+ * old the footprints may be (25 s while the Mac panel is open; the top bar's reading takes the sampler's, up to 2 min). */
+export async function processes(footAge = 25_000) {
   const [psOut, argsOut, foot] = await Promise.all([
     sh('ps', ['-axo', 'pid=,ppid=,pgid=,uid=,%cpu=,rss=,etime=,comm=']),
     sh('ps', ['-axo', 'pid=,args=']),
-    footprints(25_000),
+    footprints(footAge),
   ]);
   const procs = new Map();
   for (const line of psOut.split('\n')) {

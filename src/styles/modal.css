@@ -11,6 +11,19 @@
 .pm-pin { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; font-size: .82rem; }
 .pm-digits { font: 700 1.5rem/1 var(--mono); letter-spacing: .12em; color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; padding: 8px 12px; user-select: all; }
 .pm-note { font-size: .74rem; margin: 0; }
+.pm-approve { display: flex; align-items: center; gap: 8px; width: 100%; padding: 10px 12px; box-sizing: border-box; border-radius: 10px; background: var(--card); border: 1px solid var(--line-2); cursor: pointer; font-size: .86rem; text-align: left; }
+.pm-approve input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.pm-h { margin: 6px 0 0; width: 100%; padding-top: 12px; border-top: 1px solid var(--line); font-size: .9rem; text-align: left; }
+#pm-body > .pm-h + p, #pm-body > .pm-h ~ .pm-note { text-align: left; width: 100%; }
+.pm-url { align-self: stretch; text-align: center; }
+.pm-newpin { margin-left: 4px; }
+.pm-awake { margin: 0; width: 100%; padding: 8px 10px; box-sizing: border-box; border-radius: 8px; background: var(--card); border: 1px solid var(--line-2); font-size: .76rem; line-height: 1.45; text-align: left; }
+.pm-awake.is-battery { border-color: var(--amber, #F2B544); }
+.pm-err { margin: 0; font-size: .78rem; color: var(--red); text-align: left; width: 100%; }
+.pm-wait { margin: 0; font-size: .8rem; width: 100%; text-align: left; }
+.pm-wait::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: pm-spin .8s linear infinite; vertical-align: -1px; }
+@keyframes pm-spin { to { transform: rotate(360deg); } }
+.modal-card:has(#pm-body) { max-height: calc(100dvh - 32px); overflow-y: auto; }
 .pm-cmd { margin: 0; width: 100%; font: .74rem/1.5 var(--mono); text-align: left; white-space: pre-wrap; word-break: break-all; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; user-select: all; }
 
 /* the week-in-review card: the picture scales to the window, the buttons stay under it */

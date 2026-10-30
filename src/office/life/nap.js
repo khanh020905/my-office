@@ -1,5 +1,6 @@
 // The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk.
 import { state } from '../core/state.js';
+import { chatLife } from '../ui/group-chat.js';
 import { officeNow, rand, reduceMotion, replay } from '../core/env.js';
 import { renderer } from '../scene/renderer.js';
 import { blinds } from '../world/windows.js';
@@ -21,6 +22,7 @@ const dozer = (w) => hash(w.id) % 2 === 0;   // head down on the desk (the other
 function begin(live) {
   if (!live) return;   // (opened in the middle of it: no announcement)
   toast(tr('life.nap.start'), 5000);
+  chatLife('nap');
 }
 function end(live) {
   for (const w of workers.values()) {
@@ -28,7 +30,7 @@ function end(live) {
     w.doze = false;
     if (w.anim === 'sleep' && w.phase !== 'walk') { w.anim = 'wake'; w.wakeUntil = state.sim + (reduceMotion ? 0.3 : rand(1.4, 2.4)); }
   }
-  if (live) { sfx.play('beep'); toast(tr('life.nap.end'), 4000); }
+  if (live) { sfx.play('beep'); toast(tr('life.nap.end'), 4000); chatLife('wake'); }
 }
 
 export function updateNap(dt) {

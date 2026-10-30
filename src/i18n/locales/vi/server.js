@@ -1,4 +1,21 @@
 export default {
+  tunnel: {
+    noPlatform: 'Máy này chưa có cloudflared cho hệ điều hành của nó.',
+    downloadFailed: 'Không tải được cloudflared (mã {status}). Kiểm tra mạng rồi bật lại.',
+    ready: 'Dùng khi ra ngoài: {url}',
+    dropped: 'Đường hầm bị ngắt, đang nối lại…',
+  },
+  move: {
+    notOpen: 'Phiên này không còn mở.',
+    noAccount: 'Không thấy tài khoản này.',
+    same: 'Phiên này đang chạy bằng {to} rồi.',
+    busy: 'Phiên đang làm việc. Đợi nó làm xong rồi đổi.',
+    noShare: 'Hai tài khoản chưa dùng chung lịch sử nên không đổi được: sang tài khoản kia sẽ không mở lại được hội thoại này.',
+    noScript: 'Chưa gắn được script đổi tài khoản vào trình soạn thảo. Xem cách làm tay trong thẻ gói Claude.',
+    failed: 'Không dừng được phiên để đổi tài khoản. Thử lại sau.',
+    terminal: 'Phiên này chạy trong Terminal: gõ /exit ở đó rồi chạy lệnh bên dưới để tiếp tục bằng {to}.',
+    done: '“{name}” đã sang {to}. Gõ tiếp trong khung chat là chạy tiếp.',
+  },
   account: {
     noCli: 'Không tìm thấy Claude Code trên máy này.',
     badName: 'Tên chỉ gồm chữ và số, ví dụ cong-ty.',
@@ -44,6 +61,7 @@ export default {
     modelError: 'lỗi khi gọi model',
     limitHit: 'hết lượt Claude',
     limitSwitch: 'hết lượt Claude · phiên mới dùng {to}, mở lại phiên này để chạy tiếp',
+    limitMove: 'hết lượt Claude · phiên này sang {to}, gõ tiếp là chạy tiếp',
   },
   originApp: 'Ứng dụng Claude',
   note: {
@@ -90,6 +108,7 @@ export default {
   },
   api: {
     approveOnMac: 'Chỉ duyệt được trên {mac}.',
+    riskyOnMac: 'Từ điện thoại chỉ Cho phép một lần hoặc Từ chối; lệnh nguy hiểm chỉ cho phép được trên {mac}.',
     expired: 'Yêu cầu này đã hết hạn hoặc đã được trả lời.',
     answerAll: 'Hãy trả lời đủ mọi câu hỏi.',
     openOnMac: 'Chỉ mở được trên {mac}.',

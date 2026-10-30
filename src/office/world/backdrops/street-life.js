@@ -21,6 +21,8 @@ import { buildCorner } from './street-corner.js';
 import { buildMorning } from './street-morning.js';
 import { buildRepair } from './street-repair.js';
 import { buildSirens } from './street-siren.js';
+import { buildCsgt } from './street-csgt.js';
+import { buildNhau } from './street-nhau.js';
 import { buildWires } from './street-wires.js';
 import { buildSignals } from './street-signals.js';
 import { buildRiderExtras } from './street-riders.js';
@@ -135,20 +137,24 @@ function scooterParts() {
 const SKIN = '#E8C2A0', TROUSERS = '#2F3A4C', SHOES = '#1E2125', GLOVES = '#2B2F36';
 /* Someone on a scooter: the driver, leaning a little over the bars, or a passenger on the back of the seat, hands on
    the knees. `cloth` is painted per instance (the jacket, and the driver's helmet), `helmet` separately (a passenger
-   wears the company's helmet over their own clothes), `trim` keeps its colours (face, hands, trousers, shoes). */
-function riderParts(passenger) {
+   wears the company's helmet over their own clothes), `trim` keeps its colours (face, hands, trousers, shoes). For the
+   traffic police's stops (street-csgt.js): `bare`, no helmet (hair); `phone`, the right hand up at the ear, a phone in it. */
+export function riderParts(passenger, { bare = false, phone = false } = {}) {
   const x0 = passenger ? -0.38 : 0, cloth = [], helmet = [], trim = [];
   cloth.push(W(at(new RoundedBoxGeometry(0.3, 0.5, 0.4, 2, 0.1).rotateZ(-0.1), x0 - 0.14, 1.2, 0)));
   for (const s of [-1, 1]) {
-    const sh = V3(x0 - 0.1, 1.38, s * 0.2), el = passenger ? V3(x0 - 0.02, 1.12, s * 0.25) : V3(0.16, 1.22, s * 0.26), hd = passenger ? V3(x0 + 0.12, 1.0, s * 0.19) : V3(0.47, 1.12, s * 0.27);
+    const ear = phone && s > 0, sh = V3(x0 - 0.1, 1.38, s * 0.2);
+    const el = ear ? V3(-0.02, 1.27, 0.32) : passenger ? V3(x0 - 0.02, 1.12, s * 0.25) : V3(0.16, 1.22, s * 0.26), hd = ear ? V3(-0.07, 1.55, 0.17) : passenger ? V3(x0 + 0.12, 1.0, s * 0.19) : V3(0.47, 1.12, s * 0.27);
+    if (ear) trim.push(boxAt(0.035, 0.14, 0.075, -0.08, 1.6, 0.14, '#15171A'));
     cloth.push(limb(sh, el, 0.058), ball(0.058, el.x, el.y, el.z), limb(el, hd, 0.05));
     trim.push(ball(0.048, hd.x, hd.y, hd.z, passenger ? SKIN : GLOVES));
     const hip = V3(x0 - 0.12, 0.98, s * 0.11), knee = passenger ? V3(x0 + 0.16, 0.95, s * 0.17) : V3(0.2, 1.0, s * 0.13), ank = passenger ? V3(x0 + 0.1, 0.42, s * 0.2) : V3(0.22, 0.43, s * 0.14);
     trim.push(limb(hip, knee, 0.075, TROUSERS), ball(0.07, knee.x, knee.y, knee.z, TROUSERS), limb(knee, ank, 0.062, TROUSERS), boxAt(0.21, 0.07, 0.1, ank.x + 0.06, ank.y - 0.03, ank.z, SHOES));
   }
   trim.push(limb(V3(x0 - 0.12, 1.44, 0), V3(x0 - 0.11, 1.52, 0), 0.06, SKIN), ball(0.12, x0 - 0.1, 1.58, 0, SKIN));
-  // a half-face helmet with a short peak over the face
-  (passenger ? helmet : cloth).push(W(new THREE.SphereGeometry(0.165, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.56).translate(x0 - 0.11, 1.62, 0)),
+  // a half-face helmet with a short peak over the face (or, bare-headed, the hair)
+  if (bare) trim.push(colorize(new THREE.SphereGeometry(0.128, 14, 9, 0, Math.PI * 2, 0, Math.PI * 0.6).rotateZ(0.3).translate(x0 - 0.12, 1.6, 0), '#221D19'));
+  else (passenger ? helmet : cloth).push(W(new THREE.SphereGeometry(0.165, 16, 10, 0, Math.PI * 2, 0, Math.PI * 0.56).translate(x0 - 0.11, 1.62, 0)),
     W(at(new RoundedBoxGeometry(0.1, 0.025, 0.22, 1, 0.01).rotateZ(-0.25), x0 + 0.05, 1.68, 0)));
   const mask = passenger ? null : [W(new THREE.SphereGeometry(0.1, 10, 8).scale(0.55, 0.6, 1.05).translate(x0 + 0.005, 1.535, 0))];
   return { cloth, helmet, trim, mask };
@@ -510,6 +516,7 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
     let goal = v.base, room = Infinity;
     if (v.passing && (v.passing.mode !== 'parked' && v.passing.mode !== 'out' || (v.passing.s - v.s) * L.dir < -(v.passing.half + v.half + 0.6))) v.passing = null;
     for (const p of L.parked) {
+      if (p.lets?.(v)) continue;
       const d = (p.s - v.s) * L.dir, reach = p.half + v.half;
       if (d < -(reach + 0.6) || d > reach + 16) continue;
       const max = p.side - p.w - v.w - 0.03;   // the furthest towards the kerb it can keep and still clear it
@@ -530,7 +537,8 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
       const out = THREE.MathUtils.clamp((v.base - v.side) / (v.base - max), 0, 1);
       if (out < 0.9) room = Math.min(room, d - reach - 0.3 + out * (2 * reach + 1));
     }
-    if (v.mode === 'drive') v.sideGoal = goal;
+    // (one on its way to a kerb further on steers round too: else it waits behind a parked car for good)
+    if (v.mode === 'drive' || (v.mode === 'park' && (v.slot.s - v.s) * L.dir > 14)) v.sideGoal = goal;
     return room;
   }
   // spread each lane's vehicles out along it, as many as this hour has
@@ -600,7 +608,7 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
         let lead = null, gap = Infinity;
         for (let k = 1; k < list.length; k++) { const o = list[(n - k + list.length) % list.length]; if (v.siren && o.yielding) continue; if (Math.abs(o.side - v.side) < o.w + v.w + 0.06) { lead = o; break; } }
         if (lead) { let du = (lead.s - v.s) * L.dir; if (du <= 0) du += LEN; gap = du - lead.half - v.half; }
-        let room = Math.min(gap - (v.name === 'moto' ? motoGap : 1.1) - v.v * 0.35, v.siren ? Infinity : roomAtLight(v, t), roundParked(v, L, t), roomForWalker(v, L)), cap = Infinity;
+        let room = Math.min(gap - (v.name === 'moto' ? motoGap : 1.1) - v.v * 0.35, v.siren || v.runsRed ? Infinity : roomAtLight(v, t), roundParked(v, L, t), roomForWalker(v, L)), cap = Infinity;   // (runsRed: one the traffic police will stop, street-csgt.js)
         if (sirens.length) {
           if (v.siren) { const red = roomAtLight(v, t); if (red < 14) cap = 3 + red * 0.3; }   // through a red light, slowly
           else if (yields(v, L)) { v.yielding = true; cap = v.vmax * 0.35; if (v.mode === 'drive' && !v.passing) v.sideGoal = Math.max(v.sideGoal, v.name === 'moto' ? 1.95 : v.w > 1 ? 1.35 : 1.72); }
@@ -660,15 +668,16 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
       const x = shown >= 0 ? -8 + shown * 4.6 : lx, z = shown >= 0 ? showZ : lz;
       const yaw = shown >= 0 ? 0 : yawOf(L) - v.steer;
       q.setFromAxisAngle(UP, yaw); P.set(x, GY + (shown < 0 && v.side > HALF + 0.15 ? 0.12 : 0), z); m4.compose(P, q, v.K.scaleV);   // (up on the pavement: parking there)
-      if (M) { M.body.setMatrixAt(v.k, m4); M.trim.setMatrixAt(v.k, m4); M.rider?.setMatrixAt(v.k, m4); M.doors?.setMatrixAt(v.k, m4); }
+      // (ownRider: street-csgt.js draws the rider, or they got off; ownAll: it draws the whole thing, a patrol bike)
+      if (M) { const mm = v.ownAll ? Z0 : m4; M.body.setMatrixAt(v.k, mm); M.trim.setMatrixAt(v.k, mm); M.rider?.setMatrixAt(v.k, v.ownRider || v.ownAll ? Z0 : m4); M.doors?.setMatrixAt(v.k, mm); }
       v.deco?.(m4);   // (a bridal car's flowers: street-wedding.js)
       if (M?.box) {   // a scooter: what this one carries
         const lv = v.livery, on = (yes) => (yes ? m4 : Z0);
         M.xsmLogo.setMatrixAt(v.k, on(lv === 'xsm')); M.grabLogo.setMatrixAt(v.k, on(lv === 'grab' || lv === 'food')); M.box.setMatrixAt(v.k, on(lv === 'food'));
-        M.mask.setMatrixAt(v.k, on(v.mask));
+        M.mask.setMatrixAt(v.k, on(v.mask && !v.ownRider && !v.ownAll));
         M.paxCloth.setMatrixAt(v.k, on(v.pax)); M.paxHelmet.setMatrixAt(v.k, on(v.pax)); M.paxTrim.setMatrixAt(v.k, on(v.pax));
         M.paxXsm.setMatrixAt(v.k, on(v.pax && lv === 'xsm')); M.paxGrab.setMatrixAt(v.k, on(v.pax && lv === 'grab'));
-        if (v.extra) extras.draw(v, m4);
+        if (v.extra && !v.ownAll) extras.draw(v, m4);
       }
       const fx = Math.cos(yaw), fz = -Math.sin(yaw), rx = -fz, rz = fx, lit = v.mode !== 'parked';   // heading, its right; parked: lights off
       if (lit) {
@@ -751,6 +760,24 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
     L.parked.push(v);
     return riderOf(v, sl, L);
   }
+
+  // one riding in its lane, pulled over at the kerb near s0 (the traffic police, street-csgt.js): it indicates, slows,
+  // pulls in and waits there until release(), then rides on
+  function pullOver(v, s0, side = 1.92) {
+    if (!v?.on || v.mode !== 'drive') return null;
+    const sl = { L: v.L, s: s0, kind: 'rider', side, v, next: Infinity, stay: true };
+    slots.push(sl);
+    Object.assign(v, { special: true, mode: 'park', slot: sl, passing: null });
+    return riderOf(v, sl, v.L);
+  }
+  // a scooter's colours as drawn: the rider's jacket (and helmet), the bike, a passenger's clothes and helmet
+  const col4 = new THREE.Color();
+  function lookOf(v) {
+    const M = meshes[v.name], hex = (o) => (o?.instanceColor ? (o.getColorAt(v.k, col4), `#${col4.getHexString()}`) : null);
+    return { jacket: hex(M?.rider), paint: `#${v.paint.getHexString()}`, pax: v.pax ? hex(M?.paxCloth) : null, paxHelmet: v.pax ? hex(M?.paxHelmet) : null };
+  }
+  // the light at crossing idx of lane L for the traffic along it: 'g', 'y' or 'r'
+  const lightAt = (L, idx, t) => { const [i, j] = L.axis === 'z' ? [L.i, idx] : [idx, L.j]; return lightOf(phaseOf(i, j, t, L.axis)); };
 
   /* ---------- scooters parked on the office's pavement (the staff's own, outings.js) ---------- */
   const BIKES = low ? 12 : 24, scoot = scooterParts(), bikeFree = [...Array(BIKES).keys()];
@@ -1067,9 +1094,10 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
     for (const p of people) if (p.on && ek(p.a, p.b) === ek(a, b)) { if (p.u < 0.5) [p.a, p.b, p.u] = [p.b, p.a, 1 - p.u]; p.u = Math.max(p.u, 0.999); }
   }
   // something standing in lane L at the kerb (s along it, `half` its length, `side`/`w` as a vehicle's): the traffic goes
-  // round it as round a parked car. Returns its removal.
-  function obstacle(L, s, half, side, w) {
-    const o = { s, half, side, w, mode: 'parked' };
+  // round it as round a parked car, but for whoever lets(v) lets by (the traffic police's own: pulling in beside their
+  // cones, and out again). Returns its removal.
+  function obstacle(L, s, half, side, w, lets = null) {
+    const o = { s, half, side, w, mode: 'parked', lets };
     L.parked.push(o);
     return () => { const i = L.parked.indexOf(o); if (i >= 0) L.parked.splice(i, 1); };
   }
@@ -1087,6 +1115,8 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
   const morning = buildMorning(G, { crowd: trades, finder, far: food.cart ? [[food.cart.x, food.cart.z, 13]] : [], callRider });
   const lunar = buildLunar(G, { crowd: trades, faces, C, avoid: wedding.sites.map(([x, z]) => [x, z, 4.5]), GY });   // (rằm, mùng một)
   const trade = [corner, repair, morning, lunar];
+  // the quán nhậu on a park's edge across the street (street-nhau.js): open in the evening, the office's people some nights
+  const nhau = buildNhau(G, { finder, folk, low, depart, far: wedding.sites.map(([x, z]) => [x, z, 4.5]) });
   // a few big street trees by the kerb near the office, where their shade falls just before a stop line (street-shade.js)
   const streetTrees = plantStreetTrees(G, { lanes, spotOf, inSB, HALF, XS, ZS, C, GY, avoid: [...finder.taken, ...wedding.sites.map(([x, z]) => [x, z, 4.0])] });
   // the countdowns beside the lights, and the shade scooters wait in on a hot day
@@ -1095,10 +1125,14 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
   // the power lines: one merged mesh, clear of all the above and of where a wedding's tent may go
   buildWires(G, { XS, ZS, HALF, SB, C, avoid: [...finder.taken, ...wedding.sites.map(([x, z]) => [x, z, 3.8]), ...streetTrees.map(([x, z]) => [x, z, 1.2]), ...lunar.spots] });
   const siren = buildSirens(G, { call: sirenCall, list: () => sirens, vehicle: (kind) => byKind[kind][0] });
+  // the traffic police: a patrol now and then, a checkpoint on the office's pavement some mornings and evenings
+  const csgt = buildCsgt(G, { laneAt, spotOf, SB, HALF, C, slots, pullOver, callRider, depart, lookOf, lightAt, riderParts, obstacle, inShop, eveningAt: nhau.lane ? { L: nhau.lane, s: nhau.s } : null,
+    avoid: [...finder.taken, ...wedding.sites.map(([x, z]) => [x, z, 4.5]), ...streetTrees.map(([x, z]) => [x, z, 1.4])] });
+  nhau.police(csgt.expect);   // (a regular riding home after a few passes the evening's alcohol checkpoint)
   for (const o of G.children.slice(before)) o.userData.setPiece = true;   // (for ?debug: what they cost)
 
   // what you can walk up to in first person (first-person.js): the cart and the stall, while they are open
-  const spots = () => (food.cart ? [food.cart.g.visible && { kind: 'banhmi', x: food.cart.x, z: food.cart.z }, food.stall.g.visible && { kind: 'tea', x: food.stall.x, z: food.stall.z }].filter(Boolean) : []);
+  const spots = () => [...(food.cart ? [food.cart.g.visible && { kind: 'banhmi', x: food.cart.x, z: food.cart.z }, food.stall.g.visible && { kind: 'tea', x: food.stall.x, z: food.stall.z }].filter(Boolean) : []), ...csgt.spots(), ...nhau.spots()];
   // walking in on the street: the ground under you (the pavement is a step up from the road) and what is in the way (the
   // buildings, the office's raised terrace, the edge of the city)
   const pads = blocks.map((b) => [b.x0, b.x1, b.z0, b.z1]), TERR = [TER.x0, TER.x1, TER.z0, TER.z1];
@@ -1111,12 +1145,13 @@ export function buildStreetLife(G, { XS, ZS, STREET_W, SB, shops = [], parks = [
   return {
     marks,   // zebras and stop lines, merged with the city's other road paint
     update(dt, t) {
-      now = t; updateLights(t); census(t); updateParking(t); updateTraffic(dt, t); drawVehicles(t); if (PN) updatePeople(dt, t); updateFood(t); park.update(dt, t, hour); wedding.update(dt, t, hour); for (const p of trade) p.update(dt, t, hour); siren.update(dt, t); signals.update(t); crowd.flush(); guests.flush(); trades.flush(); },
-    night(on) { headPts.visible = tailPts.visible = beams.visible = on; nightOn = on; foodAt = -1; park.night(on); wedding.night(on); siren.night(on); },
+      now = t; updateLights(t); census(t); updateParking(t); updateTraffic(dt, t); drawVehicles(t); if (PN) updatePeople(dt, t); updateFood(t); park.update(dt, t, hour); wedding.update(dt, t, hour); for (const p of trade) p.update(dt, t, hour); siren.update(dt, t); nhau.update(dt, t, hour); csgt.update(dt, t, hour); signals.update(t); crowd.flush(); guests.flush(); trades.flush(); },
+    night(on) { headPts.visible = tailPts.visible = beams.visible = on; nightOn = on; foodAt = -1; park.night(on); wedding.night(on); siren.night(on); csgt.night(on); nhau.night(on); },
     // for outings.js and walking in (first-person.js); slots: for ?debug
     street: { route, exits, callRider, depart, parkBike, unparkBike, at: (L, s, side) => { const [x, z] = spotOf(L, s, side); return { x, z }; },
       pavement: GY + 0.12, road: GY, pavementSide: HALF + INS, spots, groundAt, blockedAt, setWalker: (p) => { walker = p; }, slots, wedding: wedding.debug, park: park.debug, trades: () => ({ corner: corner.debug(), repair: repair.debug(), morning: morning.debug(), lunar: lunar.debug(), shade: shadeOn, shadeStops: lanes.flatMap((L) => Object.entries(L.shade || {}).map(([idx, sh]) => { const [x, z] = spotOf(L, sh, 1.3), [lx, lz] = spotOf(L, L.cross[idx] - L.dir * 5.2, 1.3); return { at: [+x.toFixed(1), +z.toFixed(1)], line: [+lx.toFixed(1), +lz.toFixed(1)], waiting: L.list.filter((v) => v.name === 'moto' && v.v < 0.3 && Math.abs(v.s - sh) < 3).length }; })) }),
       carrying: () => vehicles.filter((v) => v.on && v.extra).map((v) => { const [x, z] = spotOf(v.L, v.s, v.side); return { what: Object.keys(v.extra), at: [+x.toFixed(1), +z.toFixed(1)], v: +v.v.toFixed(1) }; }),
+      csgt: csgt.debug, nhau: nhau.office, nhauDebug: nhau.debug,
       siren: (kind) => { const v = siren.call(kind); return v ? { kind: v.name, lane: `${v.L.axis}${v.L.v}${v.L.dir > 0 ? '+' : '-'}`, s: +v.s.toFixed(1) } : null; }, sirens: () => sirens.map((v) => ({ kind: v.name, s: +v.s.toFixed(1), v: +v.v.toFixed(1), side: +v.side.toFixed(2), at: [+v.px?.toFixed(1), +v.pz?.toFixed(1)] })) },
   };
 }

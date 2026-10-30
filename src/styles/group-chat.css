@@ -1,0 +1,235 @@
+/* The company's group chat (ui/group-chat-view.js), after the Vietnamese messenger: on a computer its desktop app (a
+   white bar with the group's picture, a floating pinned card, a grey ground, a toolbar over the input and 👍 / GỬI), on a
+   phone its mobile app (the blue gradient bar, back, ☰, "Tin nhắn" with ••• 🎤 🖼 or the send arrow). Its own light
+   palette whatever the office's theme. Colours and sizes from the app's web CSS (its light-theme tokens) and a 2026
+   screenshot of the phone app: ink #081B3A, grey #5A6981, the brand blue #0068FF, received bubbles white with a fine
+   shadow and no border, yours #E5F1FF (#D4EFFB on the phone), the ground #EBECF0 (#E4E8F4), red #C31818 for counts;
+   bubbles 12 px of padding and 8 px of radius; 15 px text, 12 px times, 13 px time lines and system lines. */
+.zc {
+  --zc-blue: #0068FF; --zc-ground: #EBECF0; --zc-ink: #081B3A; --zc-grey: #5A6981; --zc-ph: #77859C; --zc-time: #5A6981; --zc-icon: #081B3A;
+  --zc-mine: #E5F1FF; --zc-shadow: 0 0 1px rgba(21, 39, 71, .25), 0 1px 1px rgba(21, 39, 71, .25); --zc-line: #E5E7EB; --zc-hover: #F1F3F6;
+  position: fixed; z-index: 40; right: 14px; bottom: 14px; top: 64px; width: min(460px, calc(100vw - 28px));
+  display: flex; flex-direction: column; overflow: hidden; border-radius: 12px; background: var(--zc-ground); color: var(--zc-ink);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, .45), 0 0 0 1px rgba(255, 255, 255, .06);
+  font: 400 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", "SF Pro Text", Roboto, "Helvetica Neue", Arial, sans-serif; letter-spacing: .2px;
+}
+.zc [hidden] { display: none !important; }
+.zc button { font: inherit; color: inherit; letter-spacing: inherit; }
+.zc-mo { display: none !important; }
+/* the bar (computer): white; the group's picture, name and members; search, call, video, the info panel, close */
+.zc-head { flex: none; display: flex; align-items: center; gap: 4px; height: 68px; padding: 0 8px 0 14px; background: #fff; border-bottom: 1px solid var(--zc-line); color: var(--zc-ink); }
+.zc-head-av { flex: none; margin-right: 8px; }
+.zc-ib { all: unset; flex: none; display: grid; place-items: center; width: 38px; height: 38px; border-radius: 8px; color: var(--zc-icon); cursor: pointer; }
+.zc-ib .ic { width: 22px; height: 22px; stroke-width: 1.6; }
+.zc-ib:hover:not(:disabled) { background: var(--zc-hover); }
+.zc-ib.is-deco { cursor: default; }
+.zc-title { flex: 1; min-width: 0; display: grid; gap: 2px; line-height: 1.25; }
+.zc-title b { font-size: 17px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-subline { display: flex; align-items: center; gap: 4px; color: var(--zc-grey); }
+.zc-subline .ic { width: 14px; height: 14px; stroke-width: 1.8; }
+.zc-sub { font-size: 13px; }
+.zc-close { margin-left: 2px; }
+/* the pinned message: a floating card at the top of the conversation */
+.zc-pin { all: unset; flex: none; display: flex; align-items: center; gap: 12px; margin: 8px 10px 0; padding: 8px 12px; border-radius: 8px; background: #fff; box-shadow: 0 1px 3px rgba(21, 39, 71, .18); cursor: pointer; z-index: 1; }
+.zc-pin-ic { flex: none; display: grid; place-items: center; color: var(--zc-blue); }
+.zc-pin-ic .ic { width: 24px; height: 24px; stroke-width: 1.6; }
+.zc-pin-x { flex: 1; min-width: 0; display: grid; line-height: 1.35; }
+.zc-pin-x b { font-size: 14px; font-weight: 600; }
+.zc-pin-t { font-size: 13px; color: var(--zc-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-pin-more { flex: none; padding: 0 6px; color: var(--zc-grey); font-weight: 700; letter-spacing: 1px; }
+/* the conversation, gathered at the bottom like the app's */
+.zc-body { flex: 1; min-height: 0; overflow-y: auto; padding: 8px 16px 10px; overscroll-behavior: contain; display: flex; flex-direction: column; }
+.zc-body > * { flex: none; }
+.zc-push { flex: 1 0 0 !important; }
+.zc-day { width: max-content; max-width: 90%; margin: 16px auto; padding: 2px 12px; border-radius: 12px; background: rgba(0, 0, 0, .2); color: #fff; font-size: 13px; }
+.zc-sys { width: max-content; max-width: 88%; margin: 12px auto; padding: 3px 12px; border-radius: 12px; background: rgba(255, 255, 255, .85); color: var(--zc-grey); font-size: 13px; text-align: center; }
+.zc-row { position: relative; display: flex; align-items: flex-start; gap: 8px; margin-top: 4px; }
+.zc-row.is-first { margin-top: 16px; }
+.zc-row.is-mine { justify-content: flex-end; }
+.zc-row--card { justify-content: center; }
+.zc-row.is-flash .zc-bub, .zc-row.is-flash .zc-poll, .zc-row.is-flash .zc-remind { animation: zc-flash 1.4s; }
+@keyframes zc-flash { 30% { box-shadow: 0 0 0 3px #FFD24A; } }
+.zc-av-slot { flex: none; width: 36px; }
+.zc-av { display: inline-grid; place-items: center; flex: none; border-radius: 50%; background-size: cover; background-position: center; color: #fff; font-weight: 600; line-height: 1; overflow: hidden; }
+.zc-bub { position: relative; display: grid; min-width: 40px; max-width: 75%; padding: 12px; border-radius: 8px; background: #fff; box-shadow: var(--zc-shadow); word-break: break-word; }
+.zc-row.is-mine .zc-bub { background: var(--zc-mine); }
+.zc-bub.is-bare { padding: 0; background: none; box-shadow: none; }
+.zc-name { font-size: 13px; color: var(--zc-grey); margin: -2px 0 6px; }
+.zc-text { white-space: pre-wrap; font-size: 15px; line-height: 1.45; }
+.zc-bigemo { font-size: 44px; line-height: 1.1; }
+.zc-muted { color: var(--zc-grey); font-style: italic; }
+.zc-at { color: var(--zc-blue); }
+.zc-time { font-size: 12px; color: var(--zc-time); margin-top: 6px; }
+.zc-sticker { display: block; width: 130px; height: 130px; object-fit: contain; }
+.zc-photo { position: relative; display: block; }
+.zc-photo img { display: block; width: 240px; max-width: 100%; border-radius: 8px; }
+.zc-ptime { position: absolute; right: 8px; bottom: 8px; padding: 1px 7px; border-radius: 9px; background: rgba(0, 0, 0, .45); color: #fff; font-size: 11.5px; }
+/* reactions: the ♡ on the corner (always on the newest, on hover elsewhere), the pill once someone reacted */
+.zc-rx { position: absolute; right: 12px; bottom: -15px; display: flex; align-items: center; gap: 1px; height: 24px; padding: 1px 10px; box-sizing: border-box; border-radius: 15px;
+  background: #fff; border: .5px solid rgba(0, 0, 0, .15); font-size: 13px; z-index: 1; }
+.zc-rx i { font-style: normal; }
+.zc-rx b { font-size: 12px; font-weight: 500; color: var(--zc-grey); margin-left: 4px; }
+.zc-row:has(.zc-rx) { margin-bottom: 14px; }
+.zc-like { all: unset; position: absolute; right: -8px; bottom: -10px; display: grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #fff;
+  border: .5px solid rgba(0, 0, 0, .15); color: #8B97AB; cursor: pointer; opacity: 0; transition: opacity .15s; }
+.zc-like i { font-style: normal; font-size: 14px; line-height: 1; margin-top: 1px; }
+.zc-like.is-on, .zc-row:hover .zc-like { opacity: 1; }
+.zc-row:has(.zc-like.is-on) { margin-bottom: 10px; }
+/* the tools over a bubble: the six reactions, a reply, recall (hover; a tap on a touch screen) */
+.zc-tools { position: absolute; bottom: calc(100% + 2px); right: 0; display: none; align-items: center; gap: 4px; z-index: 3; white-space: nowrap; }
+.zc-row.is-mine .zc-tools { right: auto; left: 0; flex-direction: row-reverse; }
+.zc-row.is-first .zc-tools { bottom: auto; top: calc(100% + 14px); }
+@media (hover: hover) { .zc-bub:hover .zc-tools { display: flex; } }
+.zc-bub.is-tools .zc-tools { display: flex; }
+.zc-pick { display: flex; gap: 2px; padding: 4px 6px; border-radius: 20px; background: #fff; border: .5px solid rgba(0, 0, 0, .15); box-shadow: 0 4px 16px rgba(21, 39, 71, .2); }
+.zc-pick-b { all: unset; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 50%; font-size: 20px; cursor: pointer; transition: transform .12s; animation: zc-pop .2s backwards; }
+.zc-pick-b:hover { transform: scale(1.3) translateY(-2px); }
+@keyframes zc-pop { from { transform: scale(.3); opacity: 0; } }
+.zc-tool { all: unset; display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; background: #fff; border: .5px solid rgba(0, 0, 0, .15); box-shadow: 0 4px 16px rgba(21, 39, 71, .2); color: var(--zc-grey); cursor: pointer; }
+.zc-tool .ic { width: 17px; height: 17px; }
+.zc-tool:hover { color: var(--zc-blue); }
+/* a reply: what it answers, quoted in the bubble with a blue bar */
+.zc-quote { display: grid; gap: 1px; margin: 0 0 8px; padding: 6px 8px; border-left: 3px solid #0068FF; border-radius: 4px; background: #EBECF0; cursor: pointer; min-width: 0; }
+.zc-row.is-mine .zc-quote { background: #C7E0FF; }
+.zc-quote b { font-size: 13px; font-weight: 600; }
+.zc-quote span { font-size: 13px; color: var(--zc-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 260px; }
+/* where you stopped reading */
+.zc-newline { display: flex; align-items: center; gap: 8px; margin: 14px 0 6px; color: #E5484D; font-size: 13px; font-weight: 500; }
+.zc-newline::before, .zc-newline::after { content: ''; flex: 1; height: 1px; background: rgba(229, 72, 77, .45); }
+/* polls and reminders: cards in the middle */
+.zc-poll { display: grid; gap: 8px; width: min(308px, 100%); padding: 16px 12px 12px; box-sizing: border-box; border-radius: 10px; background: #fff; box-shadow: var(--zc-shadow); }
+.zc-card-tag { font-size: 13px; color: var(--zc-grey); }
+.zc-poll-q { font-size: 16px; font-weight: 500; line-height: 1.35; }
+.zc-poll-o { all: unset; position: relative; display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 4px; background: var(--zc-line); overflow: hidden; cursor: pointer; font-size: 14px; }
+.zc-poll-o.is-mine { box-shadow: inset 0 0 0 1.5px var(--zc-blue); }
+.zc-poll-bar { position: absolute; inset: 0 auto 0 0; background: #ADD1FF; transition: width .4s; }
+.zc-poll-t, .zc-poll-faces, .zc-poll-c { position: relative; }
+.zc-poll-t { flex: 1; }
+.zc-poll-faces { display: flex; }
+.zc-poll-faces .zc-av { margin-left: -5px; box-shadow: 0 0 0 1.5px #fff; }
+.zc-poll-c { min-width: 14px; text-align: right; font-weight: 500; color: var(--zc-grey); }
+.zc-poll-who { margin: -4px 2px 0; font-size: 12px; color: var(--zc-grey); }
+.zc-poll-n { font-size: 13px; color: var(--zc-grey); }
+.zc-card-btn { all: unset; display: block; padding: 10px 0 0; border-top: 1px solid var(--zc-line); color: var(--zc-blue); font-size: 15px; font-weight: 500; text-align: center; cursor: pointer; }
+.zc-remind { display: grid; gap: 10px; width: min(308px, 100%); padding: 14px 12px 12px; box-sizing: border-box; border-radius: 10px; background: #fff; box-shadow: var(--zc-shadow); }
+.zc-rm-top { display: flex; gap: 12px; align-items: flex-start; }
+.zc-leaf { flex: none; display: grid; width: 56px; overflow: hidden; border-radius: 8px; box-shadow: 0 0 0 1px var(--zc-line); text-align: center; background: #fff; }
+.zc-leaf b { background: #0068FF; color: #fff; font-size: 11px; font-weight: 600; padding: 3px 0; text-transform: uppercase; }
+.zc-leaf strong { font-size: 26px; font-weight: 600; line-height: 1.35; color: var(--zc-ink); }
+.zc-rm-info { min-width: 0; display: grid; gap: 1px; }
+.zc-rm-t { font-size: 15.5px; font-weight: 600; line-height: 1.3; }
+.zc-rm-info small { font-size: 13px; color: var(--zc-grey); }
+.zc-rm-going { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--zc-grey); }
+.zc-rm-acts { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.zc-rm-b { all: unset; text-align: center; padding: 8px 0; border-radius: 6px; background: #EAEDF0; font-size: 14px; font-weight: 500; cursor: pointer; }
+.zc-rm-b.is-yes { background: #E5F1FF; color: var(--zc-blue); }
+.zc-rm-b.is-on { box-shadow: inset 0 0 0 1.5px var(--zc-blue); }
+.zc-rm-b:disabled { opacity: .55; cursor: default; }
+/* under your last message: "✓✓ Đã nhận" / "Đã xem" and the faces of who has seen it */
+.zc-seen { display: flex; justify-content: flex-end; align-items: center; gap: 3px; margin: 6px 0 2px; }
+.zc-seen-st { display: inline-flex; align-items: center; gap: 5px; padding: 2px 10px; border-radius: 12px; background: rgba(0, 0, 0, .2); color: #fff; font-size: 12px; margin-right: 4px; }
+.zc-seen-st .ic { width: 14px; height: 14px; stroke-width: 2; }
+.zc-seen-n { padding: 0 5px; border-radius: 8px; background: rgba(0, 0, 0, .2); color: #fff; font-size: 11px; line-height: 16px; }
+.zc-typing { flex: none; display: flex; align-items: center; gap: 6px; padding: 2px 16px 6px; font-size: 13px; color: var(--zc-grey); }
+.zc-dots { width: 22px; height: 8px; background: radial-gradient(circle, var(--zc-grey) 2.2px, transparent 2.6px) 0 50% / 7px 8px repeat-x; animation: zc-dots 1s steps(3) infinite; }
+@keyframes zc-dots { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.zc-new { all: unset; position: absolute; right: 16px; bottom: 120px; padding: 6px 12px; border-radius: 4px; background: #fff; color: var(--zc-blue); font-size: 13px; font-weight: 500;
+  box-shadow: 0 2px 8px rgba(21, 39, 71, .25); cursor: pointer; z-index: 4; }
+/* the composer (computer): the toolbar, then the input with 😊 and 👍 — or GỬI once something is typed */
+.zc-toolbar { flex: none; display: flex; align-items: center; gap: 2px; height: 46px; padding: 0 8px; background: #fff; border-top: 1px solid var(--zc-line); }
+.zc-toolbar .zc-ib { width: 40px; height: 36px; }
+.zc-toolbar .zc-ib .ic { width: 23px; height: 23px; }
+.zc-bar { flex: none; display: flex; align-items: center; gap: 2px; min-height: 52px; padding: 4px 8px 4px 4px; background: #fff; border-top: 1px solid var(--zc-line); }
+.zc-in { flex: 1; min-width: 0; resize: none; border: 0; outline: none; background: none; color: var(--zc-ink); font: inherit; font-size: 15px; line-height: 20px; padding: 12px 10px; max-height: 110px; }
+.zc-in::placeholder { color: var(--zc-ph); }
+.zc-like-send { all: unset; flex: none; display: grid; place-items: center; width: 40px; height: 38px; border-radius: 8px; font-size: 26px; cursor: pointer; }
+.zc-like-send:hover { background: var(--zc-hover); }
+.zc-send { all: unset; flex: none; display: none; place-items: center; height: 36px; padding: 0 14px; border-radius: 8px; color: var(--zc-blue); cursor: pointer; }
+.zc-send .ic { display: none; width: 23px; height: 23px; fill: var(--zc-blue); stroke: var(--zc-blue); }
+.zc-send-t { font-size: 14px; font-weight: 700; letter-spacing: .5px; }
+.zc-send:hover { background: #EAF2FF; }
+.zc.has-text .zc-send { display: grid; }
+.zc.has-text .zc-when-empty { display: none !important; }
+/* the answer bar over the input, @ suggestions, ••• (a poll, @), stickers and emoji */
+.zc-reply { flex: none; display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; background: #fff; border-top: 1px solid var(--zc-line); color: var(--zc-blue); }
+.zc-reply > .ic { width: 18px; height: 18px; flex: none; }
+.zc-reply-q { flex: 1; min-width: 0; display: grid; border-left: 2px solid #0068FF; padding-left: 8px; }
+.zc-reply-q b { font-size: 13px; font-weight: 600; color: var(--zc-ink); }
+.zc-reply-t { font-size: 13px; color: var(--zc-grey); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-reply-x { width: 32px; height: 32px; color: var(--zc-grey); }
+.zc-men, .zc-more { position: absolute; left: 10px; right: 10px; bottom: 104px; display: grid; gap: 2px; max-height: 300px; overflow-y: auto; padding: 8px; border-radius: 10px; background: #fff;
+  box-shadow: 0 6px 20px rgba(21, 39, 71, .25); z-index: 5; }
+.zc-men-o, .zc-more-o { all: unset; display: flex; align-items: center; gap: 10px; padding: 6px 8px; border-radius: 8px; cursor: pointer; font-size: 15px; }
+.zc-men-o:hover, .zc-more-o:hover { background: var(--zc-hover); }
+.zc-more-o .ic { width: 20px; height: 20px; color: var(--zc-blue); }
+.zc-more-poll { display: grid; gap: 6px; padding: 8px 6px 2px; border-top: 1px solid var(--zc-line); margin-top: 4px; }
+.zc-more-poll b { font-size: 15px; font-weight: 500; }
+.zc-more-in { border: 1px solid #D6DBE3; border-radius: 6px; padding: 7px 10px; font: inherit; font-size: 14px; color: var(--zc-ink); background: #fff; outline: none; }
+.zc-more-in:focus { border-color: var(--zc-blue); }
+.zc-stks { flex: none; display: grid; gap: 6px; padding: 6px 8px 8px; background: #fff; border-top: 1px solid var(--zc-line); max-height: 260px; overflow-y: auto; }
+.zc-stk-tabs { display: flex; gap: 4px; }
+.zc-stk-tab { all: unset; padding: 4px 12px; border-radius: 14px; font-size: 13px; font-weight: 500; color: var(--zc-grey); cursor: pointer; }
+.zc-stk-tab.is-on { background: #E5F1FF; color: var(--zc-blue); }
+.zc-stk-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.zc-emo-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 2px; }
+.zc-emo { all: unset; display: grid; place-items: center; height: 38px; border-radius: 8px; font-size: 24px; cursor: pointer; }
+.zc-emo:hover, .zc-stk:hover { background: var(--zc-hover); }
+.zc-stk { all: unset; display: grid; place-items: center; border-radius: 10px; cursor: pointer; }
+.zc-stk img { width: 74px; height: 74px; }
+/* members: the info panel (computer) or ☰ (phone) */
+.zc-mems { position: absolute; inset: 68px 0 0 auto; width: 80%; overflow-y: auto; padding: 14px; box-sizing: border-box; background: #fff; box-shadow: -8px 0 24px rgba(21, 39, 71, .2); z-index: 6; }
+.zc-mem-h { display: block; margin-bottom: 8px; font-size: 16px; font-weight: 600; }
+.zc-mem { display: grid; grid-template-columns: 40px 1fr; grid-template-rows: auto auto; column-gap: 12px; align-items: center; padding: 7px 0; }
+.zc-mem .zc-av { grid-row: span 2; }
+.zc-mem-t { font-size: 15px; font-weight: 500; }
+.zc-mem small { font-size: 13px; color: var(--zc-grey); }
+.zc-mem-note { margin: 14px 0 0; font-size: 13px; color: var(--zc-grey); line-height: 1.45; }
+.zc-mem { position: relative; }
+.zc-mem-go { position: absolute; right: 0; top: 50%; transform: translateY(-50%); padding: 5px 10px; border-radius: 14px; background: #E5F1FF; color: var(--zc-blue); font-size: 13px; font-weight: 600; text-decoration: none; }
+.zc-hint { flex: none; display: flex; align-items: center; gap: 6px; padding: 6px 6px 6px 14px; background: #FFF8E1; border-top: 1px solid #F3E2A9; color: #5C4A12; font-size: 13px; line-height: 1.4; }
+.zc-hint > span { flex: 1; }
+/* the group's picture: four faces in a square, the last a count of the rest */
+.zc-gav { flex: none; display: grid; grid-template-columns: 1fr 1fr; place-items: center; gap: 2px; }
+.zc-gav .zc-av { box-shadow: 0 0 0 1.5px #fff; }
+.zc-gav-n { display: grid; place-items: center; border-radius: 50%; background: #EBECF0; color: #5A6981; font-size: 10px; font-weight: 600; }
+/* the top bar's button and its count; a card for a new message while the window is shut */
+.tb-chat { position: relative; }
+.tb-badge { position: absolute; top: -5px; right: -5px; min-width: 16px; height: 16px; padding: 0 4px; box-sizing: border-box; border-radius: 8px; background: #C31818; color: #fff;
+  font: 700 10px/16px system-ui, sans-serif; font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--bar, #111720); }
+.zc-peek { all: unset; position: fixed; z-index: 41; top: 64px; right: 14px; display: flex; align-items: center; gap: 12px; width: min(340px, calc(100vw - 28px)); padding: 10px 12px; box-sizing: border-box;
+  border-radius: 12px; background: #fff; color: #081B3A; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); cursor: pointer;
+  font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; animation: zc-in .25s ease-out; }
+.zc-peek.is-out { opacity: 0; transform: translateY(-6px); transition: opacity .3s, transform .3s; }
+.zc-peek-t { min-width: 0; display: grid; }
+.zc-peek-t b { font-size: 15px; font-weight: 600; }
+.zc-peek-t span { color: #5A6981; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@keyframes zc-in { from { opacity: 0; transform: translateY(-8px); } }
+
+/* ---------- on a phone: the mobile app — full screen, the blue gradient bar, "Tin nhắn" with ••• 🎤 🖼 or the arrow ---------- */
+@media (max-width: 640px) {
+  .zc { --zc-ground: #E4E8F4; --zc-mine: #D4EFFB; --zc-icon: #5A6981; inset: 0; width: auto; border-radius: 0; z-index: 60;
+    padding: env(safe-area-inset-top, 0px) 0 env(safe-area-inset-bottom, 0px); background: linear-gradient(90deg, #0085FF, #00ACF7) top / 100% 120px no-repeat, var(--zc-ground); }
+  .zc-pc { display: none !important; }
+  .zc-mo { display: grid !important; }
+  .zc-head { height: 56px; padding: 0 4px; gap: 2px; border: 0; color: #fff; background: linear-gradient(90deg, #0085FF, #00ACF7); }
+  .zc-head .zc-ib { color: #fff; border-radius: 50%; }
+  .zc-head .zc-ib:hover:not(:disabled) { background: rgba(255, 255, 255, .18); }
+  .zc-head .zc-ib .ic { width: 23px; height: 23px; stroke-width: 1.9; }
+  .zc-back .ic { width: 26px; height: 26px; stroke-width: 2.4; }
+  .zc-subline { color: rgba(255, 255, 255, .9); }
+  .zc-pin { margin: 0; border-radius: 0; box-shadow: 0 1px 2px rgba(21, 39, 71, .12); }
+  .zc-body { padding: 8px 10px 10px; background: var(--zc-ground); }
+  .zc-bub { max-width: 78%; }
+  .zc-av-slot { width: 32px; }
+  .zc-bar { min-height: 52px; padding: 4px 4px 6px; }
+  .zc-bar .zc-ib { width: 40px; height: 40px; border-radius: 50%; }
+  .zc-bar .zc-ib .ic { width: 24px; height: 24px; }
+  .zc-in { font-size: 16px; padding: 10px 4px; }
+  .zc-send { width: 44px; padding: 0; }
+  .zc-send .ic { display: block; }
+  .zc-send-t { display: none; }
+  .zc-men, .zc-more { bottom: 64px; }
+  .zc-new { bottom: 70px; }
+  .zc-mems { inset: 56px 0 0 auto; width: 86%; }
+  .zc-tools { position: fixed; left: 50% !important; right: auto !important; top: auto !important; bottom: 80px; transform: translateX(-50%); }
+}

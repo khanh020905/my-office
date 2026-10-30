@@ -3,10 +3,11 @@ import { state } from '../core/state.js';
 import { $, STATIC, rand, replay } from '../core/env.js';
 import { CHAIR_IDLE, chairs } from '../world/desks.js';
 import { sessions, subs, workers } from '../people/workers.js';
+import { chatAct, chatApply, chatLeft, chatLoad } from '../ui/group-chat.js';
 import { setTrophies } from '../life/trophies.js';
 import { addFeed, queueFeed, queueUi, renderFeed, toast } from '../ui/activity.js';
 import { closeSession, drM } from '../ui/session-drawer.js';
-import { acctLogin, acctSwitched, limitWarned, liveWindows, loadMac, renderLimits, renderMac } from '../ui/mac-drawer.js';
+import { acctLogin, acctMoved, acctSwitched, limitWarned, liveWindows, loadMac, renderLimits, renderMac } from '../ui/mac-drawer.js';
 import { DEMO_TODOS, onTodos } from '../ui/whiteboard.js';
 import { TOKEN, freeDesk, removeSession, setConn, upsertSession } from '../net/live.js';
 import { onEvent } from '../life/incidents.js';
@@ -187,16 +188,17 @@ export function applyMsg(d, quiet = false) {
     state.feed = d.feed || []; state.stats = d.stats || {}; renderFeed();
     if ('local' in d) {   // only the live snapshot carries these
       perms.clear(); for (const p of d.perms || []) perms.set(p.id, p); renderPerms(); reportPresence();
-      state.isLocal = !!d.local; state.lanUrl = d.lan || null; state.lanBase = d.lanBase || null; state.phonePin = d.pin || null;
+      if (!quiet) chatLoad();   // (the group chat as it is now: after a reconnect, what was missed)
+      state.isLocal = !!d.local; state.lanUrl = d.lan || null; state.lanBase = d.lanBase || null; state.phonePin = d.pin || null; state.tsUrl = d.ts || null; state.tsHere = !!d.tsHere; state.phoneApprove = !!d.phoneApprove; state.lanFixed = !!d.lanFixed;
       state.todos = d.todos || []; onTodos();
       if (d.trophies) setTrophies(d.trophies);
       state.limits = d.limits || null; state.limitsNote = d.limitsNote || ''; for (const w of liveWindows()) if (w.pct >= 80) limitWarned.add(`${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`); renderLimits();
-      $('btn-phone').hidden = !state.isLocal;
+      $('btn-phone').hidden = !state.isLocal; if ($('btn-phone-top')) $('btn-phone-top').hidden = !state.isLocal;
       $('btn-bell').hidden = !('Notification' in window) || !window.isSecureContext;
     }
     state.connectedOnce = true; queueUi();
   } else if (d.k === 'sess') { upsertSession(d.s, !quiet); if (d.stats) state.stats = d.stats; }
-  else if (d.k === 'gone') (quiet ? dropSessionNow : removeSession)(d.id);
+  else if (d.k === 'gone') { if (!quiet) chatLeft(sessions.get(d.id)); (quiet ? dropSessionNow : removeSession)(d.id); }
   else if (d.k === 'ev') {
     if (d.stats) state.stats = d.stats; upsertSession(d.s, !quiet);
     if (!quiet) onEvent(d.e); else if (!d.e.quiet && d.e.type !== 'start') addFeed(d.e);
@@ -205,8 +207,12 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'perm') onPerm(d.p);
   else if (d.k === 'permDone') { perms.delete(d.id); renderPerms(); }
   else if (d.k === 'todos') { state.todos = d.todos || []; onTodos(); }
+  else if (d.k === 'phone') { state.phoneApprove = !!d.approve; for (const c of [...$('perm-stack').children]) c.remove(); renderPerms(); reportPresence(); }   // (approving from a phone, switched on the Mac)
   else if (d.k === 'acctlogin') acctLogin(d);   // (adding an account: a step of its sign-in)
   else if (d.k === 'acctswitch') acctSwitched(d);   // (new sessions moved to another account)
+  else if (d.k === 'acctmove') { if (!quiet) acctMoved(d); }
+  else if (d.k === 'chat') chatApply(d);   // (the group chat, the same on every page: server/index.mjs)
+  else if (d.k === 'chatact') { if (!quiet) chatAct(d.what); }   // (open conversations moved over too)
   else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); if (!drM.hidden) renderMac(); }
   else if (d.k === 'sysauto') { if (!quiet) { toast(d.message, 8000); loadMac(); } }   // (idle sessions closed on the drawer's timer)
   else if (d.k === 'trophies') setTrophies(d.t, quiet ? [] : d.earned || []);

@@ -103,7 +103,7 @@ function streetNear(S) {
   const ex = wayOut(S); if (ex) list.push({ outside: true, x: ex.x, z: ex.z, label: tr('fp.toOffice'), act: () => toOffice() });   // (each: `outside`)
   for (const d of S.doors()) if (!d.open) list.push({ outside: true, x: d.x, z: d.z, label: tr('fp.closed', { shop: d.name, at: d.opens }), act: () => sfx.play('click') });
   for (const o of S.shop?.spots() || []) list.push({ outside: true, x: o.x, z: o.z, label: shopLabel(o), act: () => shopAct(o) });
-  for (const p of S.spots()) list.push({ outside: true, x: p.x, z: p.z, label: tr(`fp.${p.kind}`), act: () => { if (p.kind === 'banhmi') { fp.carry = 'bag'; fp.carryUntil = fp.t + 60; } toast(tr(`fp.${p.kind}Done`)); sfx.play('coin'); } });
+  for (const p of S.spots()) list.push({ outside: true, x: p.x, z: p.z, label: p.label || tr(`fp.${p.kind}`), act: p.act || (() => { if (p.kind === 'banhmi') { fp.carry = 'bag'; fp.carryUntil = fp.t + 60; } toast(tr(`fp.${p.kind}Done`)); sfx.play('coin'); }) });   // (a spot may bring its own: the traffic police's card)
   let best = null, bd = 1.8;
   for (const o of list) {
     const dx = o.x - fp.pos.x, dz = o.z - fp.pos.y, d = Math.hypot(dx, dz);

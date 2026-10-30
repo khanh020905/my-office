@@ -1,5 +1,6 @@
 // The trophy cabinet and the opening plaque.
 import * as THREE from 'three';
+import { chatLife } from '../ui/group-chat.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PRO, pad2, reduceMotion } from '../core/env.js';
 import { renderer, scene } from '../scene/renderer.js';
@@ -89,7 +90,7 @@ export function setTrophies(t, fresh = []) {
     const m = t.defs.find((x) => x.id === id); if (!m) continue;
     toast(tr('life.trophy.toast', { name: m.name }), 5200); sfx.play('deploy');
     if (!reduceMotion && PRO) confetti(-5.3, 2.4, -6.4);
-    if (!party) { party = true; celebrate(m.name); }   // and a cake on the meeting table (one party for a batch)
+    if (!party) { party = true; celebrate(m.name); chatLife('trophy', { name: m.name }); }   // and a cake on the meeting table (one party for a batch)
   }
 }
 

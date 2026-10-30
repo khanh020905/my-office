@@ -327,6 +327,13 @@ export function makeChibi(cfg = {}, scale = 1) {
     box(0.05, 0.004, 0.028, trim, 0, 0.016, -0.014);
     box(0.05, 0.004, 0.006, plainMat('#5FA8FF', { emissive: '#3A7BFF', emissiveIntensity: 0.8 }), 0, 0.012, -0.034); }
   pad.visible = false; P.pad = pad;
+  // a karaoke microphone (people/karaoke.js): a black grip, a chrome collar and a silver mesh head, held upright
+  const mic = new THREE.Group(); mic.position.set(0, -0.02, D.handR * 0.9); P.armR.hand.add(mic);
+  { const m = (geo, mt, y) => { const o = new THREE.Mesh(geo, mt); o.position.y = y; mic.add(o); return o; };
+    m(new THREE.CylinderGeometry(0.017, 0.012, 0.13, 12), plainMat('#1C1D21', { roughness: 0.5 }), 0.02);
+    m(new THREE.CylinderGeometry(0.021, 0.018, 0.025, 12), plainMat('#D7DBE0', { metalness: 0.7, roughness: 0.25 }), 0.095);
+    m(new THREE.SphereGeometry(0.031, 14, 10), plainMat('#AEB4BC', { metalness: 0.6, roughness: 0.45 }), 0.125); }
+  mic.visible = false; P.mic = mic;
   const mug = new THREE.Group(); mug.position.set(0, -0.02, D.handR * 0.9); P.armR.hand.add(mug);
   mug.add(new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.05, 0.11, 16), plainMat('#FFFFFF')));
   const mh = new THREE.Mesh(new THREE.TorusGeometry(0.034, 0.01, 6, 12), plainMat('#FFFFFF')); mh.position.x = 0.064; mug.add(mh);
@@ -608,6 +615,22 @@ export function chibiPose(P, anim, ph, o = {}) {
       p.armL = reach(-1, -0.085, y + j, z); p.armR = reach(1, 0.085, y + j2, z);
       break;
     }
+    case 'cue': {   // a shot at the pool table (people/billiards.js): bent low over the cue, the left hand a bridge on the
+      // cloth, the right drawing the cue back and through it (P.stroke: 0 at the ball … 1 drawn right back)
+      p.lean = 0.62; p.head = [-0.55, 0, 0]; p.hipL = p.hipR = -0.22; p.kneeL = 0.32; p.kneeR = 0.08;
+      p.armL = reachW(-1, -0.03, 0.84, 0.6);
+      p.armR = reachW(1, 0.09, 0.9, 0.16 - (P.stroke || 0) * 0.18);
+      break;
+    }
+    case 'sing': {  // karaoke (people/karaoke.js): the mic up at the mouth, the other arm out with the song, swaying to it
+      const sw = Math.sin(ph * 2.2), up = Math.max(0, Math.sin(ph * 0.7));
+      p.mic = true; p.tilt = sw * 0.07; p.head = [-0.12, 0, sw * 0.08]; p.lean = -0.03;
+      p.mouth = Math.sin(ph * 7.5) > -0.3 ? 'o' : 'smile';
+      p.armR = reach(1, 0.03, headY() - R * 0.62 - 0.11, headZ() + R * 0.85 + 0.05);
+      p.armL = [-0.55 - up * 0.9, -0.45 - up * 0.45, -0.3];
+      if (!sit) p.y = Math.abs(sw) * 0.015;
+      break;
+    }
     case 'read': {
       p.lean = 0.04; p.book = true; p.head = [0.3, 0, 0];
       const y = p.y + D.hipY + D.shY - 0.2, z = 0.27 + (D.shY - 0.2) * Math.sin(p.lean);
@@ -622,6 +645,20 @@ export function chibiPose(P, anim, ph, o = {}) {
       p.head = [sip ? -0.15 : 0, sip ? 0 : o.look || 0, 0];
       p.armR = sip ? reach(1, 0.06, headY() - R * 0.55, headZ() + R * 0.95 + 0.06) : reach(1, 0.16, shoulderY() - 0.3, 0.2);
       if (sit) p.armL = reach(-1, -0.14, p.y + D.hipY + 0.06, 0.2);
+      break;
+    }
+    case 'toast': {   // "Một, hai, ba, dô!" at the street-side bar (people/nhau.js): the glass up over the table, then a long drink
+      p.mug = true; const up = (ph % 3) < 1.7;
+      p.head = [up ? -0.1 : -0.18, 0, 0]; p.mouth = up ? 'o' : 'smile';
+      p.armR = up ? reach(1, 0.04, headY() + 0.04, headZ() + R * 0.9 + 0.24) : reach(1, 0.06, headY() - R * 0.55, headZ() + R * 0.95 + 0.06);
+      if (sit) p.armL = reach(-1, -0.14, p.y + D.hipY + 0.06, 0.2);
+      break;
+    }
+    case 'laugh': {   // head back, shoulders shaking, a hand on the knee (people/nhau.js)
+      const k = Math.abs(Math.sin(ph * 9));
+      p.head = [-0.22 - k * 0.06, 0, 0]; p.mouth = 'o'; p.lean = -0.06 + k * 0.03;
+      p.armL = reach(-1, -0.16, p.y + D.hipY + 0.1 + k * 0.05, 0.22);
+      if (!sit) p.y += k * 0.015;
       break;
     }
     case 'sleep':   // seated: leaning back in a reclined chair, hands folded on the belly (under the blanket)
@@ -726,6 +763,7 @@ export function applyChibiPose(P, p, dt) {
   for (const k in P.held) { const g = P.held[k]; g.visible = p.held === k; if (g.visible) g.rotation.copy(P.mug.rotation); }
   P.bag.rotation.set(-(P.armL.sh.rotation.x + P.armL.el.rotation.x + P.spine.rotation.x), 0, -P.armL.sh.rotation.z);   // (hangs straight down)
   P.grocery.rotation.copy(P.bag.rotation);
+  P.mic.visible = !!p.mic; if (p.mic) P.mic.rotation.copy(P.mug.rotation);   // (upright in the hand, like the mug)
   P.book.visible = p.book; P.pad.visible = !!p.pad; P.mug.visible = p.mug; P.drop.visible = p.drop; P.shadow.visible = p.shadow;
   P.bag.visible = !!p.bag; P.grocery.visible = !!p.grocery;
   if (p.held === 'noodle') { const u = (performance.now() / 1600) % 1; P.steam.position.y = 0.12 + u * 0.12; P.steam.material.opacity = 0.5 * (1 - u) * Math.min(1, u * 6); P.steam.scale.setScalar(0.08 + u * 0.1); }

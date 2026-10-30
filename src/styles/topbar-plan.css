@@ -69,10 +69,13 @@
 .acct-num { flex: none; display: inline-grid; place-items: center; min-width: 17px; height: 17px; border-radius: 6px; background: rgba(255, 255, 255, .07); color: var(--muted); font: 700 .6rem/1 var(--mono); }
 .acct-head.is-live .acct-num { background: var(--accent-soft); color: var(--accent-hi); }
 .plan-other .acct-num { overflow: visible; font-size: .6rem; }
-.acct-block { border-radius: 10px; transition: background .15s, box-shadow .15s; }
-.acct-block.is-dragging { background: rgba(255, 255, 255, .05); box-shadow: 0 0 0 1px var(--accent-line), 0 10px 26px rgba(0, 0, 0, .45); position: relative; z-index: 1; }
+/* (a little room round each account, taken back by the margin: the frame of the one being dragged goes round its grip
+   too, and nothing moves when it appears) */
+.acct-block { margin: 0 -10px; padding: 0 10px; border-radius: 12px; transition: background .15s, box-shadow .15s; }
+.acct-block.is-dragging { margin-block: -6px; padding-block: 6px; background: var(--card-2, #1B2230); box-shadow: 0 0 0 1px var(--accent-line), 0 10px 26px rgba(0, 0, 0, .45); position: relative; z-index: 1; }
+.acct-block.is-dragging > .plan-other.acct-head { margin-top: 0; padding-top: 0; border-top-color: transparent; }
 .plan-rows.is-sorting, .plan-rows.is-sorting * { cursor: grabbing !important; user-select: none; }
-.acct-name { all: unset; flex: 0 1 auto; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
+.acct-name { all: unset; flex: 0 0 auto; max-width: 62%; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
 .acct-name b { overflow: hidden; text-overflow: ellipsis; }
 .acct-name:hover { background: rgba(255, 255, 255, .06); }
 .acct-name:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
@@ -107,4 +110,6 @@
 .acct-switch[aria-checked="true"] .acct-knob::after { transform: translateX(13px); }
 .acct-auto-sub { font-size: .64rem; line-height: 1.45; color: var(--muted); }
 .acct-warn { font-size: .64rem; line-height: 1.45; color: var(--amber); }
+.acct-move { display: flex; align-items: flex-start; gap: 7px; font-size: .66rem; line-height: 1.45; color: var(--ink); cursor: pointer; }
+.acct-move input { flex: none; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .acct-knob, .acct-knob::after, .acct-use, .acct-pen { transition: none; } }

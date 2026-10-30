@@ -28,6 +28,8 @@ export default {
   director: { name: 'Phòng Giám đốc', hint: 'Giám đốc (là bạn) mang việc tới bàn, nhận báo cáo khi xong · kệ cúp các mốc' },
   wc: { name: 'Nhà vệ sinh', hint: 'Ai đang dùng' },
   foosball: { name: 'Bàn bi lắc', hint: 'Lắc thử một cái' },
+  billiards: { name: 'Bàn bida', hint: 'Gọi hai người rảnh ra đánh một ván (đi vào trong văn phòng thì tự cầm cơ được)', score: 'Bida: {a} {x}–{y} {b}', coming: '{a} và {b} đang ra bàn bida', called: '{a} và {b} ra đánh bida 🎱', nobody: 'Chưa ai rảnh để đánh bida', you: 'Bạn đang cầm cơ mà' },
+  karaoke: { name: 'Phòng karaoke mini', hint: 'Cho một người rảnh vào hát một bài (đi vào trong văn phòng thì tự vào hát được)', singing: '{name} đang hát “{song}” 🎤', called: '{name} vào hát karaoke 🎤', nobody: 'Chưa ai rảnh để hát', you: 'Bạn đang trong phòng hát mà', idle: 'Bấm vào để hát · 5.000đ / bài' },
   gametv: { name: 'TV chơi game', hint: 'Gọi hai người rảnh ra chơi một trận (đi vào trong văn phòng thì tự ngồi chơi được)', score: '{game}: {a} {x}–{y} {b}', coming: '{a} và {b} đang ra sofa', called: '{a} và {b} ra chơi {game} 🎮', nobody: 'Chưa ai rảnh để chơi game', you: 'Bạn đang chơi mà' },
   season: {
     halloween: 'Bí ngô Halloween',

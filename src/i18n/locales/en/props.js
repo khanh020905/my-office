@@ -29,6 +29,8 @@ export default {
   director: { name: "Director's office", hint: 'The director (you) carries prompts to desks and takes reports when work is done · trophy shelf' },
   wc: { name: 'Restroom', hint: 'Who is in there' },
   foosball: { name: 'Foosball table', hint: 'Give it a spin' },
+  billiards: { name: 'Pool table', hint: 'Call two free people over for a frame (walk in to pick up a cue yourself)', score: 'Pool: {a} {x}–{y} {b}', coming: '{a} and {b} are heading to the table', called: '{a} and {b} are playing pool 🎱', nobody: 'Nobody is free for a game of pool', you: "You're holding a cue already" },
+  karaoke: { name: 'Karaoke box', hint: 'Send someone free in to sing a song (walk in to sing yourself)', singing: '{name} is singing “{song}” 🎤', called: '{name} went in to sing 🎤', nobody: 'Nobody is free to sing', you: "You're in the box already", idle: 'Click to sing · 5,000đ a song' },
   gametv: { name: 'Games TV', hint: 'Call two free people over for a match (walk in to sit down and play yourself)', score: '{game}: {a} {x}–{y} {b}', coming: '{a} and {b} are heading to the sofa', called: '{a} and {b} are playing {game} 🎮', nobody: 'Nobody is free to play', you: "You're playing already" },
   season: {
     halloween: 'Halloween pumpkins',

@@ -160,8 +160,9 @@ function buildProFloor() {
     put(wc, rbox(0.06, 0.05, 0.04, '#3F7CC4', 0.01), -0.07, 0.78, 0.19); put(wc, rbox(0.06, 0.05, 0.04, '#E63946', 0.01), 0.07, 0.78, 0.19); }
   for (const [x, z] of [[10.4, -4.9], [12.8, -4.9], [10.4, -0.9], [12.8, -0.9]]) diningSet(x, z);
 
-  /* lounge: bean bags, a foosball table (the sofa, aquarium, arcade and rocket are shared) */
-  for (const [x, z, c] of [[9.9, 5.5, '#E8742A'], [12.35, 5.6, '#3F7CC4']]) {
+  /* lounge: a bean bag, a foosball table (the sofa, aquarium, arcade and rocket are shared; the pool table has the
+     right side: world/props/billiards.js) */
+  for (const [x, z, c] of [[9.9, 5.5, '#E8742A']]) {
     const b = new THREE.Mesh(new THREE.SphereGeometry(0.42, 20, 14), mat(c, { roughness: 0.95 })); b.scale.set(1.1, 0.62, 1.05); b.position.set(x, 0.26, z); b.castShadow = b.receiveShadow = true; scene.add(b);
     const top = new THREE.Mesh(new THREE.SphereGeometry(0.28, 16, 10), mat(tint(c, 0.15), { roughness: 0.95 })); top.scale.set(1, 0.5, 1); top.position.set(x - 0.05, 0.5, z - 0.12); top.castShadow = true; scene.add(top);
   }
@@ -289,8 +290,9 @@ function buildProFloor() {
     for (const z of [-0.35, 0.35]) put(scene, rbox(0.02, 0.5, 0.6, mat('#D6D0C5', { roughness: 0.6 }), 0.01), cx + 1.94, 0.31, cz + z);
     potPlant(cx + 1.72, cz + 0.32, 0.4, 'snake', 0.62); trinket('books', cx + 1.72, 0.62, cz - 0.3, 0.3);
   }
-  // two phone booths for calls, felt walls, a glass door facing the pods, a stool and a light inside
-  for (const z of [6.0, 7.35]) {
+  // a phone booth for calls, felt walls, a glass door facing the pods, a stool and a light inside (the karaoke box
+  // beside it: world/props/karaoke.js)
+  for (const z of [6.0]) {
     const b = new THREE.Group(); b.position.set(-0.75, 0, z); scene.add(b);
     const fm = mat('#7E9A82', { roughness: 0.95 }), fr = mat('#2B2F36', { roughness: 0.5 });
     put(b, rbox(1.0, 0.08, 1.15, fr, 0.02), 0, 0.04, 0); put(b, rbox(1.0, 0.1, 1.15, fr, 0.02), 0, 2.2, 0);

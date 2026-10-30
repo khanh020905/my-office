@@ -27,6 +27,15 @@
 .dr-actions { display: flex; flex-wrap: wrap; gap: 8px 12px; align-items: center; padding: 14px 18px 0; }
 .dr-note { margin: 0; font-size: .76rem; color: var(--muted); line-height: 1.45; }
 .dr-note code { font-family: var(--mono); font-size: .72rem; background: var(--card-2); border-radius: 5px; padding: 1px 5px; color: var(--ink); }
+/* the accounts a conversation can move to (session-account.js), and a terminal's command to resume it */
+.acct-menu { display: grid; gap: 4px; flex-basis: 100%; }
+.acct-opt { all: unset; box-sizing: border-box; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 8px 11px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); font-size: .78rem; cursor: pointer; }
+.acct-opt small { color: var(--muted); font-size: .7rem; text-align: right; }
+.acct-opt:hover:not(:disabled) { background: var(--card-3); }
+.acct-opt:focus-visible { outline: 2px solid var(--accent); }
+.acct-opt:disabled { opacity: .5; cursor: default; }
+.dr-actions > .pa-code { flex-basis: 100%; margin-top: 0; }
+.dr-actions > .dr-qr { flex-basis: auto; margin: 0; }
 .counts { list-style: none; margin: 0; padding: 14px 18px 0; display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
 .counts li { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 10px 6px 9px; text-align: center; display: flex; flex-direction: column; gap: 4px; }
 .counts b { font-size: 1.2rem; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }

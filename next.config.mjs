@@ -9,6 +9,9 @@ const STATIC = process.env.OFFICE_STATIC === '1';
 const nextConfig = {
   devIndicators: false,   // the office fills the screen; compile and runtime errors still show
   poweredByHeader: false,
+  // OFFICE_DIST_DIR also for the office itself: a build for tests (e.g. .next-e2e, with the same variable for
+  // `playwright test`) leaves the .next the running office serves alone; replacing that under it breaks its pages
+  ...(!STATIC && process.env.OFFICE_DIST_DIR && { distDir: process.env.OFFICE_DIST_DIR }),
   ...(STATIC && {
     output: 'export',
     basePath: process.env.OFFICE_BASE_PATH || '',

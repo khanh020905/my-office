@@ -1,5 +1,6 @@
 // The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th.
 import * as THREE from 'three';
+import { chatLife } from '../ui/group-chat.js';
 import { PRO, officeNow, rand } from '../core/env.js';
 import { scene } from '../scene/renderer.js';
 import { canvasTex, cyl, mat, put, rbox } from '../scene/blocks.js';
@@ -136,7 +137,7 @@ function build() {
 }
 
 /** The receptionist sets out the offerings (on an offering day). */
-export function arrange() { altar.day = officeNow().toDateString(); flowersOffer.visible = offer.visible = true; flowersDaily.visible = false; }
+export function arrange() { chatLife('altar'); altar.day = officeNow().toDateString(); flowersOffer.visible = offer.visible = true; flowersDaily.visible = false; }
 /** …and lights the incense. */
 export function lightIncense() { altar.litAt = officeNow().getTime(); }
 /** Whether this office day's offerings are out already (the receptionist does it once a day). */

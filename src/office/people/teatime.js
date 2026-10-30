@@ -1,6 +1,7 @@
 // Friday 16:00: afternoon tea. Whoever is resting gathers round the pantry tables for bubble tea and bánh tráng trộn.
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { chatLife, chatPhoto } from '../ui/group-chat.js';
 import { PRO, officeNow, rand, replay } from '../core/env.js';
 import { scene } from '../scene/renderer.js';
 import { cyl, mat, put } from '../scene/blocks.js';
@@ -58,6 +59,7 @@ export function teatime(force = false) {
   tea = { end, people: new Set(people), chatAt: state.sim + rand(8, 12) };
   for (const g of sets) g.visible = true;
   toast(tr('people.tea.toast'), 6000);
+  chatLife('tea', { photo: chatPhoto(sets[0]) });
   people.forEach((w, i) => {
     const spot = allocate(PRO ? 'dining' : 'meeting', w); if ('by' in spot) spot.by = w;   // (taken now: everyone is seated in the same moment)
     const [tx, tz] = TABLES().reduce((b, t) => (Math.hypot(t[0] - spot.x, t[1] - spot.z) < Math.hypot(b[0] - spot.x, b[1] - spot.z) ? t : b));

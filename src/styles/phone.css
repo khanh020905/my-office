@@ -1,0 +1,92 @@
+/* The office on a phone (ui/phone.js puts .is-phone on <html>, upright or held sideways): a compact top bar, the office
+   filling the screen, a tab bar at the bottom, and every panel as a full-screen sheet between the two. Approvals float
+   above the tab bar with thumb-sized buttons. Nothing here applies on a desktop. */
+.ph-tabs, .ph-empty { display: none; }
+.is-phone { --ph-top: 50px; --ph-tabs: calc(58px + env(safe-area-inset-bottom, 0px)); --ph-sheet-top: calc(var(--ph-top) + env(safe-area-inset-top, 0px)); }
+@media (max-height: 520px) { .is-phone { --ph-top: 44px; --ph-tabs: calc(48px + env(safe-area-inset-bottom, 0px)); } }
+/* the page never scrolls as a whole: only what is inside a sheet does (a focused field would otherwise pull it aside) */
+.is-phone body { position: fixed; inset: 0; overflow: hidden; overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+.is-phone #app { height: calc(100% - var(--ph-tabs)); padding-top: env(safe-area-inset-top, 0px); grid-template-columns: minmax(0, 1fr); grid-template-rows: var(--ph-top) minmax(0, 1fr); grid-template-areas: "top" "stage"; }
+
+/* the top bar: the mark, the plan and the Mac at a glance, settings; the rest lives in the tab bar */
+.is-phone .topbar { padding: 0 10px; gap: 8px; }
+.is-phone .tb-brand { gap: 6px; font-size: 1rem; }
+.is-phone .tb-brand > span:not(.logo):not(.demo-chip), .is-phone .demo-more, .is-phone .replay-chip { display: none; }
+.is-phone .tb-brand .demo-chip { padding: 3px 7px; font-size: .62rem; }
+.is-phone .tb-actions { gap: 6px; overflow: hidden; }
+.is-phone #btn-chat, .is-phone #btn-replay, .is-phone #btn-phone-top, .is-phone #btn-night, .is-phone .mp-label, .is-phone .mp-bar { display: none !important; }
+.is-phone .tb-btn { height: 38px; min-width: 40px; padding: 0 10px; justify-content: center; }
+.is-phone .mac-pill { gap: 7px; }
+.is-phone .mac-pill .mp-val { font-size: .78rem; max-width: 10ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+@media (max-width: 360px) { .is-phone .tb-brand .demo-chip { display: none; } }
+
+/* the office: all the height there is; the camera bar just above the tabs; a phone's office without the areas' labels */
+.is-phone .stage-wrap { padding-bottom: 0; }
+.is-phone #stage { bottom: 0; }
+.is-phone .toolbar { bottom: 10px; }
+.is-phone .toast { bottom: 74px; }
+.is-phone .chips { display: flex; top: 8px; }
+.is-phone .team-tag { display: none; }
+
+/* sheets: the session list, the activity, a session, the Mac, the plan, settings; between the top bar and the tabs */
+.is-phone .side-left, .is-phone .side-right { display: none; position: fixed; z-index: 30; left: 0; right: 0; top: var(--ph-sheet-top); bottom: var(--ph-tabs); width: auto; max-height: none;
+  border: 0; border-radius: 0; padding-bottom: 0; background: var(--side); overflow-y: auto; overscroll-behavior: contain; transition: none; }
+.is-phone .side-left.ph-open, .is-phone .side-right.ph-open { display: flex; flex-direction: column; animation: ph-sheet .2s ease-out; }
+.is-phone .side-left .sess-list { flex: 1; overflow-y: auto; }
+.is-phone .act-head { cursor: default; padding: 16px 56px 8px 16px; }
+.is-phone .act-head::before { display: none; }
+.is-phone .drawer, .is-phone .drawer--wide { position: fixed; top: var(--ph-sheet-top); bottom: var(--ph-tabs); left: 0; right: 0; width: auto; border: 0; border-radius: 0; padding-bottom: 0; z-index: 31; animation: ph-sheet .2s ease-out; }
+.is-phone .pop-plan, .is-phone .pop-settings { position: fixed; top: var(--ph-sheet-top); bottom: var(--ph-tabs); left: 0; right: 0; width: auto; max-height: none; border: 0; border-radius: 0; z-index: 33; overflow-y: auto; }
+.is-phone .pop-plan { padding: 14px 16px 18px; align-content: start; }
+.is-phone .pop-plan .plan-card { padding-right: 40px; }
+@keyframes ph-sheet { from { transform: translateY(14px); opacity: 0; } }
+.ph-close { all: unset; position: absolute; top: 8px; right: 10px; z-index: 2; width: 36px; height: 36px; display: grid; place-items: center; border-radius: 12px; color: var(--muted); background: var(--card); border: 1px solid var(--line-2); cursor: pointer; }
+.ph-close .ic { width: 18px; height: 18px; }
+.ph-close:focus-visible { outline: 2px solid var(--accent); }
+html:not(.is-phone) .ph-close { display: none; }
+.is-phone .side-left > .ph-close, .is-phone .side-right > .ph-close { position: sticky; top: 8px; margin: 8px 10px -44px auto; flex: none; }
+
+/* the session list as cards, rows a thumb can hit */
+.is-phone .lp-head { padding-right: 60px; }
+.is-phone .sess-list .ri { min-height: 56px; }
+.is-phone .st-row .st { min-height: 40px; }
+.is-phone .search input { height: 42px; font-size: 16px; }   /* (16px: iOS doesn't zoom into it) */
+
+/* approvals: the first one floats above the tabs (all of them in the Duyệt tab), with big buttons and no keyboard hints */
+.is-phone .perm-stack { position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(var(--ph-tabs) + 8px); transform: none; width: auto; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; z-index: 34; }
+.is-phone:not(.ph-approve) .perm-stack > .perm-card:nth-child(n+2) { display: none; }
+.is-phone.ph-approve .perm-stack { top: calc(var(--ph-sheet-top) + 8px); max-height: none; align-content: start; }
+/* (a toast while an approval floats goes to the top, never over its buttons) */
+.is-phone.ph-has-perms .toast { bottom: auto; top: 58px; }
+.is-phone .pc-acts { flex-wrap: wrap; gap: 8px; }
+.is-phone .pc-acts button { flex: 1 1 0; min-width: 30%; height: 48px; justify-content: center; font-size: .92rem; border-radius: 12px; }
+.is-phone .pc-acts kbd { display: none; }
+.is-phone .pc-detail { max-height: 7.5em; overflow: auto; }
+.is-phone .ph-empty { position: fixed; z-index: 30; left: 0; right: 0; top: var(--ph-sheet-top); bottom: var(--ph-tabs); display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 8px; padding: 24px; text-align: center; background: var(--side); color: var(--muted); }
+.is-phone .ph-empty[hidden] { display: none; }
+.ph-empty .ic { width: 36px; height: 36px; color: var(--green); }
+.ph-empty b { color: var(--ink); font-size: 1rem; }
+
+/* the tab bar */
+.is-phone .ph-tabs { display: grid; grid-template-columns: repeat(5, 1fr); position: fixed; left: 0; right: 0; bottom: 0; height: var(--ph-tabs); padding: 0 env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px);
+  background: var(--bar); border-top: 1px solid var(--line-2); z-index: 45; }
+.ph-tab { all: unset; position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; min-height: 44px; color: var(--muted); font-size: .66rem; font-weight: 600; cursor: pointer; }
+.ph-tab .ic { width: 22px; height: 22px; }
+.ph-tab[aria-selected="true"] { color: var(--accent); }
+.ph-tab[aria-selected="true"]::before { content: ''; position: absolute; top: 0; left: 30%; right: 30%; height: 2px; border-radius: 0 0 2px 2px; background: var(--accent); }
+.ph-tab:focus-visible { outline: 2px solid var(--accent); outline-offset: -4px; }
+.ph-badge { position: absolute; top: 5px; left: calc(50% + 5px); min-width: 17px; height: 17px; padding: 0 5px; box-sizing: border-box; border-radius: 9px; background: var(--red); color: #fff;
+  font: 700 .62rem/17px var(--font); font-style: normal; text-align: center; box-shadow: 0 0 0 2px var(--bar); }
+.ph-badge[data-tone="amber"] { background: var(--amber); color: #2A1B02; }
+@media (max-height: 520px) { .ph-tab span { display: none; } .ph-badge { top: 4px; } }
+
+/* the team chat (ui/group-chat-view.js) is full screen on a phone, like a conversation in a messenger app: the tab bar
+   steps aside while it's open (its back button closes it); its new-message card sits above the tabs */
+.is-phone body:has(#zchat:not([hidden])) .ph-tabs { display: none; }
+.is-phone .zc-peek { top: auto; right: 8px; left: 8px; bottom: calc(var(--ph-tabs) + 8px); width: auto; }
+@media (max-height: 520px) { .is-phone .zc-peek { left: auto; width: min(380px, calc(100vw - 16px)); } }   /* (sideways: a card in the corner, not a band across the office) */
+.is-phone.ph-has-perms .zc-peek { display: none; }
+
+/* things that only showed on hover get a tap path */
+@media (hover: none) { .msg-copy, .todo-del { opacity: .8; } }

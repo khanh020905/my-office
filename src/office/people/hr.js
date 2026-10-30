@@ -8,6 +8,7 @@
 // staff's own. The song, the candles, a slice each, and back to work three minutes later.
 import * as THREE from 'three';
 import { state } from '../core/state.js';
+import { chatLife } from '../ui/group-chat.js';
 import { PRO, officeNow, reduceMotion, replay } from '../core/env.js';
 import { scene } from '../scene/renderer.js';
 import { canvasTex, cyl, fitText, mat, put, rbox } from '../scene/blocks.js';
@@ -203,6 +204,7 @@ function startParty() {
   if (party || gatheringNow() || replay.on) return false;
   const month = officeNow().getMonth() + 1, names = birthdayNames(month);
   drawBanner(month, names);
+  chatLife('birthday', { names: [].concat(names).join(', ') });
   const host = hr && !hr.offstage && !hr.chore && !hr.job && hr.phase !== 'walk' && !hr.leavingNow ? hr : null;
   if (host) host.carry = 'cake';   // (the cake, carried to the table)
   const g = birthday({ long: reduceMotion ? 40 : 150, host, open: tr('people.hr.bdayOpen', { m: month }),

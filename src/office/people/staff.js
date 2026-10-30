@@ -12,6 +12,7 @@ import { wetSign } from '../life/rain.js';
 import { night } from '../world/room-update.js';
 import { altar, arrange, arranged, lightIncense, offeringDay } from '../life/altar.js';
 import { sfx } from '../audio/sfx.js';
+import { chatLife } from '../ui/group-chat.js';
 import { t as tr } from '../../i18n/index.js';
 
 /* - The receptionist (company floor) stands behind the lobby counter from 7:45 to 18:15, up and down by the lift.
@@ -86,6 +87,7 @@ export function sendParcel() {
   arrive(courier, () => courier.goTo(DROP, () => {
     courier.faceTarget = DROP.face; courier.anim = 'idle';
     sfx.play('pop');
+    chatLife('parcel', { id: w.id });   // (the receptionist tells the group chat too)
     if (PRO) {   // onto the counter; the receptionist calls the name
       say(courier, 'people.staff.shipperHi');
       courier.afterAt = state.sim + 1.2;

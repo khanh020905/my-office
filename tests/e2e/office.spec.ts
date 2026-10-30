@@ -1,7 +1,9 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import crypto from 'node:crypto';
+import { execFileSync, spawn } from 'node:child_process';
 import { test, expect, type Page } from '@playwright/test';
-import { HOME_DIR } from '../../playwright.config';
+import { DATA_DIR, HOME_DIR } from '../../playwright.config';
 
 // Collects uncaught errors and console errors while the page runs.
 function watchErrors(page: Page) {
@@ -124,6 +126,194 @@ test('photo mode hides the panels and saves a PNG', async ({ page }) => {
   expect(download.suggestedFilename()).toMatch(/^my-office-.*\.png$/);
   await page.keyboard.press('Escape');
   await expect(page.locator('.topbar')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('a vertical 15-second clip with its music: 1080 × 1920, a sound track', async ({ page }) => {
+  test.setTimeout(150_000);
+  const errors = watchErrors(page);
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&layout=cozy');
+  await expect(page.locator('#rail-list .ri').first()).toBeVisible({ timeout: 20_000 });
+  await page.click('#btn-photo');
+  await page.click('[data-clip-shape="tall"]');
+  await expect(page.locator('[data-clip-shape="tall"]')).toHaveAttribute('aria-pressed', 'true');
+  await expect(page.locator('#ph-music')).toHaveAttribute('aria-pressed', 'true');
+  const [download] = await Promise.all([page.waitForEvent('download', { timeout: 90_000 }), page.click('#ph-clip')]);
+  expect(download.suggestedFilename()).toMatch(/^my-office-clip-.*-9x16\.(mp4|webm)$/);
+  const bytes = fs.readFileSync(await download.path());
+  expect(bytes.includes('mp4a') || bytes.includes('A_OPUS')).toBe(true);   // (an AAC or Opus track: the music)
+  const size = await page.evaluate(async (b64) => {
+    const v = document.createElement('video'); v.muted = true; v.src = `data:video/${b64.startsWith('GkXf') ? 'webm' : 'mp4'};base64,${b64}`;
+    await new Promise((ok, no) => { v.onloadedmetadata = ok; v.onerror = no; });
+    return [v.videoWidth, v.videoHeight];
+  }, bytes.toString('base64'));
+  expect(size).toEqual([1080, 1920]);
+  expect(errors).toEqual([]);
+});
+
+test('the group chat: people post, a poll, @ someone and they answer, a reply, recall, reactions, stickers, a reminder, the unread count', async ({ page }) => {
+  test.setTimeout(420_000);   // (many steps, and a headless browser draws the office slowly)
+  const errors = watchErrors(page);
+  // (list mode: the office keeps going behind the chat, drawn once a second; a headless browser draws it slowly)
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); localStorage.setItem('office-lite', 'on'); if (!sessionStorage.getItem('e2e-chat')) { localStorage.removeItem('office-chat-demo'); sessionStorage.setItem('e2e-chat', '1'); } } catch { /* private mode */ } });   // (cleared once: not again on the reload below)
+  await page.goto('/?demo&debug&layout=pro');
+  await expect(page.locator('#rail-list .ri').first()).toBeVisible({ timeout: 60_000 });
+  type Eng = { poll: (from: string, q: string, o: string[]) => void, remind: (from: string, t: string, at: number, rep: string) => void };
+  type Chat = { chat: { msgs: { kind: string, from: string, text: string }[] }, chatSay: (from: string, text: string, o?: object) => void, chatEngine: () => Eng,
+    sessions: Map<string, { id: string, name: string, title?: string }>, pauseDemo: () => void };
+  await page.waitForFunction(() => !!(window as unknown as { __office?: { chat?: unknown } }).__office?.chat);
+  await page.evaluate(() => (window as unknown as { __office: Chat }).__office.pauseDemo());
+  await page.click('#btn-chat');
+  const zc = page.locator('#zchat');
+  await expect(zc).toBeVisible();
+  await expect(zc.locator('.zc-title b')).toHaveText('My Office team');
+  await expect(zc.locator('.zc-sub')).toContainText('members');
+  // a poll (pinned): you vote
+  await page.evaluate(() => (window as unknown as { __office: Chat }).__office.chatEngine().poll('reception', 'Lunch?', ['Phở', 'Bún bò', 'Cơm tấm']));
+  const poll = zc.locator('.zc-poll').last();
+  await expect(poll).toBeVisible({ timeout: 15_000 });
+  await expect(zc.locator('.zc-pin')).toBeVisible();
+  await poll.locator('.zc-poll-o').nth(1).click();
+  await expect(poll.locator('.zc-poll-o').nth(1)).toHaveClass(/is-mine/);
+  // a reminder card: you're going
+  await page.evaluate(() => (window as unknown as { __office: Chat }).__office.chatEngine().remind('hr', 'Stand-up', Date.now() + 3600e3, 'week'));
+  const rem = zc.locator('.zc-remind').last();
+  await expect(rem).toBeVisible({ timeout: 15_000 });
+  await rem.locator('.zc-rm-b.is-yes').click();
+  await expect(rem.locator('.zc-rm-b.is-yes')).toHaveClass(/is-on/);
+  // @ someone: they answer with what they're doing, quoting you
+  const name = await page.evaluate(() => { const s = [...(window as unknown as { __office: Chat }).__office.sessions.values()][0]; return s.title || s.name; });
+  await zc.locator('.zc-in').fill(`@${name} how is it going?`);
+  await zc.locator('.zc-in').press('Enter');
+  await expect(zc.locator('.zc-row.is-mine').last()).toContainText('how is it going?');
+  await expect(zc.locator('.zc-at').last()).toHaveText(`@${name}`);
+  await expect(zc.locator('.zc-row:not(.is-mine) .zc-quote').last()).toContainText('how is it going?', { timeout: 15_000 });
+  // a reaction and a reply on their bubble
+  const bub = zc.locator('.zc-row:not(.is-mine) .zc-bub').last();
+  await bub.hover();
+  await bub.locator('.zc-pick-b', { hasText: '😆' }).click();
+  await expect(bub.locator('.zc-rx')).toContainText('😆');
+  await bub.hover();
+  await bub.locator('.zc-tool').first().click();
+  await expect(zc.locator('.zc-reply')).toBeVisible();
+  await zc.locator('.zc-in').fill('thanks');
+  await zc.locator('.zc-in').press('Enter');
+  await expect(zc.locator('.zc-row.is-mine').last().locator('.zc-quote')).toBeVisible();
+  // recall your own
+  const mine = zc.locator('.zc-row.is-mine .zc-bub').last();
+  await mine.hover();
+  await mine.locator('.zc-tool').last().click();
+  await expect(zc.locator('.zc-row.is-mine').last()).toContainText('unsent');
+  // a sticker (the toolbar's first button), an emoji into the text (😊 by the input), a 👍 shown big
+  await zc.locator('.zc-toolbar .zc-ib').first().click();
+  await zc.locator('.zc-stk').first().click();
+  await expect(zc.locator('.zc-row.is-mine .zc-sticker').last()).toBeVisible();
+  await zc.locator('.zc-bar .zc-ib.zc-pc').click();
+  await zc.locator('.zc-emo').first().click();
+  await expect(zc.locator('.zc-in')).toHaveValue(/\S/);
+  await zc.locator('.zc-in').fill('');
+  await zc.locator('.zc-like-send').click();
+  await expect(zc.locator('.zc-row.is-mine .zc-bigemo').last()).toHaveText('👍');
+  // shut: a new message counts as unread, with a card by the button; open again: "New messages" where you stopped
+  await page.click('#btn-chat');
+  await expect(zc).toBeHidden();
+  await page.evaluate(() => (window as unknown as { __office: Chat }).__office.chatSay('reception', 'Hello from reception', { now: true }));
+  await expect(page.locator('#chat-badge')).toBeVisible();
+  await expect(page.locator('#zc-peek')).toContainText('Hello from reception');
+  await page.click('#btn-chat');
+  await expect(zc.locator('.zc-newline')).toBeVisible();
+  // kept on this device (the demo has no server): the conversation is there after a reload
+  const said = 'Hello from reception';
+  await page.reload();
+  await page.waitForFunction(() => !!(window as unknown as { __office?: { chat?: unknown } }).__office?.chat);
+  expect(await page.evaluate((t) => (window as unknown as { __office: Chat }).__office.chat.msgs.some((m) => m.text === t), said)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the group chat in the office: one conversation for every page, kept by the server; the work comes from the hooks', async ({ page, context, request }) => {
+  test.setTimeout(300_000);
+  const errors = watchErrors(page);
+  // (both pages in list mode: two whole 3D offices are too slow side by side in a headless browser)
+  await context.addInitScript(() => { try { localStorage.setItem('office-lite', 'on'); } catch { /* private mode */ } });
+  // (the button works once the office's code has started: click until the window is there)
+  const openChat = (p: Page) => expect(async () => { if (!(await p.locator('#zchat').isVisible())) await p.click('#btn-chat'); await expect(p.locator('#zchat')).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
+  await page.goto('/');
+  await openChat(page);
+  const zc = page.locator('#zchat');
+  await zc.locator('.zc-in').fill('hello from the Mac');
+  await zc.locator('.zc-in').press('Enter');
+  await expect(zc.locator('.zc-row.is-mine').last()).toContainText('hello from the Mac');
+  // a second page (a phone, say) sees the same conversation, and what it writes shows on the first
+  const other = await context.newPage();
+  await other.goto('/');
+  await openChat(other);
+  await expect(other.locator('#zchat .zc-row.is-mine', { hasText: 'hello from the Mac' })).toBeVisible({ timeout: 20_000 });
+  await other.locator('#zchat .zc-in').fill('and from the phone');
+  await other.locator('#zchat .zc-in').press('Enter');
+  await expect(zc.locator('.zc-row.is-mine', { hasText: 'and from the phone' })).toBeVisible({ timeout: 20_000 });
+  // a session's work, from the hooks: your task in the group and their "on it", with no page needed to write it
+  const base = { session_id: `e2e-chat-${Date.now()}`, cwd: HOME_DIR, transcript_path: path.join(HOME_DIR, 'e2e-chat.jsonl') };
+  await request.post('/event', { data: { ...base, hook_event_name: 'SessionStart', source: 'startup' } });
+  await request.post('/event', { data: { ...base, hook_event_name: 'UserPromptSubmit', prompt: 'polish the chat window' } });
+  await expect(zc.locator('.zc-row.is-mine', { hasText: 'polish the chat window' })).toBeVisible({ timeout: 20_000 });
+  const chat = await (await request.get('/api/chat')).json();
+  expect(chat.msgs.some((m: { text: string }) => m.text.includes('hello from the Mac'))).toBe(true);
+  await other.close();
+  expect(errors).toEqual([]);
+});
+
+test('the phone window: a switch to open the office to phones (off), how to use it when out, and Remote Control', async ({ page }) => {
+  const errors = watchErrors(page);
+  await page.goto('/');   // (the real office on this computer: the switch is only offered here)
+  await page.click('#btn-phone-top');
+  const body = page.locator('#pm-body');
+  const lan = body.locator('.pm-approve').first();
+  await expect(lan).toContainText('Open on phones');
+  await expect(lan.locator('input')).not.toBeChecked();   // (off by default; nothing listens beyond 127.0.0.1)
+  await expect(body.locator('.pm-note').first()).toContainText('PIN');
+  await expect(body).not.toContainText('install');         // (no terminal command to type)
+  await expect(body.locator('.pm-h')).toHaveCount(2);      // (when you're out; giving Claude work from the phone)
+  await expect(body).toContainText('/rc');
+  // Remote Control in every new session: written into Claude Code's settings (this test's own home folder), and back out
+  const rc = body.locator('.pm-approve', { hasText: 'Remote Control' }), cc = path.join(HOME_DIR, '.claude', 'settings.json');
+  await rc.locator('input').click();
+  await expect.poll(() => { try { return JSON.parse(fs.readFileSync(cc, 'utf8')).remoteControlAtStartup; } catch { return null; } }).toBe(true);
+  await body.locator('.pm-approve', { hasText: 'Remote Control' }).locator('input').click();
+  await expect.poll(() => { try { return JSON.parse(fs.readFileSync(cc, 'utf8')).remoteControlAtStartup ?? false; } catch { return null; } }).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test('away from home: the tunnel switch, and all that comes through it is from the internet (PIN only, nothing that controls the Mac)', async ({ page, request }) => {
+  const errors = watchErrors(page);
+  await page.goto('/');
+  await page.click('#btn-phone-top');
+  const sw = page.locator('#pm-body .pm-approve', { hasText: 'Cloudflare' });
+  await sw.locator('input').click();
+  await expect(page.locator('#pm-body')).toContainText('e2e-office-test.trycloudflare.com', { timeout: 20_000 });   // (tests/e2e/fake-cloudflared.sh)
+  await expect(page.locator('#pm-body .pm-digits')).toBeVisible();
+  const t = await (await request.get('/api/tunnel')).json();
+  expect(t.state).toBe('on');
+  if (process.platform === 'darwin') expect(t.awake.held).toBe(true);   // (caffeinate -s, while the tunnel is on)
+  // straight to the tunnel's own listener, the way cloudflared comes in: from 127.0.0.1, and still not this computer
+  const via = `http://127.0.0.1:${t.port}`, host = { Host: 'e2e-office-test.trycloudflare.com' }, token = fs.readFileSync(path.join(DATA_DIR, 'token'), 'utf8').trim();
+  expect((await request.get(`${via}/?k=${token}`, { headers: host, maxRedirects: 0 })).headers().location).toBe('/pin');   // (no token links)
+  expect((await request.post(`${via}/event`, { headers: host, data: { hook_event_name: 'SessionStart', session_id: 'e2e-tunnel' } })).status()).toBe(403);
+  expect((await request.post(`${via}/api/sys/action`, { headers: host, data: { action: 'kill', target: 1 } })).status()).toBe(403);
+  expect((await request.post(`${via}/api/accounts/auto`, { headers: host, data: { on: true } })).status()).toBe(403);
+  expect((await request.post(`${via}/api/tunnel`, { headers: host, data: { on: false } })).status()).toBe(403);
+  expect((await request.post(`${via}/api/lan`, { headers: host, data: { on: true } })).status()).toBe(403);
+  expect((await request.get(`${via}/api/sys`, { headers: host })).status()).toBe(401);   // (watching needs the PIN)
+  expect((await request.get(`${via}/`, { headers: { Host: 'evil.example' }, maxRedirects: 0 })).status()).toBe(421);   // (not the tunnel's name)
+  // the PIN gets in, with an https-only cookie
+  const r = await request.post(`${via}/pin`, { headers: { ...host, Origin: 'https://e2e-office-test.trycloudflare.com', 'Content-Type': 'application/x-www-form-urlencoded' }, data: `pin=${t.pin}`, maxRedirects: 0 });
+  expect(r.status()).toBe(303);
+  expect(r.headers()['set-cookie']).toContain('Secure');
+  // off: the listener closes
+  await sw.locator('input').click();
+  await expect.poll(async () => (await (await request.get('/api/tunnel')).json()).state).toBe('off');
+  if (process.platform === 'darwin') expect((await (await request.get('/api/tunnel')).json()).awake.held).toBe(false);
+  await expect(request.get(`${via}/health`, { headers: host, timeout: 3000 })).rejects.toThrow();
   expect(errors).toEqual([]);
 });
 
@@ -262,6 +452,83 @@ test('a commit goes in the post box, and a push brings the postman to empty it',
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.post.postman?.offstage), { timeout: 60_000 }).toBe(false);
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.post.inBox), { timeout: 60_000 }).toBe(0);
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.post.trip), { timeout: 60_000 }).toBe(false);
+  expect(errors).toEqual([]);
+});
+
+test('the traffic police: a checkpoint by the office, a rider stopped, the record written and signed', async ({ page }) => {
+  test.setTimeout(420_000);   // (a stop takes about half a minute of the office's clock; a headless page runs slow)
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=15:00&csgt');   // (?csgt: the checkpoint now, a stop every few seconds)
+  await page.waitForFunction(() => (window as unknown as Win).__office?.street, null, { timeout: 30_000 });
+  await page.evaluate(() => (window as unknown as Win).__office!.speed(5));   // (a headless page draws few frames: the street would crawl)
+  type Csgt = { state: () => { phase: string, stop: { kind: string, step: string } | null, last: { kind: string, written: boolean } | null } };
+  const state = () => page.evaluate(() => ((window as unknown as Win).__office!.street as { csgt: Csgt }).csgt.state());
+  await expect.poll(async () => (await state()).phase, { timeout: 60_000 }).toBe('on');
+  // by day: a rider without a helmet, three on a scooter, on the phone or through the red light is pulled in; the
+  // officer salutes, checks the papers on VNeID, writes the record, the rider signs and rides on
+  await expect.poll(async () => (await state()).stop?.step ?? '', { timeout: 120_000 }).toMatch(/salute|reason|papers|write|sign|go/);
+  await expect.poll(async () => (await state()).last?.written ?? false, { timeout: 150_000 }).toBe(true);
+  // the chip over the checkpoint opens the card: the steps, the clause of Decree 168/2024, and the record itself
+  await page.locator('.csgt-chip').evaluate((b: HTMLElement) => b.click());
+  await expect(page.locator('.csgt-card')).toBeVisible();
+  await expect(page.locator('.csgt-card .csgt-law')).toContainText('168/2024/NĐ-CP');
+  await expect(page.locator('.csgt-paper')).toContainText('RECORD OF AN ADMINISTRATIVE VIOLATION');
+  await page.keyboard.press('Escape');
+  await expect(page.locator('.csgt-card')).toBeHidden();
+  expect(errors).toEqual([]);
+});
+
+test('an evening at the quán nhậu: down for a few rounds, "dô", then home by Grab and never by scooter', async ({ page }) => {
+  test.setTimeout(900_000);   // (packing up, the lift, across the street at the lights, a round, a ride home: long on a slow headless page)
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=18:40&nhau');   // (?nhau: the quán open, tonight's round now)
+  type Nh = { go: () => number, end: () => boolean, state: () => { stage: string, toasts: number, members: { stage: string, way: string | null, away: boolean }[] } | null };
+  type O = { nhau: Nh, pauseDemo: () => void, sessions: Map<string, object>, upsert: (s: object) => void, speed: (n: number) => void, chat: { msgs: { text: string }[] }, street?: { nhauDebug: { card: () => boolean } } };
+  await page.waitForFunction(() => !!(window as unknown as { __office?: O }).__office?.nhau && !!(window as unknown as { __office?: O }).__office?.street, null, { timeout: 60_000 });
+  await page.evaluate(() => { const o = (window as unknown as { __office: O }).__office; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(5); });
+  const state = () => page.evaluate(() => (window as unknown as { __office: O }).__office.nhau.state());
+  // people resting go down (an invitation in the group chat), over the street, onto the stools; a round of "dô"
+  await expect.poll(() => page.evaluate(() => { const n = (window as unknown as { __office: O }).__office.nhau; return n.state() ? 1 : n.go(); }), { timeout: 200_000, message: 'someone goes down to the quán' }).toBeGreaterThan(0);
+  await expect.poll(async () => (await state())?.members.filter((m) => m.stage === 'sit').length ?? 0, { timeout: 300_000, message: 'someone sits at the table' }).toBeGreaterThan(0);
+  await expect.poll(async () => (await state())?.toasts ?? 0, { timeout: 90_000, message: 'a round of dô' }).toBeGreaterThan(0);
+  const said = (re: string) => page.evaluate((r) => (window as unknown as { __office: O }).__office.chat.msgs.some((m) => new RegExp(r).test(m.text)), re);
+  await expect.poll(() => said('A few cans tonight'), { timeout: 30_000, message: 'the invitation in the chat' }).toBe(true);
+  // the quán's card: the menu with its prices, who from the office is at the table
+  expect(await page.evaluate(() => (window as unknown as { __office: O }).__office.street!.nhauDebug.card())).toBe(true);
+  await expect(page.locator('.nhau-card')).toContainText('20.000đ');
+  await page.keyboard.press('Escape');
+  // time to go: "don't drive" in the chat, and everyone home by a ride, nobody on their own scooter
+  await page.evaluate(() => (window as unknown as { __office: O }).__office.nhau.end());
+  await expect.poll(() => said('don’t drive'), { timeout: 30_000, message: 'no driving after a drink, in the chat' }).toBe(true);
+  // (the first ride home: whoever called one went by Grab, Xanh SM or a taxi, not by their own scooter)
+  await expect.poll(async () => (await state())?.members.some((m) => m.stage === 'home' && m.away) ?? false, { timeout: 300_000, message: 'someone home by a ride' }).toBe(true);
+  const rode = (await state())!.members.filter((m) => m.way);
+  expect(rode.length, 'someone rode home').toBeGreaterThan(0);
+  expect(rode.every((m) => ['grab', 'xsm', 'taxi'].includes(m.way!))).toBe(true);
+  expect(errors).toEqual([]);
+});
+
+test('the alcohol checkpoint by the quán nhậu: a regular rides off after a few, the breath test shows it', async ({ page }) => {
+  test.setTimeout(420_000);
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=19:40&csgt&nhau');   // (the evening: the checkpoint is the alcohol one, on the quán's street)
+  type S = { csgt: { state: () => { phase: string, alc: boolean, stop: object | null, site: { evening: boolean }, last: { kind: string, fromQuan: boolean } | null } }, nhauDebug: { local: () => boolean, state: () => { regulars: number } } };
+  await page.waitForFunction(() => (window as unknown as { __office?: { street?: S } }).__office?.street?.csgt, null, { timeout: 60_000 });
+  await page.evaluate(() => (window as unknown as { __office: { speed: (n: number) => void } }).__office.speed(5));
+  const st = () => page.evaluate(() => (window as unknown as { __office: { street: S } }).__office.street.csgt.state());
+  await expect.poll(async () => (await st()).phase, { timeout: 60_000 }).toBe('on');
+  expect((await st()).alc).toBe(true);
+  expect((await st()).site.evening).toBe(true);
+  // a regular gets up, rides off on his own scooter, and is stopped for the breath test: alcohol, the record written
+  await expect.poll(() => page.evaluate(() => { const S = (window as unknown as { __office: { street: S } }).__office.street; return !S.csgt.state().stop && S.nhauDebug.local(); }), { timeout: 90_000 }).toBe(true);
+  await expect.poll(async () => (await st()).last?.fromQuan ?? false, { timeout: 180_000 }).toBe(true);
+  expect((await st()).last!.kind).toMatch(/^alc[123]$/);
   expect(errors).toEqual([]);
 });
 
@@ -565,6 +832,70 @@ test('the lounge TV: two people resting play a match on the sofa, and in first p
   expect(errors).toEqual([]);
 });
 
+// billiards.js and karaoke.js add their own hooks (?debug)
+type Bil = { stage: string | null, npc: boolean, shots: number, players: string[], me: boolean };
+type Ktv = { stage: string | null, npc: boolean, song: string | null, singers: string[], me: boolean, beat: number | null };
+type WinB = { __office?: DebugOffice & { bilGame: () => boolean, bilPlay: () => void, bil: Bil, ktvSing: () => boolean, ktvPlay: () => void, ktv: Ktv, fp: { on: boolean } } };
+const restAll = (page: Page) => page.evaluate(() => { const o = (window as unknown as WinB).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(3); });
+
+test('pool in the lounge: two people resting play a frame, and in first person you pick up a cue and shoot', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=10:40');
+  await page.waitForFunction(() => !!(window as unknown as WinB).__office?.bilGame, null, { timeout: 60_000 });
+  await restAll(page);
+  const bil = () => page.evaluate(() => (window as unknown as WinB).__office!.bil);
+  await expect.poll(() => page.evaluate(() => (window as unknown as WinB).__office!.bilGame()), { timeout: 90_000 }).toBe(true);
+  // both come over with a cue; the break goes in (the white leaves the head spot)
+  await expect.poll(async () => (await bil()).shots, { timeout: 150_000 }).toBeGreaterThan(0);
+  // work for one of them: the frame ends where it stands, both put their cues back and go
+  await page.evaluate(() => { const o = (window as unknown as WinB).__office!, id = o.bil.players[0], s = o.sessions.get(id) as object; o.upsert({ ...s, status: 'work' }); });
+  await expect.poll(async () => (await bil()).stage, { timeout: 90_000 }).toBe(null);
+  // first person: E at the table picks up a cue, a colleague comes over (or you play alone); hold Space, let go: a shot
+  await page.click('#btn-fp');
+  await page.evaluate(() => (window as unknown as WinB).__office!.bilPlay());
+  await expect.poll(async () => (await bil()).stage, { timeout: 90_000 }).toBe('you');
+  await page.keyboard.down('Space'); await page.waitForTimeout(500); await page.keyboard.up('Space');
+  await expect.poll(async () => (await bil()).shots, { timeout: 10_000 }).toBe(1);
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await bil()).me, { timeout: 10_000 }).toBe(false);
+  expect(await page.evaluate(() => (window as unknown as WinB).__office!.fp.on)).toBe(true);   // (Esc puts the cue back, it doesn't leave first person)
+  expect(errors).toEqual([]);
+});
+
+test('karaoke: someone resting goes into the box and sings, and in first person you sing a song', async ({ page }) => {
+  test.setTimeout(300_000);
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 800, height: 500 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=15:10');
+  await page.waitForFunction(() => !!(window as unknown as WinB).__office?.ktvSing, null, { timeout: 60_000 });
+  await restAll(page);
+  const ktv = () => page.evaluate(() => (window as unknown as WinB).__office!.ktv);
+  await expect.poll(() => page.evaluate(() => (window as unknown as WinB).__office!.ktvSing()), { timeout: 90_000 }).toBe(true);
+  // in through the door, a mic each, the song running (the words move on)
+  await expect.poll(async () => (await ktv()).stage, { timeout: 150_000 }).toBe('sing');
+  const b0 = (await ktv()).beat || 0;
+  await expect.poll(async () => (await ktv()).beat || 0, { timeout: 30_000 }).toBeGreaterThan(b0 + 2);
+  // work for the singer: the song stops and they come out
+  await page.evaluate(() => { const o = (window as unknown as WinB).__office!, id = o.ktv.singers[0], s = o.sessions.get(id) as object; o.upsert({ ...s, status: 'work' }); });
+  await expect.poll(async () => (await ktv()).stage, { timeout: 90_000 }).toBe(null);
+  // first person: E at the box takes you in; pick the second song, sing, Esc takes you out
+  await page.click('#btn-fp');
+  await page.evaluate(() => (window as unknown as WinB).__office!.ktvPlay());
+  await expect.poll(async () => (await ktv()).stage, { timeout: 10_000 }).toBe('menu');
+  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('Space');
+  await expect.poll(async () => (await ktv()).stage, { timeout: 10_000 }).toBe('sing');
+  expect((await ktv()).song).toBe('monday');
+  await page.keyboard.press('Escape');
+  await expect.poll(async () => (await ktv()).me, { timeout: 10_000 }).toBe(false);
+  expect(await page.evaluate(() => (window as unknown as WinB).__office!.fp.on)).toBe(true);
+  expect(errors).toEqual([]);
+});
+
 test('adding a Claude account: a folder of its own, connected to the office, signed in from the card', async ({ page }) => {
   test.setTimeout(420_000);   // (signing in, renaming, picking, then the page once more: ~5 min on a busy machine)
   const errors = watchErrors(page), dir = path.join(HOME_DIR, '.claude-cong-ty');
@@ -590,7 +921,8 @@ test('adding a Claude account: a folder of its own, connected to the office, sig
   await acct('Việc công ty').hover();
   await acct('Việc công ty').locator('.acct-use').click();
   await expect(acct('Việc công ty').locator('.acct-badge--on')).toBeVisible();
-  const main = page.locator('.acct-block').first();
+  await expect(page.locator('.acct-block').first()).toContainText('Việc công ty');   // ("Use" puts it at the top of the order)
+  const main = acct('Main account');
   await main.hover();
   await main.locator('.acct-use').click();   // (back to the main account: the other tests expect it)
   await expect(main.locator('.acct-badge--on')).toBeVisible();
@@ -609,6 +941,59 @@ test('adding a Claude account: a folder of its own, connected to the office, sig
   await page.fill('.acct-rename input', '');
   await page.keyboard.press('Enter');
   await expect(acct('cong-ty')).toBeVisible();
+  expect(errors).toEqual([]);
+});
+
+test('an open conversation moves to another account: stopped while it rests, started on that account when resumed', async ({ page, request }) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page), data = DATA_DIR, sessDir = path.join(HOME_DIR, '.claude', 'sessions');
+  const acctDir = path.join(HOME_DIR, '.claude-phu-e2e'), sid = crypto.randomUUID(), pin = path.join(data, 'resume-on', sid);
+  fs.mkdirSync(path.join(HOME_DIR, '.claude', 'projects'), { recursive: true });   // (the history the accounts share)
+  fs.mkdirSync(path.join(HOME_DIR, '.vscode', 'extensions', 'anthropic.claude-code-e2e'), { recursive: true });   // (an editor with Claude Code's extension)
+  fs.mkdirSync(sessDir, { recursive: true });
+  // a second account, signed in the way the card does it (tests/e2e/fake-claude.sh)
+  fs.rmSync(acctDir, { recursive: true, force: true });
+  expect((await request.post('/api/accounts', { data: { name: 'phu e2e' } })).ok()).toBeTruthy();
+  await expect.poll(() => fs.existsSync(path.join(acctDir, '.claude.json')), { timeout: 30_000 }).toBe(true);
+  // a conversation open in the editor and resting: a process of its own and the session file Claude Code writes for it
+  const open = () => {
+    const p = spawn('sleep', ['600'], { stdio: 'ignore' });
+    fs.writeFileSync(path.join(sessDir, `${p.pid}.json`), JSON.stringify({ pid: p.pid, sessionId: sid, cwd: HOME_DIR, startedAt: Date.now(), kind: 'interactive', entrypoint: 'claude-vscode', name: 'e2e-move', status: 'idle', updatedAt: Date.now() }));
+    return p;
+  };
+  const first = open();
+  await page.goto('/');
+  const row = page.locator('#rail-list .ri', { hasText: 'e2e-move' });
+  await expect(row).toBeVisible({ timeout: 60_000 });
+  await row.click();
+  const acts = page.locator('#ds-actions'), change = acts.getByRole('button', { name: 'Change account' });
+  await expect(change).toBeVisible({ timeout: 30_000 });
+  await change.click();
+  await expect(acts.locator('.acct-opt').first()).toContainText('in use');   // (the main account, the one it is on)
+  await acts.locator('.acct-opt', { hasText: 'phu-e2e' }).click();
+  await expect(acts).toContainText('Moved to', { timeout: 20_000 });
+  await expect.poll(() => { try { process.kill(first.pid!, 0); return true; } catch { return false; } }).toBe(false);
+  // the office's script went into the editor, and starts this conversation (only this one) on the new account
+  expect(fs.readFileSync(pin, 'utf8').trim()).toBe(acctDir);
+  const cfg = path.join(HOME_DIR, ...(process.platform === 'darwin' ? ['Library', 'Application Support'] : ['.config']), 'Code', 'User', 'settings.json');
+  const wrapper = JSON.parse(fs.readFileSync(cfg, 'utf8'))['claudeCode.claudeProcessWrapper'];
+  expect(wrapper).toBe(path.join(data, 'claude-switch.sh'));
+  const run = (...args: string[]) => execFileSync('sh', [wrapper, '/bin/sh', '-c', 'printf %s "$CLAUDE_CONFIG_DIR"', ...args], { env: { ...process.env, CLAUDE_CONFIG_DIR: '' }, encoding: 'utf8' });
+  expect(run(`--resume=${sid}`)).toBe(acctDir);
+  expect(run('--resume', sid)).toBe(acctDir);
+  expect(run(`--resume=${crypto.randomUUID()}`)).not.toBe(acctDir);
+  // its person waits at the desk; when the editor starts it again (same conversation, a new process) it is the same one
+  await expect(row).toHaveCount(1);
+  const second = open();
+  await expect(acts).not.toContainText('Moved to', { timeout: 30_000 });
+  await expect.poll(() => fs.existsSync(pin)).toBe(false);
+  await expect(row).toHaveCount(1);
+  await change.click();
+  await expect(acts.locator('.acct-opt', { hasText: 'phu-e2e' })).toContainText('in use');
+  second.kill();
+  for (const p of [first, second]) fs.rmSync(path.join(sessDir, `${p.pid}.json`), { force: true });
+  fs.rmSync(acctDir, { recursive: true, force: true });
+  fs.rmSync(path.join(HOME_DIR, '.vscode'), { recursive: true, force: true });
   expect(errors).toEqual([]);
 });
 

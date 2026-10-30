@@ -5,6 +5,7 @@ import { syncDevBoxes } from '../world/props/dev-servers.js';
 import { setLedMood } from '../world/room-update.js';
 import { queueUi, toast } from './activity.js';
 import { closeSession, drM } from './session-drawer.js';
+import { chatMoved } from './group-chat.js';
 import { TOKEN } from '../net/live.js';
 import { DEMO, demoMac } from '../demo/demo.js';
 import { icon } from './icons.js';
@@ -14,15 +15,19 @@ export let macSnap = null;
 let confirmKey = null;
 let confirmTimer = null;
 const busyKeys = new Set();
-export function openMac() { if (state.selectedId) closeSession(); drM.hidden = false; if (small.matches) $('feed').classList.remove('feed--open'); loadMac(); clearInterval(state.macTimer); state.macTimer = setInterval(loadMac, 5000); }
-export function closeMac() { drM.hidden = true; clearInterval(state.macTimer); state.macTimer = setInterval(loadMac, 30000); }
+export function openMac() { if (state.selectedId) closeSession(); drM.hidden = false; if (small.matches) $('feed').classList.remove('feed--open'); loadMac(); clearInterval(state.macTimer); state.macTimer = setInterval(pollMac, 5000); }
+export function closeMac() { drM.hidden = true; clearInterval(state.macTimer); state.macTimer = setInterval(pollMac, 30000); }
+// the readings by the clock: not while the tab is hidden (each one has the server list every process; a tab hidden for
+// the evening would keep it at it all night); it reads again as soon as the tab shows
+export const pollMac = () => { if (document.visibilityState === 'visible') loadMac(); };
 // the drawer is rebuilt on every reading: not while a button in it is being pressed, or the click would land on a
 // button that no longer exists (the next reading draws it)
 let pressing = false;
 export async function loadMac() {
   if (DEMO) { macSnap = demoMac(); renderMacButton(); syncDevBoxes(macSnap); if (!drM.hidden && !pressing) renderMac(); return; }
   try {
-    const r = await fetch(`/api/sys${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`);
+    const q = new URLSearchParams(TOKEN ? { k: TOKEN } : {}); if (!drM.hidden) q.set('open', '1');   // (open: fresh memory footprints)
+    const r = await fetch(`/api/sys${String(q) ? `?${q}` : ''}`);
     macSnap = await r.json();
     renderMacButton(); syncDevBoxes(macSnap);
     if (!drM.hidden && !pressing) renderMac();
@@ -59,6 +64,8 @@ function renderOthers(rows) {
     const block = acctBlock(o.name, o.label, acc, o.until); rows.append(block);
     if (!ws.length) { block.append(el('small', 'plan-other-note', o.note || tr('mac.plan.loading'))); continue; }
     for (const w of ws) limitRow(block, w);
+    // Anthropic not answering for now (it limits how often it's asked): the last reading stays, with when it was read
+    if (o.note) block.append(el('small', 'plan-other-note', o.at ? tr('mac.plan.readAt', { time: hhmm(o.at), note: o.note }) : o.note));
   }
   if (state.limits?.others?.length) rows.append(autoRow());
   // in the order the user dragged them into (the server's: switching goes down it), the switch after them
@@ -87,19 +94,22 @@ function gripFor(slug, label) {
 function startDrag(e, grip) {
   if (e.button !== 0) return;
   const block = grip.closest('.acct-block'), rows = block.parentElement, was = blocksOf(rows).map((b) => b.dataset.slug).join('|');
-  e.preventDefault(); grip.setPointerCapture?.(e.pointerId);
+  e.preventDefault();
   dragging = true; block.classList.add('is-dragging'); rows.classList.add('is-sorting');
   const move = (ev) => {   // before the first other account whose middle is below the pointer
+    if (!ev.buttons) { up(); return; }   // (let go outside the window: no pointerup came)
     let before = rows.querySelector(':scope > .acct-auto');
     for (const b of blocksOf(rows)) { if (b === block) continue; const r = b.getBoundingClientRect(); if (ev.clientY < r.top + r.height / 2) { before = b; break; } }
     if (block.nextElementSibling !== before && before !== block) { rows.insertBefore(block, before); blocksOf(rows).forEach((x, i) => { const n = x.querySelector('.acct-num'); if (n) n.textContent = String(i + 1); }); }
   };
   const up = () => {
-    grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+    removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up); removeEventListener('blur', up);
+    if (!dragging) return;
     dragging = false; block.classList.remove('is-dragging'); rows.classList.remove('is-sorting');
     if (blocksOf(rows).map((b) => b.dataset.slug).join('|') !== was) saveOrder(rows, block.dataset.slug); else renderLimits();
   };
-  grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+  // (on the window: the grip moves with its account under the pointer, which loses a pointer capture)
+  addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up); addEventListener('blur', up);
 }
 async function saveOrder(rows, slug) {
   const order = blocksOf(rows).map((b) => b.dataset.slug), first = state.limits?.auto?.order?.[0];
@@ -118,7 +128,7 @@ async function saveOrder(rows, slug) {
    (POST /api/accounts/use) and moving on by itself when one runs out (POST /api/accounts/auto) are the server's: it
    starts the editors' Claude Code through a script of its own (server/index.mjs, which account new sessions start on). */
 let editing = null;   // the account whose name is being typed ('' = the main one): the card isn't redrawn under it
-const acctName = (slug, label) => label || (slug ? tr('mac.plan.otherAccount', { name: slug }) : tr('mac.plan.mainAccount'));
+export const acctName = (slug, label) => label || (slug ? tr('mac.plan.otherAccount', { name: slug }) : tr('mac.plan.mainAccount'));
 const switchOn = () => { const a = state.limits?.auto; return !!(a?.on || a?.pick); };
 // an account's heading and its limits, together: hovering any of it shows its actions
 function acctBlock(slug, label, info, until) { const b = el('div', 'acct-block'); b.dataset.slug = slug; b.append(acctHead(slug, label, info, until)); return b; }
@@ -133,7 +143,7 @@ function acctHead(slug, label, info, until) {
     const use = el('button', 'acct-use', tr('mac.plan.use')); use.type = 'button'; use.title = tr('mac.plan.useTitle', { name: acctName(slug, label) });
     use.addEventListener('click', () => useAccount(slug, label, use)); end.append(use);
   }
-  if (until > Date.now()) end.append(el('em', 'acct-badge acct-badge--out', tr('mac.plan.out', { when: resetText(until) })));
+  if (until > Date.now()) end.append(el('em', 'acct-badge acct-badge--out', tr('mac.plan.out', { when: new Date(until).toDateString() === new Date().toDateString() ? hhmm(until) : resetText(until) })));
   else if (inUse) end.append(el('em', 'acct-badge acct-badge--on', tr('mac.plan.inUse')));
   const meta = el('span', 'acct-meta', info); if (!slug) meta.title = tr('mac.plan.account');
   if (order.length > 1) head.append(gripFor(slug, label));
@@ -193,12 +203,31 @@ function autoRow() {
     toast(tr(r.on ? 'mac.plan.autoNowOn' : 'mac.plan.autoNowOff'), 6000);
   });
   box.append(sw, el('small', 'acct-auto-sub', tr(a.win ? 'mac.plan.autoWin' : a.on ? 'mac.plan.autoOn' : 'mac.plan.autoOff')));
+  // and the conversations open on the account that ran out: they go over too (on unless turned off)
+  if (a.on && !a.win) {
+    const mv = el('label', 'acct-move'), cb = el('input'); cb.type = 'checkbox'; cb.checked = a.move !== false;
+    cb.addEventListener('change', async () => {
+      cb.disabled = true;
+      const r = await post('/api/accounts/auto', { move: cb.checked });
+      cb.disabled = false;
+      if (!r.ok) { cb.checked = !cb.checked; toast(tr('mac.plan.useFailed')); return; }
+      if (state.limits) state.limits.auto = r;
+    });
+    mv.append(cb, el('span', null, tr('mac.plan.autoMove')));
+    box.append(mv);
+  }
   if (!switchOn()) return box;
   box.append(el('small', 'acct-auto-sub', tr('mac.plan.running')));
   editorNotes(box, a);
   if (!a.win && !(a.editors || []).length) box.append(el('small', 'acct-warn', tr('mac.plan.noEditor')));
   if (a.alias) { const more = el('details', 'pa-more'); more.append(el('summary', null, tr('mac.plan.terminal')), el('small', null, tr('mac.plan.terminalTip')), codeBox(a.alias)); box.append(more); }
   return box;
+}
+// the server moved the conversations open on an account that ran out
+export function acctMoved(d) {
+  if (replay.on || !d.names?.length) return;
+  toast(tr('mac.plan.moved', { from: d.from, to: d.to, n: d.names.length, names: d.names.join(', ') }), 10000);
+  chatMoved(d.names, d.to);
 }
 // the server moved new sessions to another account (one ran out, or came back)
 export function acctSwitched(d) {
@@ -217,7 +246,7 @@ function copyButton(text, label = tr('mac.add.copy')) {
   b.addEventListener('click', () => navigator.clipboard?.writeText(text).then(() => { b.textContent = tr('mac.add.copied'); setTimeout(() => { b.textContent = label; }, 1600); }).catch(() => {}));
   return b;
 }
-function codeBox(text) { const box = el('div', 'pa-code'); box.append(el('code', null, text), copyButton(text)); return box; }
+export function codeBox(text) { const box = el('div', 'pa-code'); box.append(el('code', null, text), copyButton(text)); return box; }
 function addButton(text, cls, fn, type = 'button') { const b = el('button', `btn btn--sm ${cls}`, text); b.type = type; if (fn) b.addEventListener('click', fn); return b; }
 // a step of the sign-in, from the server
 const lastLogin = new Map();   // (the latest step per account: one can come before the card has heard back from POST /api/accounts)
@@ -629,6 +658,7 @@ export function renderMac() {
 export function setup() {
   /* ---------- Mac drawer ---------- */
   state.macTimer = null;
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') loadMac(); });
   /* plan usage (5-hour / 7-day windows) from Claude Code's status line */
   state.limits = null; state.limitsNote = '';
   setInterval(renderLimits, 30000);
