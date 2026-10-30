@@ -3,8 +3,9 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { DATA_DIR } from '../../playwright.config';
 
-// Katinat on the street (world/backdrops/shop-katinat.js): walking in and buying; and the fronts too far off to walk
-// into, painted (shops.js, WALK_INS). SHOTS_DIR: where the pictures go.
+// Katinat and Phúc Long on the street (world/backdrops/shop-katinat.js, shop-phuclong.js): walking in and buying at
+// each; the fronts too far off to walk into, painted (shops.js, WALK_INS); and the afternoon trà sữa at Phúc Long
+// (people/outings.js). SHOTS_DIR: where the pictures go.
 const SHOTS = process.env.SHOTS_DIR || path.join(DATA_DIR, '..');
 type Door = { key: string, x: number, z: number, face: number };
 type Front = Door & { room: boolean, far: boolean };
@@ -77,6 +78,22 @@ test('Katinat: the navy sign, the evening queue, a roasted oolong ordered at the
   expect(errors).toEqual([]);
 });
 
+test('Phúc Long: the green sign and its crest, a peach tea at the counter', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = watchErrors(page);
+  await onTheStreet(page, '15:00');
+  const at = atFront(page, { key: 'phuclong' });
+  await at(0, 6.5); await page.waitForTimeout(2000);
+  await shot(page, 'phuclong-front.png');
+  await at(0, 4.6); await page.waitForTimeout(800);
+  await shot(page, 'phuclong-sign-close.png');
+  await walkIn(page, at, /Phúc Long/);
+  await at(-0.2, -0.3); await page.waitForTimeout(800);
+  await shot(page, 'phuclong-inside.png');
+  await buy(page, at, 2.3, /peach tea/i, /Phúc Long/);
+  expect(errors).toEqual([]);
+});
+
 test('the fronts too far off to walk into: painted, no door, and you cannot get in', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);
@@ -97,5 +114,24 @@ test('the fronts too far off to walk into: painted, no door, and you cannot get 
   expect(await page.evaluate(() => !!(window as unknown as Win).__office!.street!.shop.inside())).toBe(false);
   const z = await page.evaluate(() => { const o = (window as unknown as Win).__office!, d = o.street!.shop.fronts().find((f) => f.far)!, p = o.fp.pos!; return d.face === Math.PI ? p.y - (d.z - 0.45) : p.x - (d.x - 0.45); });   // (pos: x and z as a 2D vector's x, y)
   expect(z).toBeGreaterThan(0);   // (still on the pavement's side of the glass)
+  expect(errors).toEqual([]);
+});
+
+// the office at a time, the demo's people all resting, sped up
+async function resting(page: Page, time: string) {
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); localStorage.setItem('office-tips', 'seen'); } catch { /* private mode */ } });
+  await page.goto(`/?demo&debug&layout=pro&at=${time}`);
+  await page.waitForFunction(() => (window as unknown as Win).__office?.street, null, { timeout: 30_000 });
+  await page.evaluate(() => { const o = (window as unknown as Win).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(6); });
+}
+
+test('the afternoon trà sữa: someone resting goes to Phúc Long', async ({ page }) => {
+  test.setTimeout(120_000);
+  const errors = watchErrors(page);
+  await resting(page, '15:00');
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.goOut('tea')), { timeout: 45_000 }).toBe(true);
+  const trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
+  expect(trip?.shop).toBe('Phúc Long');
+  expect(trip?.item).toBe('cup');
   expect(errors).toEqual([]);
 });
