@@ -17,6 +17,7 @@ export default {
   notifyBar: '🔔 Bật thông báo để biết ngay khi Claude trả lời, kể cả lúc khoá máy.',
   notifyBarInstall: '🔔 Muốn được báo khi Claude trả lời? Thêm My Office vào màn hình chính trước.',
   notifyBarBtn: 'Bật',
+  conv: { open: 'Xem cả cuộc trò chuyện', back: 'Về nhóm', gone: 'Cuộc trò chuyện này không còn mở trên Mac.', summary: '📄 Tóm tắt phần trước (bấm để xem)' },
   readMore: 'Xem thêm',
   card: { stopped: 'Đã dừng', allow: 'Cho phép', deny: 'Từ chối', stop: '⏹ Dừng', askHere: '⏳ {what}', risky: 'Lệnh nguy hiểm: chỉ cho phép được trên Mac.', work: 'Đang làm', wait: 'Chờ bạn duyệt', done: 'Xong', fail: 'Gặp lỗi', meta: '{n} bước · {took}', ask: '⏳ {what} · thẻ duyệt hiện ở dưới (45 giây)', all: 'Xem cả {n} bước', show: 'Xem {n} bước đã làm', none: 'Không cần làm bước nào' },
   step: { read: 'Đọc {f}', edit: 'Sửa {f}', write: 'Tạo {f}', todo: 'Cập nhật danh sách việc' },

@@ -412,6 +412,20 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect(zc.locator('.zc-work.is-done').first()).toBeVisible({ timeout: 20_000 });
   await zc.locator('.zc-work.is-done .zc-readmore').first().click();
   await expect(zc.locator('.zc-work-steps').first()).toContainText('README.md');
+  // its conversation on a screen of its own: what was said (Claude's laid out) and the steps, from its transcript
+  fs.writeFileSync(base.transcript_path, [
+    { type: 'user', timestamp: new Date().toISOString(), message: { content: 'fix the header please' } },
+    { type: 'assistant', timestamp: new Date().toISOString(), message: { content: [{ type: 'tool_use', name: 'Read', input: { file_path: '/e2e/Header.tsx' } }] } },
+    { type: 'assistant', timestamp: new Date().toISOString(), message: { content: [{ type: 'text', text: '**Fixed** the header:\n- smaller logo' }] } },
+  ].map((x) => JSON.stringify(x)).join('\n') + '\n');
+  await zc.locator('.zc-to-chip').click();
+  await zc.locator(`.zc-to-pick .zc-to-o[data-sid="${base.session_id}"] .zc-to-see`).click();
+  const convo = zc.locator('.zc-conv');
+  await expect(convo.locator('.zc-conv-row.is-mine')).toContainText('fix the header please', { timeout: 20_000 });
+  await expect(convo.locator('.zc-md b')).toHaveText('Fixed');
+  await expect(convo.locator('.zc-conv-steps')).toBeVisible();
+  await convo.locator('.zc-conv-h .zc-ib').click();
+  await expect(convo).toBeHidden();
   // writing to that conversation ("To", over the input): that very conversation carried on (no branch), the answer from
   // its person, marked Claude; and again
   const asked = () => { try { return fs.readFileSync(path.join(HOME_DIR, '.fake-claude.log'), 'utf8'); } catch { return ''; } };

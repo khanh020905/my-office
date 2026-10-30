@@ -351,3 +351,18 @@
 .zc .zc-work-btn.is-ok { background: var(--zc-blue); color: #fff; }
 .zc .zc-work-btn.is-no { background: #FDECEC; color: #C31818; }
 .zc .zc-work-btn.is-stop { background: #F1F3F6; color: var(--zc-ink); margin-left: auto; }
+
+/* one conversation on its own screen (over the group's messages) */
+.zc-conv { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--zc-ground); }
+.zc-conv-h { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 10px; background: #fff; border-bottom: 1px solid var(--zc-line); }
+.zc-conv-h .zc-ib { width: 34px; height: 34px; }
+.zc-conv-h .zc-ib .ic { transform: rotate(180deg); }
+.zc-conv-list { flex: 1; min-height: 0; overflow-y: auto; padding: 10px 10px 14px; display: flex; flex-direction: column; gap: 6px; }
+.zc-conv-row .zc-bub { max-width: 86%; }
+.zc-conv-steps { align-self: flex-start; margin-left: 40px; padding: 4px 8px; border-left: 2px solid #C9D3E0; color: var(--zc-grey); font-size: 12px; line-height: 1.5; display: grid; gap: 1px; max-width: 86%; }
+.zc-conv-steps > div { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.zc-conv-sum { padding: 8px 10px; border-radius: 8px; background: #fff; font-size: 12.5px; white-space: pre-wrap; max-height: 40vh; overflow-y: auto; }
+.zc-sys.is-click, .zc-av-slot.is-click { cursor: pointer; }
+.zc-to-conv { width: 30px; height: 30px; font-size: 15px; }
+.zc-to-see { flex: none; padding: 4px 6px; border-radius: 8px; font-size: 16px; }
+.zc-to-see:hover { background: var(--zc-hover); }
