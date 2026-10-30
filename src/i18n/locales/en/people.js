@@ -131,6 +131,7 @@ export default {
     // on the way down, by what they will bring back (go), and coming out with it (got)
     morning: { go: ['A phin at {shop} first ☕', 'Can’t start without {shop} ☕'], got: ['Iced milk coffee in hand, up we go ☕', 'Coffee sorted, let’s go ☕'] },
     coffee: { go: ['Off to {shop} to wake up ☕', 'Popping to {shop}, anyone want anything? ☕'], got: ['A cold matcha freeze 🍵', 'Got my {shop}, back to it ☕'] },
+    upgrade: { go: ['Claude Code is on {version}: off to {shop} to level up 📱', 'Time to level up 📱'], got: ['Levelled up, back to work 📱', 'Got a charging cable while I was there 🔌'] },
     treat: { go: ['Off to Mixue, ice cream for everyone 🍦', 'Getting Mixue for the whole team 🍦'], got: ['Ice cream’s here, come and get it 🍦', 'Mixue for everyone, eat it before it melts 🍦'] },
     go: {
       cup: ['Popping down to {shop} for a drink 🥤', 'Off to {shop} for a peach tea 🥤', 'Running to {shop}, want anything? 🛒'],

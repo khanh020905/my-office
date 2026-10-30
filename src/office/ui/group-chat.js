@@ -99,7 +99,7 @@ export function chatMoved(names, to) { if (!engine) return; for (const s of sess
 /* ---------- life in the office (called from the modules where it happens) ---------- */
 const life = (key, vars) => tr(`chat.life.${key}`, vars);
 const lastLife = new Map();
-/** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, mixue),
+/** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, tgdd, mixue),
  *  altar, trophy, bye (v: id, name, shop, names, photo, why, every). The morning hello, the lunch poll and the
  *  reminders come by the clock, from the engine. */
 export function chatLife(kind, v = {}) {
@@ -119,6 +119,7 @@ export function chatLife(kind, v = {}) {
     case 'birthday': chatSay('hr', life('birthday', { names: v.names }), { key, react: ['❤️', '😆'], reacts: 5, answer: [{ key: 'hpbd' }, { key: 'hpbd', chance: 0.8 }, { key: 'hpbd', chance: 0.5 }] }); break;
     case 'store': if (v.id) chatSay(v.id, life('store', { shop: v.shop }), { key, answer: [{ key: 'storeAsk', chance: 0.7 }] }); break;
     case 'highlands': if (v.id) chatSay(v.id, life(v.why === 'morning' ? 'highlandsMorning' : 'highlandsCoffee'), { key, react: ['❤️', '👍'], reacts: 2, answer: [{ key: 'highlandsAsk', chance: 0.8 }] }); break;
+    case 'tgdd': chatSay(v.id || restingOne(), life('tgdd', { version: v.version }), { key: `${key}:${v.version}`, react: ['😮', '❤️', '😆'], reacts: 4, answer: [{ key: 'tgddAsk', chance: 0.9 }, { key: 'tgddAsk', chance: 0.5 }] }); break;
     case 'mixue': if (v.id) chatSay(v.id, life(v.why === 'treat' ? 'mixueTreat' : 'mixueHot', { temp: v.temp }), { key, react: ['❤️', '😆'], reacts: 3, answer: [{ key: 'mixueAsk', chance: 0.9 }, { key: 'mixueAsk', chance: 0.5 }] }); break;
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;

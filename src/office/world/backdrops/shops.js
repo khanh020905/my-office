@@ -8,9 +8,9 @@
 // ice cream at Ministop, an auntie with her shopping at WinMart+ after work. Real opening hours: the 24-hour chains stay
 // lit all night, WinMart+ and Bách Hóa Xanh roll their shutters down at closing time. The signs carry the chains' real
 // logos (public/assets/brands, from Wikimedia Commons: see the README there); the town's own eateries are painted fronts.
-// The Highlands Coffee is a whole module of its own (shop-highlands.js). All the printing (signs, posters, menus, the QR
-// stand) is one canvas; the shops cost a handful of merged meshes, and their people are street-folk.js figures, stepped
-// only when in view. Rebuilt when the city changes.
+// The café and the phone shop are whole modules of their own (shop-*.js: Highlands, Thế Giới Di Động). All the printing
+// (signs, posters, menus, the QR stand) is one canvas; the shops cost a handful of merged meshes, and their people are
+// street-folk.js figures, stepped only when in view. Rebuilt when the city changes.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { HQ, PRO, el, officeNow } from '../../core/env.js';
@@ -23,26 +23,27 @@ import { folk, stepper } from './street-folk.js';
 import { puffs } from './street-corner.js';
 import { RM, drawMixue, fitMixue, snowDancer, snowKing } from './shop-mixue.js';
 import { HIGHLANDS } from './shop-highlands.js';
+import { TGDD } from './shop-tgdd.js';
 // the shops made whole in a file of their own (their printing, fittings, front and people): chain key -> that module
-const CUSTOM = { highlands: HIGHLANDS };
+const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-export const SHOPS = 8, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
+export const SHOPS = 9, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
 export const shopDepth = (deep) => Math.min(5.0, deep - 1.4);   // how far in a shop goes, in a building `deep` deep
 const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (level with the pavement), the glass's top, the sign, half the door
 /* what each city has, front-most first (Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25
    and WinMart+ in Hanoi; WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng;
-   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each; Highlands Coffee in every city
-   too). 'rent': a shuttered front to let. */
+   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each; Highlands Coffee and Thế Giới Di
+   Động in every city too). 'rent': a shuttered front to let. */
 const SETS = {
-  hcm: ['gs25', 'mixue', 'highlands', 'circlek', 'winmart', 'seven', 'ministop', 'bhx'],
-  hn: ['circlek', 'mixue', 'highlands', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
-  hp: ['winmart', 'mixue', 'highlands', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'],
-  dn: ['winmart', 'mixue', 'highlands', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  hue: ['winmart', 'mixue', 'highlands', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'],
-  nt: ['winmart', 'mixue', 'highlands', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  dl: ['winmart', 'mixue', 'highlands', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
-  ct: ['bhx', 'mixue', 'highlands', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
+  hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'winmart', 'seven', 'ministop', 'bhx'],
+  hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
+  hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'],
+  dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'],
+  nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
+  ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
 };
 /* the chains: logo, the sign (face, stripes), the staff's shirt, opening hours (null: day and night), a window counter to
    sit at, and the three things you can take: from the fridges, from the chain's own corner (`side`), at the till (`hot`).
@@ -60,7 +61,7 @@ const CHAINS = {
     fridge: { id: 'milk', price: 32, carry: 'grocery' }, side: { id: 'veg', price: 12, carry: 'grocery', unit: 'produce' }, hot: null },
   // (an ice cream and tea shop, not a store: its own printing, fittings and people, shop-mixue.js)
   mixue: { name: 'Mixue', parlour: true, face: '#E50914', stripes: ['#E50914'], accent: '#E50914', shirt: '#1E1E1E', hours: [9, 22], seats: true },
-  highlands: { ...HIGHLANDS.chain, custom: 'highlands' },
+  highlands: { ...HIGHLANDS.chain, custom: 'highlands' }, tgdd: { ...TGDD.chain, custom: 'tgdd' },
   bhx: { name: 'Bách Hóa Xanh', logo: 'bach-hoa-xanh.png', face: '#008C44', stripes: ['#FFE600', '#008C44'], accent: '#008C44', shirt: '#0B8A43', hours: [6.5, 21.5], seats: false,
     fridge: { id: 'eggs', price: 30, carry: 'grocery' }, side: { id: 'meat', price: 65, carry: 'grocery', unit: 'meat' }, hot: null },
 };
@@ -808,6 +809,7 @@ function propSet(G, n) {
     bento: mergeAll([boxAt(0.2, 0.05, 0.14, 0, 0.025, 0, '#1E1E1E'), boxAt(0.2, 0.01, 0.14, 0, 0.055, 0, '#E8E8E8')]),
     chicken: boxAt(0.14, 0.1, 0.1, 0, 0.05, 0, '#E60012'),
     hlcup: mergeAll([colorize(new THREE.CylinderGeometry(0.04, 0.032, 0.12, 10).translate(0, 0.06, 0), '#F2F2F0'), colorize(new THREE.CylinderGeometry(0.042, 0.038, 0.035, 10).translate(0, 0.065, 0), '#9B1C21'), colorize(new THREE.SphereGeometry(0.04, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.12, 0), '#F6F1E7')]),
+    phone: mergeAll([boxAt(0.07, 0.14, 0.01, 0, 0.07, 0, '#1E1E1E'), colorize(new THREE.PlaneGeometry(0.06, 0.125).translate(0, 0.07, 0.0055), '#6E8FE8')]),
     mxcup: mergeAll([colorize(new THREE.CylinderGeometry(0.042, 0.033, 0.13, 10).translate(0, 0.065, 0), '#C9A27A'), colorize(new THREE.CylinderGeometry(0.044, 0.04, 0.04, 10).translate(0, 0.07, 0), '#E50914'), boxAt(0.008, 0.08, 0.008, 0.012, 0.16, 0, '#F2F2F2')]),
     cone: mergeAll([colorize(new THREE.ConeGeometry(0.03, 0.1, 8).rotateX(Math.PI), '#D9A441'), colorize(new THREE.SphereGeometry(0.035, 8, 6).translate(0, 0.065, 0), '#FFF8EC')]),
     bag: mergeAll([boxAt(0.22, 0.24, 0.1, 0, -0.12, 0, '#F4F3EE'), colorize(new THREE.SphereGeometry(0.05, 6, 4).translate(0.04, 0.02, 0), '#3E8E3A')]),
