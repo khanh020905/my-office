@@ -8,9 +8,10 @@
 // ice cream at Ministop, an auntie with her shopping at WinMart+ after work. Real opening hours: the 24-hour chains stay
 // lit all night, WinMart+ and Bách Hóa Xanh roll their shutters down at closing time. The signs carry the chains' real
 // logos (public/assets/brands, from Wikimedia Commons: see the README there); the town's own eateries are painted fronts.
-// The café and the phone shop are whole modules of their own (shop-*.js: Highlands, Thế Giới Di Động). All the printing
-// (signs, posters, menus, the QR stand) is one canvas; the shops cost a handful of merged meshes, and their people are
-// street-folk.js figures, stepped only when in view. Rebuilt when the city changes.
+// The café and the phone shop are whole modules of their own (shop-*.js: Highlands, Thế Giới Di Động). Only the nearest
+// chains (WALK_INS) are rooms; the further ones are their sign and a painted picture of the inside, as the eateries are.
+// All the printing (signs, posters, menus, the QR stand, those pictures) is one canvas; the shops cost a handful of
+// merged meshes, and their people are street-folk.js figures, stepped only when in view. Rebuilt when the city changes.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { HQ, PRO, el, officeNow } from '../../core/env.js';
@@ -24,23 +25,35 @@ import { puffs } from './street-corner.js';
 import { RM, drawMixue, fitMixue, snowDancer, snowKing } from './shop-mixue.js';
 import { HIGHLANDS } from './shop-highlands.js';
 import { TGDD } from './shop-tgdd.js';
-// the shops made whole in a file of their own (their printing, fittings, front and people): chain key -> that module
+import { figure, glassOver } from './shop-paint.js';
+// the shops made whole in a file of their own (their printing, fittings, front and people; and `paint`, how the front looks
+// when it is too far to walk into: paint(g, cx, cy, dark) the whole cell, its sign and the picture under it, or
+// paint(g, x, y, w, h, dark) only the picture, in the front's rect, under the sign its draw() makes): chain key -> that module
 const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-export const SHOPS = 9, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
+export const SHOPS = 12, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
+/* How many of the chains, the nearest the office, are rooms you can walk into; the ones further off are their sign and a
+   picture of the inside behind the glass (as the eateries are), with no fittings and no people to step. Measured (Oct 2026,
+   'low' quality, 390 × 844 at 2×, Ho Chi Minh City's twelve chains at 19:30): up to 8 rooms cost next to nothing more than
+   none, as the nearest fronts are round the office and only one or two are in sight at a time; the 9th to 12th are the
+   ones in the long views, and as rooms they add 11% to the triangles on the pavement (761k against 675k), 3% from the
+   office's view, and half again to the street's time each frame (0.6 ms against 0.4; with the CPU slowed 4×, 1.4 against
+   1.2, and the picture's 5.4 ms against 4.8). ?debug&walkins=N tries another number. */
+const WALK_INS = 8;
 export const shopDepth = (deep) => Math.min(5.0, deep - 1.4);   // how far in a shop goes, in a building `deep` deep
 const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (level with the pavement), the glass's top, the sign, half the door
-/* what each city has, front-most first (Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25
-   and WinMart+ in Hanoi; WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng;
-   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each; Highlands Coffee and Thế Giới Di
-   Động in every city too). 'rent': a shuttered front to let. */
+/* what each city has, front-most first (the first WALK_INS chains are the rooms you walk into, so the ones people go to
+   come first). Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25 and WinMart+ in Hanoi;
+   WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng; Mixue everywhere, 4–6
+   to a kilometre in the big cities, so one near the office in each; Highlands Coffee and Thế Giới Di Động in every city
+   too. 'rent': a shuttered front to let. */
 const SETS = {
   hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'winmart', 'seven', 'ministop', 'bhx'],
   hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
   hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'],
   dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'],
+  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo', 'bunbo'],
   nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
   dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
   ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
@@ -253,12 +266,57 @@ function eateryFront(g, x, y, w, h, key) {
     }
   }
 }
+// a shutter rolled down over a front (a shop shut for the night)
+function shutterFront(g, x, y, w, h) { for (let k = 0; k * 10 < h; k++) { g.fillStyle = k % 2 ? '#8E949C' : '#A3A9B1'; g.fillRect(x, y + k * 10, w, 10); } }
 // a front to let: the shutter down, a banner on it
 function rentFront(g, x, y, w, h) {
-  for (let k = 0; k * 10 < h; k++) { g.fillStyle = k % 2 ? '#8E949C' : '#A3A9B1'; g.fillRect(x, y + k * 10, w, 10); }
+  shutterFront(g, x, y, w, h);
   g.fillStyle = '#FFFFFF'; g.fillRect(x + w * 0.22, y + h * 0.3, w * 0.56, h * 0.3);
   g.fillStyle = '#C8261B'; g.textAlign = 'center'; g.textBaseline = 'middle'; g.font = `900 ${Math.round(h * 0.14)}px ${FONT}`;
   g.fillText('CHO THUÊ', x + w / 2, y + h * 0.4); g.fillStyle = '#1C1F24'; g.font = `700 ${Math.round(h * 0.06)}px ${FONT}`; g.fillText('MẶT BẰNG KINH DOANH', x + w / 2, y + h * 0.52);
+}
+/* A chain's front too far from the office to walk into, painted: a convenience store's bright inside (the fridges along
+   the back, the aisles end on, the cashier at the till in the chain's colour, its posters on the glass), or a café's warm
+   one (the counter in its colour, people at the tables) for a chain whose own module has no picture of its own */
+function storeFront(g, x, y, w, h, ch, key) {
+  const r = rnd(key.length * 3301 + 5);
+  g.fillStyle = '#F4F6F8'; g.fillRect(x, y, w, h);
+  stripes(g, ch, x, y + h * 0.07, w, h * 0.05);
+  for (let k = 0; k < 6; k++) {
+    const fx = x + w * (0.2 + k * 0.1);
+    g.fillStyle = '#DDE6EE'; g.fillRect(fx, y + h * 0.16, w * 0.095, h * 0.5);
+    for (let s = 0; s < 5; s++) for (let i = 0; i < 5; i++) { g.fillStyle = DRINKS[(k * 7 + s * 3 + i) % DRINKS.length]; g.fillRect(fx + 6 + i * 17, y + h * (0.2 + s * 0.09), 11, h * 0.06); }
+  }
+  g.fillStyle = '#D9DCE0'; g.fillRect(x, y + h * 0.84, w, h * 0.16);
+  for (const ax of [0.22, 0.44]) {
+    g.fillStyle = '#C3C9D0'; g.fillRect(x + w * ax, y + h * 0.46, w * 0.12, h * 0.4);
+    for (let s = 0; s < 4; s++) for (let i = 0; i < 5; i++) { g.fillStyle = PACKS[Math.floor(r() * PACKS.length)]; g.fillRect(x + w * ax + 6 + i * 23, y + h * (0.49 + s * 0.09), 18, h * 0.06); }
+  }
+  figure(g, x + w * 0.83, y + h * 0.46, 15, ch.shirt); figure(g, x + w * 0.38, y + h * 0.52, 15, PACKS[Math.floor(r() * 6)], '#3A2A20');
+  g.fillStyle = '#2F343B'; g.fillRect(x + w * 0.68, y + h * 0.6, w * 0.26, h * 0.25); g.fillStyle = '#E8E6E1'; g.fillRect(x + w * 0.68, y + h * 0.59, w * 0.26, 8);
+  if (PROMO[key]) { poster(g, [x + 4, y + h * 0.16, w * 0.155, h * 0.64], PROMO[key][0]); poster(g, [x + w * 0.845 - 4, y + h * 0.16, w * 0.155, h * 0.64], PROMO[key][1]); }
+  glassOver(g, x, y, w, h);
+}
+function cafeFront(g, x, y, w, h, ch) {
+  g.fillStyle = '#F1E6D6'; g.fillRect(x, y, w, h);
+  g.fillStyle = '#B9A88C'; g.fillRect(x, y + h * 0.82, w, h * 0.18);
+  g.fillStyle = ch.accent; g.fillRect(x + w * 0.5, y + h * 0.56, w * 0.48, h * 0.26);
+  figure(g, x + w * 0.78, y + h * 0.42, 15, ch.shirt);
+  g.fillStyle = '#7A4B2E'; g.fillRect(x + w * 0.1, y + h * 0.68, w * 0.28, 10);
+  for (const [fx, c] of [[0.12, '#DCE6F2'], [0.24, '#F7D774'], [0.36, '#2A2D33']]) figure(g, x + w * fx, y + h * 0.58, 14, c);
+  glassOver(g, x, y, w, h);
+}
+// all of a far front: its sign (its own module's, if it has one) and the painting under it; shut, the shutter down
+function farFront(g, cx, cy, key, dark, redraw) {
+  const ch = CHAINS[key], M = ch.custom && CUSTOM[ch.custom], front = [cx + R.front[0], cy + R.front[1], R.front[2], R.front[3]];
+  if (M?.paint && M.paint.length < 6) M.paint(g, cx, cy, dark);   // (the whole cell)
+  else if (M?.paint) { M.draw(g, cx, cy, dark); g.clearRect(...front); M.paint(g, ...front, dark); }   // (the picture only)
+  else {
+    if (M) M.draw(g, cx, cy, dark); else if (ch.parlour) drawMixue(g, cx, cy, dark); else sign(g, cx + R.sign[0], cy + R.sign[1], R.sign[2], R.sign[3], key, redraw, dark);
+    g.clearRect(...front);
+    if (M || ch.parlour) cafeFront(g, ...front, ch); else storeFront(g, ...front, ch, key);
+  }
+  if (dark) { shutterFront(g, ...front); g.fillStyle = 'rgba(10,12,16,.5)'; g.fillRect(...front); }   // (shut at night: the painting glows then, a shutter doesn't)
 }
 
 /* ---------- inside a store: the fittings, in the shop's own frame ----------
@@ -416,30 +474,36 @@ function fitOut(key, D, r, low) {
 export function buildShops(G, fronts) {
   for (const f of fronts) f.store = true;   // (the city leaves its plain shop out)
   if (!fronts.length) return { update() {}, night() {}, doors: () => [], walk: () => undefined, shop: null };
-  const canvas = document.createElement('canvas'); canvas.width = CELL * 2; canvas.height = ROW * Math.ceil(fronts.length / 2);
+  // (on the 'low' quality the canvas is half the size, drawn scaled: a quarter of the memory, and of the upload each time
+  // a shop opens or shuts; everything is still drawn in a cell's 1024 × 512)
+  const low = quality.level === 'low', PX = low ? 0.5 : 1, W = CELL * 2, H = ROW * Math.ceil(fronts.length / 2);
+  const canvas = document.createElement('canvas'); canvas.width = W * PX; canvas.height = H * PX;
   const g = canvas.getContext('2d'), tex = new THREE.CanvasTexture(canvas);
   tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 8;
-  const low = quality.level === 'low';
+  const qs = new URLSearchParams(location.search), walkIns = qs.has('debug') && qs.get('walkins') ? Number(qs.get('walkins')) : WALK_INS;
   let city = null, set = [], night = false, built = null, stores = [], shut = [], now = 0;
   const cellOf = (n) => [(n % 2) * CELL, Math.floor(n / 2) * ROW];
+  function cell(n) {
+    const [cx, cy] = cellOf(n), key = set[n] || 'rent', ch = CHAINS[key], at = ([x, y, w, h]) => [cx + x, cy + y, w, h];
+    if (stores[n]?.far) { farFront(g, cx, cy, key, !!shut[n], draw); return; }
+    if (ch?.parlour) { drawMixue(g, cx, cy, !!shut[n]); return; }
+    if (ch?.custom) { CUSTOM[ch.custom].draw(g, cx, cy, !!shut[n]); return; }
+    sign(g, ...at(R.sign), key, draw, !!shut[n]);
+    if (!ch) { if (EATS[key]) eateryFront(g, ...at(R.front), key); else rentFront(g, ...at(R.front)); return; }
+    poster(g, at(R.posterA), PROMO[key][0]); poster(g, at(R.posterB), PROMO[key][1]);
+    menuBoard(g, at(R.menu), ch, MENU[key]); doorSticker(g, at(R.door), ch, draw); counterPanel(g, at(R.panel), ch, draw); qrStand(g, at(R.qr), key); band(g, at(R.band), ch, draw);
+  }
   function draw() {
-    g.clearRect(0, 0, canvas.width, canvas.height);
-    fronts.forEach((_, n) => {
-      const [cx, cy] = cellOf(n), key = set[n] || 'rent', ch = CHAINS[key], at = ([x, y, w, h]) => [cx + x, cy + y, w, h];
-      if (ch?.parlour) { drawMixue(g, cx, cy, !!shut[n]); return; }
-      if (ch?.custom) { CUSTOM[ch.custom].draw(g, cx, cy, !!shut[n]); return; }
-      sign(g, ...at(R.sign), key, draw, !!shut[n]);
-      if (!ch) { if (EATS[key]) eateryFront(g, ...at(R.front), key); else rentFront(g, ...at(R.front)); return; }
-      poster(g, at(R.posterA), PROMO[key][0]); poster(g, at(R.posterB), PROMO[key][1]);
-      menuBoard(g, at(R.menu), ch, MENU[key]); doorSticker(g, at(R.door), ch, draw); counterPanel(g, at(R.panel), ch, draw); qrStand(g, at(R.qr), key); band(g, at(R.band), ch, draw);
-    });
+    g.setTransform(PX, 0, 0, PX, 0, 0); g.clearRect(0, 0, W, H);
+    // (a shop's own printing that fails costs that shop's cell, not the whole canvas: every sign on the street with it)
+    fronts.forEach((_, n) => { g.save(); try { cell(n); } catch (e) { console.error('shops: printing', set[n], e); } finally { g.restore(); } });
     tex.needsUpdate = true;
   }
   document.fonts?.ready.then(() => { if (city) draw(); });   // the lettering, once the font is in
   // a plane showing part of a cell (rect: x, y, w, h in the cell's pixels)
   const decalOn = (p, n, [rx, ry, rw, rh]) => {   // (any flat geometry with 0–1 uvs: a plane, a disc)
     const uv = p.attributes.uv, [cx, cy] = cellOf(n);
-    for (let i = 0; i < uv.count; i++) uv.setXY(i, (cx + rx + uv.getX(i) * rw) / canvas.width, 1 - (cy + ry + (1 - uv.getY(i)) * rh) / canvas.height);
+    for (let i = 0; i < uv.count; i++) uv.setXY(i, (cx + rx + uv.getX(i) * rw) / W, 1 - (cy + ry + (1 - uv.getY(i)) * rh) / H);
     return p;
   };
   const decal = (w, h, n, rect) => decalOn(new THREE.PlaneGeometry(w, h), n, rect);
@@ -466,6 +530,14 @@ export function buildShops(G, fronts) {
     built = new THREE.Group(); G.add(built);
     const out = [], inner = [], glass = [], faces = [], pools = [], leafs = [];
     stores = [];
+    let chains = 0;
+    // a pool of light on the pavement at night (in one mesh: each shop's four corners lit or not)
+    const pool = (S, M) => {
+      const p = new THREE.PlaneGeometry(4.4, 2.4).rotateX(-Math.PI / 2).translate(0, FL + 0.02, 1.0);
+      p.setAttribute('color', new THREE.BufferAttribute(new Float32Array(p.attributes.position.count * 3).fill(1), 3));
+      S.poolAt = pools.reduce((a, q) => a + q.attributes.position.count, 0);
+      pools.push(p.applyMatrix4(M));
+    };
     fronts.forEach((f, n) => {
       const key = set[n] || 'rent', ch = CHAINS[key], rot = f.dir === 'px' ? Math.PI / 2 : 0, D = shopDepth(f.deep);
       const M = new THREE.Matrix4().makeRotationY(rot).setPosition(f.x, GY, f.z);
@@ -479,9 +551,11 @@ export function buildShops(G, fronts) {
       // (in front of the till, not the window counter; at GS25 the other side, its table is there)
       const kerb = ch?.custom ? CUSTOM[ch.custom].kerb : ch?.parlour ? [2.0, 2.85] : ch && !ch.outdoor ? [1.15, 2.0, 2.85] : [-2.6, -1.75, -0.9, -0.05].slice(0, ch?.outdoor ? 2 : 3 + (n % 2));
       kerb.forEach((x, k) => put(parkedScooter(['#D9534F', '#F2F2F2', '#2E86DE', '#3B3B3B'][(k + n) % 4]).rotateY(0.18 * (k % 2 ? 1 : -1)).translate(x, FL, 1.0), out));
-      if (!ch) {   // an eatery or a front to let: painted, in a plain frame
+      const far = !!ch && chains++ >= walkIns;
+      if (!ch || far) {   // an eatery, a front to let, a chain too far off to walk into: painted, in a plain frame
         put(boxAt(SHOP_W + 0.3, GLASS + 0.05, 0.08, 0, FL + GLASS / 2, 0.03, '#5E6670'), out);
         put(decal(SHOP_W, GLASS - FL, n, R.front).translate(0, FL + (GLASS - FL) / 2 + 0.02, 0.075), faces);
+        if (far) { Object.assign(S, { far, spots: [], seats: [], fix: [] }); pool(S, M); }
         return;
       }
       const fr = rnd(n * 7919 + key.length * 131 + 17);
@@ -541,10 +615,7 @@ export function buildShops(G, fronts) {
       }
       // the door's two sliding leaves; a pool of light on the pavement at night
       S.leaf = leafs.length; leafs.push(S, S);
-      const p = new THREE.PlaneGeometry(4.4, 2.4).rotateX(-Math.PI / 2).translate(0, FL + 0.02, 1.0);
-      p.setAttribute('color', new THREE.BufferAttribute(new Float32Array(p.attributes.position.count * 3).fill(1), 3));
-      S.poolAt = pools.reduce((a, q) => a + q.attributes.position.count, 0);
-      pools.push(p.applyMatrix4(M));
+      pool(S, M);
     });
     const mesh = (list, mat, shadow, recv = true) => { if (!list.length) return null; const o = new THREE.Mesh(mergeAll(list), mat); o.castShadow = shadow; o.receiveShadow = recv; built.add(o); return o; };
     mesh(out, vmat({ roughness: 0.6 }), true);
@@ -591,12 +662,12 @@ export function buildShops(G, fronts) {
     winmart: [() => ({ shirt: '#B85C7A', pants: '#3A3F47', sleeves: '#F2E6D8' })], bhx: [() => ({ shirt: '#8C6A9E', pants: '#3A3F47' }), () => ({ shirt: '#5E8C6A', pants: '#2B2F36' })] };
   const V3 = new THREE.Vector3();
   function buildPeople() {
-    const slots = stores.reduce((a, S) => a + (S.ch ? 4 + S.seats.length : 0), 0);
+    const slots = stores.reduce((a, S) => a + (S.ch && !S.far ? 4 + S.seats.length : 0), 0);
     crowd = folk(built, Math.max(1, slots), { low, shadows: false });
     props = propSet(built, 64);
     const parts = [];
     for (const S of stores) {
-      if (!S.ch) continue;
+      if (!S.ch || S.far) continue;
       const r = rnd(S.n * 271 + 9), at = (x, z) => S.toW(x, z), face = (dx, dz) => S.rot + Math.atan2(-dz, dx);
       const [cashier] = crowd.take(1), [browser] = crowd.take(1), sit = crowd.take(S.seats.length), out = crowd.take(2);
       crowd.dress(cashier, { shirt: S.ch.shirt, pants: '#2B2F36', hair: '#2B2420' });
@@ -756,9 +827,9 @@ export function buildShops(G, fronts) {
     for (const S of stores) {
       const [lx, lz] = local(S, x, z), half = SHOP_W / 2;
       if (lx < -half - 0.3 || lx > half + 0.3 || lz < -S.D - 0.3 || lz > r + 0.02) continue;
-      const doorway = S.ch && Math.abs(lx) < DOOR - r && S.door > 0.6;
+      const doorway = S.ch && !S.far && Math.abs(lx) < DOOR - r && S.door > 0.6;
       if (lz > -r - 0.05) return !doorway;   // at the front (either side of the glass): only through the open door
-      if (!S.ch) return true;
+      if (!S.ch || S.far) return true;
       if (lx < -half + r || lx > half - r || lz < -S.D + r) return true;
       return S.fix.some(([x0, x1, z0, z1]) => lx > x0 - r && lx < x1 + r && lz > z0 - r && lz < z1 + r);
     }
@@ -771,13 +842,15 @@ export function buildShops(G, fronts) {
     feel(p) {
       walker = p;
       for (const S of stores) {
-        if (!S.ch) continue;
+        if (!S.ch || S.far) continue;
         const [lx, lz] = p ? local(S, p[0], p[1]) : [99, 99], inside = Math.abs(lx) < SHOP_W / 2 && lz < -0.3 && lz > -S.D;
         if (inside && !S.inside && !shut[S.n]) { S.greetT = now + 1.5; S.say?.(S.ch.greet || `${S.ch.name} xin chào!`); if (S.ch.parlour) sfx.play('mixue'); }
         S.inside = inside;
       }
     },
     inside: () => stores.find((S) => S.inside) || null,
+    // every front, the rooms and the painted ones (for the tests): its chain, whether it is a room, where to stand at it
+    fronts: () => stores.map((S) => { const [x, z] = S.toW(0, 0.45); return { key: S.key, room: S.leaf != null, far: !!S.far, x, z, face: S.rot ? -Math.PI / 2 : Math.PI }; }),
     spots: () => stores.flatMap((S) => (S.inside ? S.spots.map((o) => {
       const [x, z] = S.toW(o.x, o.z), seat = o.seat && S.toW(o.seat.x, o.seat.z);
       return { ...o, x, z, face: o.face + S.rot, store: { key: S.key, name: S.ch.name, accent: S.ch.accent }, seatAt: seat && { x: seat[0], z: seat[1], y: GY + FL + o.seat.top, yaw: S.rot } };
