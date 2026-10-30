@@ -59,7 +59,7 @@
 /* each account in the card (mac-drawer.js acctBlock): its name (click to rename), its plan, a badge (in use / out until),
    and "Use" when hovering anywhere over it (always shown on touch screens) */
 .acct-block { display: grid; gap: 4px; min-width: 0; }
-.plan-other.acct-head { align-items: center; min-height: 26px; }
+.plan-other.acct-head { align-items: center; min-height: 26px; min-width: 0; }   /* (the name gives way to its badges, never the card's edge) */
 .plan-rows > .acct-block:first-child > .plan-other.acct-head { margin-top: 0; padding-top: 0; border-top: 0; }
 /* the order: a grip to drag by (on hover; ↑ ↓ when it has focus), the place in the list while switching is on */
 .acct-grip { all: unset; flex: none; width: 10px; height: 16px; margin-left: -4px; border-radius: 3px; cursor: grab; touch-action: none; opacity: 0; transition: opacity .15s;
@@ -75,7 +75,7 @@
 .acct-block.is-dragging { margin-block: -6px; padding-block: 6px; background: var(--card-2, #1B2230); box-shadow: 0 0 0 1px var(--accent-line), 0 10px 26px rgba(0, 0, 0, .45); position: relative; z-index: 1; }
 .acct-block.is-dragging > .plan-other.acct-head { margin-top: 0; padding-top: 0; border-top-color: transparent; }
 .plan-rows.is-sorting, .plan-rows.is-sorting * { cursor: grabbing !important; user-select: none; }
-.acct-name { all: unset; flex: 0 0 auto; max-width: 62%; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
+.acct-name { all: unset; flex: 0 1 auto; max-width: 62%; display: inline-flex; align-items: center; gap: 5px; min-width: 0; margin-left: -5px; padding: 2px 5px; border-radius: 6px; cursor: text; transition: background .15s; }
 .acct-name b { overflow: hidden; text-overflow: ellipsis; }
 .acct-name:hover { background: rgba(255, 255, 255, .06); }
 .acct-name:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
