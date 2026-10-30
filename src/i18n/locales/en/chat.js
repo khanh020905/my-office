@@ -17,6 +17,7 @@ export default {
   notifyBar: '🔔 Turn on notifications to know as soon as Claude answers, even with the phone locked.',
   notifyBarInstall: '🔔 Want to know when Claude answers? Add My Office to your home screen first.',
   notifyBarBtn: 'Turn on',
+  conv: { open: 'See the whole conversation', back: 'Back to the group', gone: 'This conversation isn’t open on the Mac any more.', summary: '📄 A summary of what came before (tap to read)' },
   readMore: 'Read more',
   card: { stopped: 'Stopped', allow: 'Allow', deny: 'Deny', stop: '⏹ Stop', askHere: '⏳ {what}', risky: 'A risky command: it can only be allowed on the Mac.', work: 'Working', wait: 'Waiting for your approval', done: 'Done', fail: 'Hit an error', meta: { one: '{n} step · {took}', other: '{n} steps · {took}' }, ask: '⏳ {what} · the approval card is below (45 s)', all: 'See all {n} steps', show: 'See the {n} steps', none: 'No steps needed' },
   step: { read: 'Read {f}', edit: 'Edit {f}', write: 'Create {f}', todo: 'Update the to-do list' },
