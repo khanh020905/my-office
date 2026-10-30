@@ -180,6 +180,7 @@ export default {
     highlandsAsk: ['Get me a phin sữa đá please ☕', 'A matcha freeze for me 🍵', 'A golden lotus tea for me 🌸'],
     tgddAsk: ['Grab me a charging cable too 🔌', 'Level up! My phone’s ancient 😆', '0% instalments? Take me with you 😂', 'Anything good in the new version?'],
     mixueAsk: ['A cone for me please 🍦', 'Bubble milk tea for me 🧋', 'A fresh lemonade for me 🍋', 'Strawberry Super Sundae please 😋', 'Peach tea for me 🍑'],
+    katinatAsk: ['A roasted oolong for me, take a picture 📸', 'Avocado with young coconut please 🥑🥥', 'Isn’t the queue huge? 😆', 'Roasted oolong with black pearls for me 🧋'],
     parcelGot: ['Got it, thanks 🥰', 'Coming down'],
   },
   life: {
@@ -199,6 +200,8 @@ export default {
     highlandsCoffee: ['So sleepy: off to Highlands for a matcha freeze 🍵', 'Afternoon slump: anyone want Highlands? ☕'],
     tgdd: ['Claude Code is on {version} now, everyone 📱 Off to Thế Giới Di Động to level up!', 'New Claude Code {version} is out 📱 time to level up', 'Claude Code {version} just landed 📱, heading to Thế Giới Di Động'],
     mixueTreat: ['CI is green again! Mixue ice cream on me, everyone 🍦🎉', 'No more red: Mixue’s on me this afternoon 🍦', 'All tests pass: ice cream for the whole team 🍦'],
+    katinatTea: ['Afternoon: off to Katinat for a roasted oolong, anyone? 🧋', 'Popping to Katinat, want anything? 🧋'],
+    katinatCheckin: ['Weekend! Off to Katinat for the drink and the photo 📸', 'Going to Katinat, the queue will be half an hour 😆 anyone want anything', 'Katinat is packed tonight, I’m going for the picture 📸'],
     cleaner: ['Mopping now, walk slowly or you’ll slip 🧽'],
     altar: ['Full moon today, the offering’s done 🙏', 'First of the lunar month, good fortune to us all 🙏'],
     trophy: '🏆 We just reached “{name}”! Well done everyone 🎉',
