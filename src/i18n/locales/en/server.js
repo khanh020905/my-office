@@ -78,9 +78,12 @@ export default {
   },
   pin: {
     title: 'Enter My Office',
-    help: 'Type the 6-digit PIN. It is on the {mac}: click "Open on your phone" in the office.',
+    help: 'Type the PIN. It is on the {mac}: click 📱 in the office.',
     label: 'PIN',
     submit: 'Enter the office',
+    keep: 'Remember this device',
+    keepHint: 'Next time it goes straight in. Untick it on a borrowed phone.',
+    weak: 'Use 6 to 10 digits, and not an easy run like 000000 or 123456.',
     locked: { one: 'Too many wrong tries. Try again in {n} minute.', other: 'Too many wrong tries. Try again in {n} minutes.' },
     wrong: { one: 'Wrong PIN. {n} try left.', other: 'Wrong PIN. {n} tries left.' },
     needed: 'PIN required.',

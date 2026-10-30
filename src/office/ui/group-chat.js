@@ -117,6 +117,7 @@ export function chatLife(kind, v = {}) {
     case 'tea': chatSay(v.id || restingOne(), life('tea'), { key, photo: v.photo || null, react: ['❤️', '😆', '😮'], reacts: 4, answer: [{ key: 'milkTea', chance: 0.6 }] }); break;
     case 'birthday': chatSay('hr', life('birthday', { names: v.names }), { key, react: ['❤️', '😆'], reacts: 5, answer: [{ key: 'hpbd' }, { key: 'hpbd', chance: 0.8 }, { key: 'hpbd', chance: 0.5 }] }); break;
     case 'store': if (v.id) chatSay(v.id, life('store', { shop: v.shop }), { key, answer: [{ key: 'storeAsk', chance: 0.7 }] }); break;
+    case 'mixue': if (v.id) chatSay(v.id, life(v.why === 'treat' ? 'mixueTreat' : 'mixueHot', { temp: v.temp }), { key, react: ['❤️', '😆'], reacts: 3, answer: [{ key: 'mixueAsk', chance: 0.9 }, { key: 'mixueAsk', chance: 0.5 }] }); break;
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;
     case 'bye': if (v.id) chatSay(v.id, tr('chat.work.bye'), { key, answer: [{ key: 'bye', chance: 0.6 }] }); break;

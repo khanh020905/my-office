@@ -46,8 +46,16 @@ export function setup() {
       water: (t) => { for (let i = 0; i < 5; i++) noise(t + i * 0.22, 0.3, 0.025, 700 + i * 120); },
       clap: (t) => { for (let i = 0; i < 26; i++) noise(t + Math.random() * 1.6, 0.04, 0.04 * Math.random() + 0.015, 1500); },
       thud: (t) => { for (let i = 0; i < 3; i++) { tone(95, t + i * 0.22, 0.12, 'sine', 0.16, 60); noise(t + i * 0.22, 0.06, 0.05, 300); } },
+      // the Mixue shop's tune: "Oh! Susanna" (Stephen Foster, 1848, long in the public domain), the melody its song is sung
+      // to, two lines on a bright music box: E G G A G E C D E E D C D, then E G G A G E C D E E D D C
+      mixue: (t) => {
+        const hz = { C: 523.25, D: 587.33, E: 659.25, G: 783.99, A: 880 }, e = 0.19;
+        const line = (notes, at) => { for (const [n, d] of notes) { tone(hz[n], at, d * e * 0.95, 'triangle', 0.07); tone(hz[n] * 2, at, d * e * 0.5, 'sine', 0.018); at += d * e; } return at; };
+        const one = [['E', 1], ['G', 1], ['G', 2], ['A', 1], ['G', 1], ['E', 2], ['C', 1], ['D', 1], ['E', 1], ['E', 1], ['D', 1], ['C', 1], ['D', 2]];
+        line([...one.slice(0, 11), ['D', 1], ['C', 2]], line(one, t) + e);
+      },
     };
-    const GAP = { bell: 0.6, water: 1.5, clap: 1.5, ding: 1, key: 0.18, perm: 1, turn: 1.5, print: 1, deploy: 3, siren: 4, meow: 0.8, pop: 0.15, bloop: 0.5, brew: 1.5, rustle: 0.25, click: 0.08, coin: 0.4, beep: 0.5, buzz: 0.6, thud: 2, thunder: 5 };
+    const GAP = { mixue: 8, bell: 0.6, water: 1.5, clap: 1.5, ding: 1, key: 0.18, perm: 1, turn: 1.5, print: 1, deploy: 3, siren: 4, meow: 0.8, pop: 0.15, bloop: 0.5, brew: 1.5, rustle: 0.25, click: 0.08, coin: 0.4, beep: 0.5, buzz: 0.6, thud: 2, thunder: 5 };
     return {
       get on() { return on; },
       set(v) { on = v; try { localStorage.setItem('office-sound', v ? 'on' : 'off'); } catch { /* storage blocked */ } if (v) unlock(); },

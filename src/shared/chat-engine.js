@@ -22,7 +22,7 @@ const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
 export function createChatEngine(ctx) {
   const { tr } = ctx, timer = ctx.timer || ((fn, ms) => setTimeout(fn, ms));
   const st = { msgs: [], pinned: null, days: {}, keys: [], typing: [] };
-  const queue = [], cool = new Map();
+  const queue = [], cool = new Map(), busy = new Map();   // (busy: who is working on what you sent them, key -> name)
   let seq = 0, tickT = null;
   const nid = () => `${ctx.now().toString(36)}${(seq++).toString(36)}${Math.random().toString(36).slice(2, 5)}`;
 
@@ -63,12 +63,12 @@ export function createChatEngine(ctx) {
   function system(text) { return add({ kind: 'sys', text }); }
   /** Someone says something after typing a moment (opts.now: at once). opts: delay, sticker, photo, poll, remind, reply
    *  ({ id, name, text }), react (emojis others may add), reacts (how many at most), answer ([{ key, chance, vars }]: lines
-   *  others answer with, under chat.reply), pin, key (once only), then(m). */
+   *  others answer with, under chat.reply), pin, key (once only), long (up to 4000 characters: Claude's own answer), tag ('claude': Claude's answer), then(m). */
   function say(from, text, opts = {}) {
     if (!fresh(opts.key) || (!text && opts.sticker == null && !opts.photo && !opts.poll && !opts.remind)) return;
     const p = who(from); if (!p) return;
     const now = ctx.now(), wait = opts.now ? 0 : opts.delay ?? rand(400, 1800), typing = opts.now || p.key === 'me' ? 0 : Math.min(2800, 700 + String(text || '').length * 30);
-    queue.push({ p, text: String(text || '').slice(0, 600), opts, typeAt: now + wait, at: now + wait + typing });
+    queue.push({ p, text: String(text || '').slice(0, opts.long ? 4000 : 600), opts, typeAt: now + wait, at: now + wait + typing });
     queue.sort((a, b) => a.at - b.at);
     tick();
   }
@@ -78,16 +78,18 @@ export function createChatEngine(ctx) {
     while (queue.length && queue[0].at <= now) {
       const { p, text, opts } = queue.shift();
       const kind = opts.poll ? 'poll' : opts.remind ? 'remind' : opts.photo ? 'photo' : opts.sticker != null ? 'sticker' : 'text';
-      const m = add({ from: p.key, name: p.name, kind, text, sticker: opts.sticker ?? null, photo: opts.photo || null, poll: opts.poll || null, remind: opts.remind || null, reply: opts.reply || null });
+      const m = add({ from: p.key, name: p.name, kind, text, sticker: opts.sticker ?? null, photo: opts.photo || null, poll: opts.poll || null, remind: opts.remind || null, reply: opts.reply || null, ...(opts.tag && { tag: opts.tag }) });
       if (opts.pin) pin(m.id, p.name);
       if (opts.react?.length) autoReact(m, opts.react, opts.reacts ?? 2);
       for (const a of opts.answer || []) answer(m, a.key, a.chance ?? 1, a.vars);
       opts.then?.(m);
     }
-    const typing = queue.filter((q) => q.typeAt <= now && q.at > now).map((q) => q.p.name);
+    const typing = [...new Set([...queue.filter((q) => q.typeAt <= now && q.at > now).map((q) => q.p.name), ...busy.values()])];
     if (typing.join('|') !== st.typing.join('|')) { st.typing = typing; ctx.emit('typing', typing); }
     if (queue.length) tickT = timer(tick, Math.max(60, Math.min(...queue.map((q) => (q.typeAt > now ? q.typeAt : q.at))) - now));
   }
+  /** Someone "typing" for as long as they work on what you asked them (Claude on a message sent to its conversation). */
+  function working(from, on) { const p = who(from); if (!p) return; if (on) busy.set(p.key, p.name); else busy.delete(p.key); tick(); }
   /** A reaction ('me' for you); the same emoji again takes it back. */
   function react(id, by, emoji) {
     const m = byId(id); if (!m || !REACTIONS.includes(emoji) || m.recalled) return;
@@ -208,5 +210,5 @@ export function createChatEngine(ctx) {
     for (const m of st.msgs) if (m.kind === 'remind' && !m.remind.done && m.remind.at <= ctx.now()) { m.remind.done = true; update(m); system(tr('chat.sys.remindNow', { title: m.remind.title })); }
   }
 
-  return { state: st, who, byId, say, system, send, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
+  return { state: st, who, byId, say, system, send, working, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
 }

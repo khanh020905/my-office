@@ -119,6 +119,7 @@ export default {
     lunch7: ['Cơm 7-Eleven về rồi mọi người ơi! 🍱', 'Cơm hộp 7-Eleven đây, ăn thôi! 🍱'],
     lunch7Toast: 'Cơm trưa 7-Eleven đã tới, ra pantry ăn thôi 🍱',
     // on the way down, by what they will bring back (go), and coming out with it (got)
+    treat: { go: ['Đi mua kem Mixue khao cả phòng đây 🍦', 'Ra Mixue mua kem cho cả nhà nè 🍦'], got: ['Kem về rồi, ra lấy nha mọi người 🍦', 'Kem Mixue đây, ăn nhanh kẻo chảy 🍦'] },
     go: {
       cup: ['Xuống {shop} mua chai nước chút 🥤', 'Ra {shop} mua ly trà đào 🥤', 'Qua {shop} xíu, ai mua gì không? 🛒'],
       noodle: ['Xuống {shop} làm ly mì cho ấm bụng 🍜', 'Đói rồi, ra {shop} úp ly mì đây 🍜'],

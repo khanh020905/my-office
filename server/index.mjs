@@ -52,16 +52,24 @@ const TOKEN_FILE = path.join(DATA_DIR, 'token');
 const TOKEN = fs.existsSync(TOKEN_FILE)
   ? fs.readFileSync(TOKEN_FILE, 'utf8').trim()
   : (() => { const t = crypto.randomBytes(9).toString('base64url'); fs.writeFileSync(TOKEN_FILE, t, { mode: 0o600 }); return t; })();
-// Or a 6-digit PIN typed on /pin, which sets a signed 30-day cookie. The PIN is read from disk on each use, so
-// `my-office pin --new` takes effect at once and signs out every phone (the cookie signature covers the PIN).
-const PIN_FILE = path.join(DATA_DIR, 'pin');
+// Or a PIN typed on /pin (6 to 10 digits: a random 6 at first, or your own, set on the Mac), which sets a signed cookie:
+// for a year, renewed as it's used, on a phone where you tick "Remember this device"; for this visit only otherwise.
+// The PIN is read from disk on each use, so a new one takes effect at once and signs out every phone (the cookie
+// signature covers the PIN).
+const PIN_FILE = path.join(DATA_DIR, 'pin'), PIN_RE = /^\d{6,10}$/;
 function currentPin() {
-  try { const p = fs.readFileSync(PIN_FILE, 'utf8').trim(); if (/^\d{6}$/.test(p)) return p; } catch { /* first run */ }
+  try { const p = fs.readFileSync(PIN_FILE, 'utf8').trim(); if (PIN_RE.test(p)) return p; } catch { /* first run */ }
   const p = String(crypto.randomInt(0, 1e6)).padStart(6, '0');
   fs.writeFileSync(PIN_FILE, p, { mode: 0o600 });
   return p;
 }
 currentPin();
+/** A PIN of your own that a stranger would try first: all one digit, or a run like 123456 or 987654 (or not 6–10 digits). */
+function pinWeak(p) {
+  if (!PIN_RE.test(p)) return true;
+  const d = [...p].map(Number), steps = new Set(d.slice(1).map((x, i) => x - d[i]));
+  return steps.size === 1 && [0, 1, -1].includes([...steps][0]);
+}
 
 /* ---------- text helpers ---------- */
 const clip = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
@@ -242,8 +250,8 @@ const git = createGit({
   onCi: (r) => gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName),
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
-setInterval(() => { if (clients.size) pollGit(); }, 20_000).unref();
-setInterval(() => { if (clients.size) git.pollCi(); }, 120_000).unref();
+setInterval(() => { if (watching()) pollGit(); }, 20_000).unref();
+setInterval(() => { if (watching()) git.pollCi(); }, 120_000).unref();
 
 function rollDay() { if (stats.day !== today()) stats = { day: today(), read: 0, edit: 0, cmd: 0, web: 0, prompts: 0, deploy: 0, commit: 0 }; }
 
@@ -414,7 +422,18 @@ function todoOp(b) {
 /* ---------- SSE ---------- */
 const clients = new Set();
 function send(res, obj) { res.write(`data: ${JSON.stringify(obj)}\n\n`); }
-function broadcast(obj) { for (const c of clients) send(c.res, obj); if (RECORDED.has(obj.k)) record(obj); }
+/* The same messages for a page that asks instead of keeping a stream open: through the Cloudflare quick tunnel, which holds
+   a stream's data back until it ends (quick tunnels don't do server-sent events), GET /api/live?since=<n> waits up to 25 s
+   for what was broadcast after message n and answers as soon as there is something. The last 400 are kept. */
+const backlog = [], waiting = new Set();
+let sent = 0, polledAt = 0;   // (sent: how many messages so far, the number of the last)
+const watching = () => clients.size > 0 || Date.now() - polledAt < 60_000;   // (a page open: a stream, or asking now and then)
+function broadcast(obj) {
+  for (const c of clients) send(c.res, obj);
+  backlog.push([++sent, JSON.stringify(obj)]); if (backlog.length > 400) backlog.shift();
+  for (const w of waiting) w();
+  if (RECORDED.has(obj.k)) record(obj);
+}
 
 /* ---------- replay log ----------
    What the office shows is appended to data/replay/YYYY-MM-DD.jsonl, one {t, m} per line: session changes and events as
@@ -501,13 +520,19 @@ const tasks = createTasks({
   env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
   onDone: (t) => {
     if (t.sid) taskSids.add(t.sid);
-    const s = t.sid && [...sessions.values()].find((x) => x.sid === t.sid), folder = path.basename(t.dir);
-    const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), 560);
+    const dm = t.from?.chat, folder = path.basename(t.dir);
+    // the answer from whoever you asked (the conversation's person; the run's own if that one has gone)
+    const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (t.sid && all.find((x) => x.sid === t.sid)?.id);
+    const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), dm ? 3800 : 560);
     const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
-    if (s) chat.say(s.id, text, { reply: quote, react: ['❤️', '👍'], reacts: 2 });
+    if (dm) { chat.working(t.from.id, false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
+    if (who) chat.say(who, text, { now: dm, long: dm, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
     else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
   },
 });
+/* Writing to a conversation from the chat ("Gửi tới"): the first message branches it (its whole context, the one open in
+   your editor left as it is); what you write next carries on that branch, so it remembers what you said (for 6 hours). */
+const threads = new Map();   // the conversation's own id -> { sid: the branch, at, running }
 const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
   sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status })) });
@@ -908,20 +933,26 @@ function lanUrl(withToken = true) {
   for (const name of order) for (const n of nets[name] || []) if (n.family === 'IPv4' && !n.internal) return `http://${n.address}:${PORT}/${withToken ? `?k=${TOKEN}` : ''}`;
   return null;
 }
-const COOKIE = 'office_pin', COOKIE_DAYS = 30;
-const sign = (exp) => crypto.createHmac('sha256', TOKEN).update(`pin:${exp}:${currentPin()}`).digest('base64url');
+// The cookie: <expiry>.<k: a device you trust, kept a year | s: this visit, until the browser closes (12 h at most)>.<signature>.
+// SameSite=Lax, not Strict: opening the address from another app (the camera's QR code, a link in a chat) is a visit from
+// elsewhere, and Strict would leave the cookie behind and ask for the PIN again. A POST from another site still goes
+// without it, and every POST checks its Origin as well.
+const COOKIE = 'office_pin', KEEP_DAYS = 365, VISIT_MS = 12 * 3600e3;
+const sign = (exp, kind = '') => crypto.createHmac('sha256', TOKEN).update(`pin:${exp}:${kind ? `${kind}:` : ''}${currentPin()}`).digest('base64url');
 const sameBytes = (a, b) => { const x = Buffer.from(String(a)), y = Buffer.from(String(b)); return x.length === y.length && crypto.timingSafeEqual(x, y); };
-function pinCookie(req) {
-  const exp = Date.now() + COOKIE_DAYS * 86400e3;
-  return `${COOKIE}=${exp}.${sign(exp)}; Max-Age=${COOKIE_DAYS * 86400}; Path=/; HttpOnly; SameSite=Strict${req?.viaTunnel ? '; Secure' : ''}`;
+function pinCookie(req, keep = true) {
+  const kind = keep ? 'k' : 's', exp = Date.now() + (keep ? KEEP_DAYS * 86400e3 : VISIT_MS);
+  return `${COOKIE}=${exp}.${kind}.${sign(exp, kind)};${keep ? ` Max-Age=${KEEP_DAYS * 86400};` : ''} Path=/; HttpOnly; SameSite=Lax${req?.viaTunnel ? '; Secure' : ''}`;
 }
-function cookieOk(req) {
-  const m = new RegExp(`(?:^|;\\s*)${COOKIE}=(\\d+)\\.([\\w-]+)`).exec(String(req.headers.cookie || ''));
-  return !!m && Number(m[1]) > Date.now() && sameBytes(m[2], sign(m[1]));
+/** The phone's cookie when it's good: { exp, keep } (one from before "Remember this device" counts as kept). */
+function pinCookieOf(req) {
+  const m = new RegExp(`(?:^|;\\s*)${COOKIE}=(\\d+)\\.(?:([ks])\\.)?([\\w-]+)`).exec(String(req.headers.cookie || ''));
+  return m && Number(m[1]) > Date.now() && sameBytes(m[3], sign(m[1], m[2] || '')) ? { exp: Number(m[1]), keep: m[2] !== 's' } : null;
 }
+const cookieOk = (req) => !!pinCookieOf(req);
 function authorized(req, url) { return isLoopback(req) || (!req.viaTunnel && sameBytes(url.searchParams.get('k') || '', TOKEN)) || cookieOk(req); }
 
-// 6 digits is a million guesses: 5 wrong tries lock that address for 15 minutes, and 20 wrong tries from anywhere
+// 6 digits (at least) is a million guesses: 5 wrong tries lock that address for 15 minutes, and 20 wrong tries from anywhere
 // lock the PIN page for everyone for 15 minutes, so guessing it would take years.
 const LOCK_MS = 15 * 60e3;
 const pinFails = new Map();   // ip -> { n, until }
@@ -951,11 +982,13 @@ function readForm(req, max = 2_000) {
 }
 const PIN_CSS = `*{box-sizing:border-box}body{margin:0;min-height:100vh;min-height:100dvh;display:grid;place-items:center;background:#f4f1ea;color:#1d1b16;
 font:16px/1.5 system-ui,-apple-system,sans-serif;padding:16px;padding-bottom:max(16px,env(safe-area-inset-bottom))}@media (prefers-color-scheme:dark){body{background:#16151a;color:#ece9e2}
-.card{background:#211f26!important;border-color:#3a3742!important}input{background:#16151a!important;color:#ece9e2!important;border-color:#4a4654!important}}
+.card{background:#211f26!important;border-color:#3a3742!important}input[name=pin]{background:#16151a!important;color:#ece9e2!important;border-color:#4a4654!important}.keep small{color:#9a948a!important}}
 .card{width:100%;max-width:360px;background:#fff;border:1px solid #e3ddd0;border-radius:20px;padding:28px 24px;box-shadow:0 10px 40px rgba(0,0,0,.08)}
 h1{font-size:1.25rem;margin:0 0 4px}p{margin:0 0 18px;color:#7a7468;font-size:.92rem}
-input{width:100%;font:600 2rem/1 ui-monospace,Menlo,monospace;letter-spacing:.5em;text-align:center;padding:14px 0 14px .5em;border:1.5px solid #d8d1c2;
-border-radius:14px;background:#fbfaf7;outline:none}input:focus{border-color:#d97757;box-shadow:0 0 0 4px rgba(217,119,87,.18)}
+input[name=pin]{width:100%;font:600 1.75rem/1 ui-monospace,Menlo,monospace;letter-spacing:.3em;text-align:center;padding:14px 0 14px .3em;border:1.5px solid #d8d1c2;
+border-radius:14px;background:#fbfaf7;outline:none}input[name=pin]:focus{border-color:#d97757;box-shadow:0 0 0 4px rgba(217,119,87,.18)}
+.keep{display:flex;gap:10px;align-items:flex-start;margin:14px 0 0;cursor:pointer;font-size:.95rem;line-height:1.35}.keep input{width:22px;height:22px;margin:0;flex:none;accent-color:#d97757}
+.keep small{display:block;color:#7a7468;font-size:.8rem;margin-top:2px}
 button{margin-top:14px;width:100%;height:48px;border:0;border-radius:14px;background:#d97757;color:#fff;font:600 1rem system-ui;cursor:pointer}
 button:disabled{opacity:.5;cursor:default}.err{color:#c0392b;margin:12px 0 0;font-size:.9rem}.ico{font-size:2rem;margin-bottom:8px}`;
 function pinPage(res, code, msg = '', locked = false) {
@@ -964,7 +997,8 @@ function pinPage(res, code, msg = '', locked = false) {
 <html lang="${prefs.lang()}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>My Office</title><style>${PIN_CSS}</style></head>
 <body><form class="card" method="post" action="/pin" autocomplete="off"><div class="ico">🏢</div><h1>${esc(tr('server.pin.title'))}</h1>
 <p>${esc(tr('server.pin.help'))}</p>
-<input name="pin" inputmode="numeric" pattern="\\d{6}" maxlength="6" autocomplete="one-time-code" required autofocus aria-label="${esc(tr('server.pin.label'))}" ${locked ? 'disabled' : ''}>
+<input name="pin" inputmode="numeric" pattern="\\d{6,10}" maxlength="10" autocomplete="one-time-code" required autofocus aria-label="${esc(tr('server.pin.label'))}" ${locked ? 'disabled' : ''}>
+<label class="keep"><input type="checkbox" name="keep" value="1" checked ${locked ? 'disabled' : ''}><span>${esc(tr('server.pin.keep'))}<small>${esc(tr('server.pin.keepHint'))}</small></span></label>
 <button type="submit" ${locked ? 'disabled' : ''}>${esc(tr('server.pin.submit'))}</button>${msg ? `<p class="err" role="alert">${esc(msg)}</p>` : ''}</form></body></html>`);
 }
 const lockMsg = (until) => tr('server.pin.locked', { n: Math.max(1, Math.ceil((until - Date.now()) / 60e3)) });
@@ -1176,7 +1210,7 @@ function fetchPlanUsage(force = false) {
     if (usageNote) broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
   })().finally(() => { planBusy = null; }));
 }
-setInterval(() => { if (clients.size) { fetchPlanUsage(); for (const d of otherDirs) setTimeout(() => fetchOtherUsage(d), Math.random() * 40e3).unref(); } }, 120_000).unref();
+setInterval(() => { if (watching()) { fetchPlanUsage(); for (const d of otherDirs) setTimeout(() => fetchOtherUsage(d), Math.random() * 40e3).unref(); } }, 120_000).unref();
 
 /* ---------- other accounts on this machine ----------
    A second Claude Code login lives in its own config folder (CLAUDE_CONFIG_DIR, e.g. ~/.claude-org2): found as the
@@ -1656,9 +1690,9 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
-  // through the tunnel (the internet), only what a phone may send: the PIN, its answers to approvals (when the Mac allows
-  // them) and the page's presence. Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
+  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it). Everything else that changes something stays on the Mac and the home network.
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -1670,8 +1704,8 @@ const server = http.createServer((req, res) => {
     readForm(req).then((f) => {
       if (sameBytes(String(f.get('pin') || '').replace(/\D/g, ''), currentPin())) {
         pinFails.delete(ip);
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} pin ok ${ip}\n`).catch(() => {});
-        res.writeHead(303, { Location: '/', 'Set-Cookie': pinCookie(req), 'Cache-Control': 'no-store' }).end();
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} pin ok ${ip}${f.get('keep') === '1' ? ' remembered' : ''}\n`).catch(() => {});
+        res.writeHead(303, { Location: '/', 'Set-Cookie': pinCookie(req, f.get('keep') === '1'), 'Cache-Control': 'no-store' }).end();
         return;
       }
       const left = pinFailed(ip);
@@ -1713,14 +1747,38 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/pin' && !isLoopback(req)) {   // a phone signed in, changing the PIN: { current, pin }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const ip = clientIp(req), until = pinLockedUntil(ip);
+    if (until) { json(res, 200, { ok: false, message: lockMsg(until) }); return; }
+    readJson(req).then((b) => {
+      // the PIN it has now, as on the PIN page (wrong ones count toward the same lock), then one that isn't easy to guess
+      if (!sameBytes(String(b?.current || '').replace(/\D/g, ''), currentPin())) {
+        const left = pinFailed(ip), lockedNow = pinLockedUntil(ip);
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone pin change wrong ${ip}\n`).catch(() => {});
+        json(res, 200, { ok: false, message: lockedNow ? lockMsg(lockedNow) : tr('server.pin.wrong', { n: left }) }); return;
+      }
+      const own = String(b?.pin || '').replace(/\s/g, '');
+      if (pinWeak(own)) { json(res, 200, { ok: false, message: tr('server.pin.weak') }); return; }
+      pinFails.delete(ip);
+      fs.writeFileSync(PIN_FILE, own, { mode: 0o600 });
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone pin set ${ip}\n`).catch(() => {});
+      // this phone stays in (a new cookie, signed with the new PIN); every other one is cut off once the answer has gone
+      res.on('finish', () => { for (const srv of [...lanServers.values(), tunnel.srv]) srv?.closeAllConnections?.(); });
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Set-Cookie': pinCookie(req) }).end(JSON.stringify({ ok: true }));
+    });
+    return;
+  }
   if (req.method === 'POST' && (url.pathname === '/api/lan' || url.pathname === '/api/pin')) {   // phones on the home network: { on }; a new PIN (this computer only)
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
     readJson(req).then((b) => {
-      if (url.pathname === '/api/pin') {   // every phone signed out: the cookie's signature covers the PIN; open pages are cut off now
-        fs.writeFileSync(PIN_FILE, String(crypto.randomInt(0, 1e6)).padStart(6, '0'), { mode: 0o600 });
-        for (const srv of lanServers.values()) srv.closeAllConnections?.();
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone pin new\n`).catch(() => {});
+      if (url.pathname === '/api/pin') {   // { pin } of your own, or a random one; every phone signed out (the cookie's signature covers the PIN), open pages cut off now
+        const own = b?.pin == null ? '' : String(b.pin).replace(/\s/g, '');
+        if (own && pinWeak(own)) { json(res, 200, { ok: false, message: tr('server.pin.weak') }); return; }   // (turned down, not an error: the page shows why)
+        fs.writeFileSync(PIN_FILE, own || String(crypto.randomInt(0, 1e6)).padStart(6, '0'), { mode: 0o600 });
+        for (const srv of [...lanServers.values(), tunnel.srv]) srv?.closeAllConnections?.();
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone pin ${own ? 'set' : 'new'}\n`).catch(() => {});
         json(res, 200, { ok: true, pin: currentPin() });
         return;
       }
@@ -1739,6 +1797,7 @@ const server = http.createServer((req, res) => {
         if (!mac) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
         prefs.set('phoneTasks', b?.on ? true : undefined);
         fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tasks from phones ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
+        broadcast({ k: 'phone', approve: !!prefs.get('phoneApprove'), tasks: !!b?.on });
         json(res, 200, tasksOut(true)); return;
       }
       if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
@@ -1746,6 +1805,21 @@ const server = http.createServer((req, res) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       // where: a conversation the office knows (its context, branched), or a folder sessions have worked in
       const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
+      if (b?.chat) {   // a message to that conversation, from the chat: on its branch, and the answer comes back from its person
+        if (!s) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
+        const text = String(b?.text || '').trim().slice(0, 4000), name = s.title || s.name, th = threads.get(s.sid);
+        if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
+        if (th?.running) { json(res, 409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }); return; }
+        const on = th && th.sid !== s.sid && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;   // (never the conversation itself: that one stays as it is)
+        chat.say('me', `@${name} ${text}`, { now: true });
+        const mine = chat.state.msgs.at(-1);
+        const r = tasks.start({ dir: s.cwd, text, images: [], from: { sid: on || s.sid, fork: !on, name, id: s.id, orig: s.sid, chat: true } });
+        if (r.ok) { threads.set(s.sid, { sid: on || s.sid, at: Date.now(), running: true }); chat.working(s.id, true); taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null); }
+        else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${on ? `carry ${on}` : `branch ${s.sid}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+        json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
+        return;
+      }
       const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), dir = s ? s.cwd : knownDirs.find((d) => d === want);
       if (!dir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
       const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
@@ -1756,7 +1830,7 @@ const server = http.createServer((req, res) => {
       for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
       chat.say('me', `📋 ${text}`, { now: true });
       const mine = chat.state.msgs.at(-1);
-      const r = tasks.start({ dir, text, images, from: s ? { sid: s.sid, name } : null });
+      const r = tasks.start({ dir, text, images, from: s ? { sid: s.sid, name, id: s.id } : null });
       if (r.ok) {
         taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
       } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
@@ -1813,7 +1887,7 @@ const server = http.createServer((req, res) => {
     readJson(req).then((b) => {
       prefs.set('phoneApprove', b?.approve ? true : undefined);
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone approve ${b?.approve ? 'on' : 'off'}\n`).catch(() => {});
-      broadcast({ k: 'phone', approve: !!b?.approve });
+      broadcast({ k: 'phone', approve: !!b?.approve, tasks: !!prefs.get('phoneTasks') });
       json(res, 200, { ok: true, approve: !!b?.approve });
     });
     return;
@@ -1929,21 +2003,43 @@ const server = http.createServer((req, res) => {
     }).catch(() => { res.writeHead(404).end(); });
     return;
   }
+  // everything as it is now, the first message a page gets (the Mac's own addresses and PIN only for the Mac)
+  const snapNow = (local) => {
+    const lanOn = lanIsOn();
+    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), trophies: trophies.pub(),
+      lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
+      ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD };
+  };
   if (url.pathname === '/stream') {
-    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
     const local = isLoopback(req);
     const client = { res };
     clients.add(client);
     fetchPlanUsage();   // skipped when the saved reading is fresh
     pollGit().then(() => git.pollCi());
-    scanSessions().then(() => {
-      const lanOn = lanIsOn();
-      send(res, { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), trophies: trophies.pub(),
-        lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
-        ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), lanFixed: local && lanFixed });
-    });
+    scanSessions().then(() => send(res, snapNow(local)));
     const ping = setInterval(() => res.write(': ping\n\n'), 20_000);
     req.on('close', () => { clearInterval(ping); clients.delete(client); });
+    return;
+  }
+  if (url.pathname === '/api/live') {   // { seq, msgs }: the snapshot first (or when too far behind), then what came after `since`
+    const at = url.searchParams.get('since'), since = at == null ? -1 : Number(at), fresh = !watching();
+    polledAt = Date.now();
+    if (!(since >= 0) || since > sent || (backlog.length && since < backlog[0][0] - 1)) {
+      if (fresh) { fetchPlanUsage(); pollGit().then(() => git.pollCi()); }
+      scanSessions().then(() => json(res, 200, { seq: sent, msgs: [snapNow(isLoopback(req))] }));
+      return;
+    }
+    let timer = 0;
+    const answer = () => {
+      waiting.delete(answer); clearTimeout(timer);
+      if (res.writableEnded || res.destroyed) return;
+      const msgs = backlog.filter(([n]) => n > since).map(([, d]) => d);
+      res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' }).end(`{"seq":${sent},"msgs":[${msgs.join(',')}]}`);
+    };
+    if (sent > since) { answer(); return; }
+    timer = setTimeout(answer, 25_000); waiting.add(answer);
+    req.on('close', () => { waiting.delete(answer); clearTimeout(timer); });
     return;
   }
   if (url.pathname === '/api/log') {
@@ -1979,7 +2075,9 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/' || url.pathname === '/index.html') {
     // the office page itself is rendered by Next.js (app/page.tsx); our headers go on before it starts the response
     res.setHeader('Referrer-Policy', 'no-referrer');
-    if (!isLoopback(req) && !cookieOk(req)) res.setHeader('Set-Cookie', pinCookie(req));
+    // a phone in by a token link gets a cookie; a remembered one, renewed once a month, so it stays while it's used
+    const ck = isLoopback(req) ? null : pinCookieOf(req);
+    if (!isLoopback(req) && (!ck || (ck.keep && ck.exp - Date.now() < (KEEP_DAYS - 30) * 86400e3))) res.setHeader('Set-Cookie', pinCookie(req));
     if (url.pathname === '/index.html') req.url = '/' + url.search;
     req.headers['x-office-lang'] = pickLang(url.searchParams.get('lang') || prefs.lang());   // ?lang=vi: one visit in another language
     nextHandle(req, res);
@@ -1991,6 +2089,8 @@ const server = http.createServer((req, res) => {
 // Next.js renders the page and bundles the office's code: `--dev` runs it with Turbopack and hot reload, otherwise it
 // serves the production build made by `npm run build`.
 const DEV = process.argv.includes('--dev');
+// this build's id: a page from an older one (the office was updated and restarted) loads the new one by itself
+const BUILD = (() => { try { return fs.readFileSync(path.join(ROOT, process.env.OFFICE_DIST_DIR || '.next', 'BUILD_ID'), 'utf8').trim(); } catch { return ''; } })();
 const nextApp = next({ dev: DEV, dir: ROOT, hostname: HOST, port: PORT, httpServer: server });
 const nextHandle = nextApp.getRequestHandler();
 try { await nextApp.prepare(); }

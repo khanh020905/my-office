@@ -5,7 +5,7 @@ import nextTs from 'eslint-config-next/typescript';
 export default defineConfig([
   ...nextVitals,
   ...nextTs,
-  globalIgnores(['.next/**', 'out/**', '.demo-build/**', 'demo-site/**', 'data/**', 'public/assets/vendor/**', 'next-env.d.ts', 'test-results/**', 'playwright-report/**']),
+  globalIgnores(['.next/**', '.next-*/**', 'out/**', '.demo-build/**', 'demo-site/**', 'data/**', 'public/assets/vendor/**', 'next-env.d.ts', 'test-results/**', 'test-results-*/**', 'playwright-report/**']),
   // `ready && start()` and `a ? b() : c()` as statements are this code base's style
   { rules: { '@typescript-eslint/no-unused-expressions': ['warn', { allowShortCircuit: true, allowTernary: true }] } },
   // `({ secret, ...rest }) => rest` drops a field on purpose

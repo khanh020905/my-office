@@ -273,7 +273,8 @@ test('the phone window: a switch to open the office to phones (off), how to use 
   await expect(lan.locator('input')).not.toBeChecked();   // (off by default; nothing listens beyond 127.0.0.1)
   await expect(body.locator('.pm-note').first()).toContainText('PIN');
   await expect(body).not.toContainText('install');         // (no terminal command to type)
-  await expect(body.locator('.pm-h')).toHaveCount(2);      // (when you're out; giving Claude work from the phone)
+  await expect(body.locator('.pm-tab')).toHaveCount(2);    // (the two ways in: home, and when you're out)
+  await expect(body.locator('.pm-list .pm-toggle')).toHaveCount(3);   // (what phones may do: approve, give work, Remote Control)
   await expect(body).toContainText('/rc');
   // Remote Control in every new session: written into Claude Code's settings (this test's own home folder), and back out
   const rc = body.locator('.pm-approve', { hasText: 'Remote Control' }), cc = path.join(HOME_DIR, '.claude', 'settings.json');
@@ -285,9 +286,11 @@ test('the phone window: a switch to open the office to phones (off), how to use 
 });
 
 test('away from home: the tunnel switch, and all that comes through it is from the internet (PIN only, nothing that controls the Mac)', async ({ page, request }) => {
+  test.setTimeout(300_000);   // (a second office page, the phone's)
   const errors = watchErrors(page);
   await page.goto('/');
   await page.click('#btn-phone-top');
+  await page.locator('#pm-body .pm-tab', { hasText: 'out' }).click();
   const sw = page.locator('#pm-body .pm-approve', { hasText: 'Cloudflare' });
   await sw.locator('input').click();
   await expect(page.locator('#pm-body')).toContainText('e2e-office-test.trycloudflare.com', { timeout: 20_000 });   // (tests/e2e/fake-cloudflared.sh)
@@ -305,10 +308,57 @@ test('away from home: the tunnel switch, and all that comes through it is from t
   expect((await request.post(`${via}/api/lan`, { headers: host, data: { on: true } })).status()).toBe(403);
   expect((await request.get(`${via}/api/sys`, { headers: host })).status()).toBe(401);   // (watching needs the PIN)
   expect((await request.get(`${via}/`, { headers: { Host: 'evil.example' }, maxRedirects: 0 })).status()).toBe(421);   // (not the tunnel's name)
-  // the PIN gets in, with an https-only cookie
-  const r = await request.post(`${via}/pin`, { headers: { ...host, Origin: 'https://e2e-office-test.trycloudflare.com', 'Content-Type': 'application/x-www-form-urlencoded' }, data: `pin=${t.pin}`, maxRedirects: 0 });
+  // the PIN gets in, with an https-only cookie: kept a year with "Remember this device" (ticked at first), this visit only without
+  const login = (pin: string, keep = true) => request.post(`${via}/pin`, { headers: { ...host, Origin: 'https://e2e-office-test.trycloudflare.com', 'Content-Type': 'application/x-www-form-urlencoded' }, data: `pin=${pin}${keep ? '&keep=1' : ''}`, maxRedirects: 0 });
+  const r = await login(t.pin);
   expect(r.status()).toBe(303);
-  expect(r.headers()['set-cookie']).toContain('Secure');
+  const kept = String(r.headers()['set-cookie']), cookie = kept.split(';')[0];
+  expect(kept).toContain('Secure');
+  expect(kept).toContain('SameSite=Lax');   // (opened from the camera's QR code or a chat link, the cookie still goes)
+  expect(kept).toContain(`Max-Age=${365 * 86400}`);
+  expect(String((await login(t.pin, false)).headers()['set-cookie'])).not.toContain('Max-Age');
+  expect((await request.get(`${via}/api/chat`, { headers: { ...host, Cookie: cookie } })).status()).toBe(200);
+  // through the tunnel a page asks (/api/live, which answers as soon as there is something) instead of keeping a stream
+  // open, which a quick tunnel holds back: the snapshot first, then what is broadcast after it
+  const live = async (since?: number) => (await request.get(`${via}/api/live${since == null ? '' : `?since=${since}`}`, { headers: { ...host, Cookie: cookie } })).json();
+  const first = await live();
+  expect(first.msgs[0].k).toBe('snap');
+  await request.post('/api/chat', { data: { op: 'say', from: 'hr', text: 'over the tunnel', key: `e2e-live-${Date.now()}` } });
+  let seen = '', at = first.seq;
+  for (let k = 0; k < 6 && !seen.includes('over the tunnel'); k++) { const r = await live(at); at = r.seq; seen += JSON.stringify(r.msgs); }
+  expect(seen).toContain('over the tunnel');
+  // a PIN of your own, set on the Mac: an easy one is turned down; the new one signs every phone out
+  await page.locator('#pm-body .pm-pin button', { hasText: 'Set your own' }).click();
+  await page.locator('#pm-body .pm-pinin').fill('123456');
+  await page.locator('#pm-body .pm-setpin button[type=submit]').click();
+  await expect(page.locator('#pm-body .pm-setpin + .pm-err')).toContainText('123456');
+  await page.locator('#pm-body .pm-pinin').fill('20051990');
+  await page.locator('#pm-body .pm-setpin button[type=submit]').click();
+  await expect(page.locator('#pm-body .pm-digits')).toHaveText('2005 1990');
+  expect((await request.get(`${via}/api/chat`, { headers: { ...host, Cookie: cookie } })).status()).toBe(401);
+  expect((await login('20051990')).status()).toBe(303);
+  // on a phone (a page through the tunnel): the PIN changed there, with the one it has now, and that phone stays in;
+  // what the Mac allows it, each with where to turn it on
+  const phone = await page.context().newPage();
+  await phone.addInitScript(() => { try { localStorage.setItem('office-lite', 'on'); } catch { /* private mode */ } });
+  await phone.goto(`${via}/pin`);
+  await phone.locator('input[name=pin]').fill('20051990');
+  await phone.locator('button[type=submit]').click();
+  const side = phone.locator('#pm-body .pm-side');
+  await expect(async () => { if (!(await side.isVisible())) { await phone.click('#btn-look'); await phone.click('#st-tab-more'); await phone.click('#btn-phone'); } await expect(side).toBeVisible({ timeout: 2000 }); }).toPass({ timeout: 120_000 });
+  await expect(phone.locator('#pm-body')).toContainText('Give Claude work from a phone: off');
+  await side.locator('input').nth(0).fill('11111111');
+  await side.locator('input').nth(1).fill('31121999');
+  await side.locator('button').click();
+  await expect(phone.locator('#pm-body .pm-side + .pm-err')).toContainText('Wrong PIN');
+  await side.locator('input').nth(0).fill('20051990');
+  await side.locator('button').click();
+  await expect.poll(() => fs.readFileSync(path.join(DATA_DIR, 'pin'), 'utf8').trim()).toBe('31121999');
+  await phone.reload();
+  await expect(phone.locator('#btn-look')).toBeVisible();   // (still in: not sent back to the PIN page)
+  expect(new URL(phone.url()).pathname).toBe('/');
+  await phone.close();
+  expect((await (await request.post('/api/pin', { data: { pin: '111111' } })).json()).ok).toBe(false);
   // off: the listener closes
   await sw.locator('input').click();
   await expect.poll(async () => (await (await request.get('/api/tunnel')).json()).state).toBe('off');
@@ -338,6 +388,24 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect(sheet).toBeHidden({ timeout: 20_000 });
   await expect(zc.locator('.zc-row.is-mine', { hasText: 'write a hello file' })).toBeVisible({ timeout: 20_000 });
   await expect(zc).toContainText('Done: the e2e task.', { timeout: 30_000 });   // (tests/e2e/fake-claude.sh answers for `claude -p`)
+  // writing to that conversation ("To", over the input): a branch of it, the answer from its person, marked Claude; what
+  // you write next carries on that branch (never the conversation itself)
+  const asked = () => { try { return fs.readFileSync(path.join(HOME_DIR, '.fake-claude.log'), 'utf8'); } catch { return ''; } };
+  const claudeSaid = async () => (await (await request.get('/api/chat')).json()).msgs.filter((m: { tag?: string }) => m.tag === 'claude').length;
+  await zc.locator('.zc-to-chip').click();
+  await zc.locator(`.zc-to-pick .zc-to-o[data-sid="${base.session_id}"]`).click();
+  await expect(zc.locator('.zc-to-chip')).toHaveClass(/is-on/);
+  await zc.locator('.zc-in').fill('what are you on?');
+  await zc.locator('.zc-in').press('Enter');
+  await expect(zc.locator('.zc-row.is-mine', { hasText: 'what are you on?' })).toBeVisible({ timeout: 20_000 });
+  await expect.poll(asked, { timeout: 20_000 }).toContain(`--resume ${base.session_id} --fork-session`);
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(0);
+  await expect(zc.locator('.zc-claude').first()).toBeVisible();
+  await zc.locator('.zc-in').fill('and then?');
+  await zc.locator('.zc-in').press('Enter');
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);
+  await zc.locator('.zc-to-x').click();
+  await expect(zc.locator('.zc-to-chip')).not.toHaveClass(/is-on/);
   // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it
   await request.post('/api/tunnel', { data: { on: true } });
   await expect.poll(async () => (await (await request.get('/api/tunnel')).json()).state).toBe('on');
@@ -780,7 +848,7 @@ test('walking into the GS25: the door opens, the cashier says hello, a drink fro
   await page.keyboard.down('KeyW');
   await expect.poll(() => page.evaluate(() => !!((window as unknown as Win).__office!.street as { shop: { inside: () => unknown } }).shop.inside()), { timeout: 20_000 }).toBe(true);
   await page.keyboard.up('KeyW');
-  await expect(page.locator('.shop-say')).toHaveText(/GS25/, { timeout: 5_000 });
+  await expect(page.locator('.shop-say', { hasText: 'GS25' }).first()).toBeVisible({ timeout: 5_000 });
   await at(0, -3.2);
   await expect(page.locator('#fp-near')).toHaveText(/banana milk/i, { timeout: 5_000 });
   await page.keyboard.press('KeyE');
@@ -788,6 +856,54 @@ test('walking into the GS25: the door opens, the cashier says hello, a drink fro
   await expect(page.locator('#fp-near')).toHaveText(/1 item/i, { timeout: 5_000 });
   await page.keyboard.press('KeyE');
   await expect(page.locator('.toast').last()).toHaveText(/QR/, { timeout: 5_000 });
+  expect(errors).toEqual([]);
+});
+
+test('walking into the Mixue: the red front and its Snow King, a cone ordered at the counter and paid; the CI green again sends someone for ice cream', async ({ page }) => {
+  test.setTimeout(240_000);
+  const errors = watchErrors(page);
+  await page.setViewportSize({ width: 900, height: 560 });
+  await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); localStorage.setItem('office-tips', 'seen'); } catch { /* private mode */ } });
+  await page.goto('/?demo&debug&layout=pro&at=17:00');
+  await page.waitForFunction(() => (window as unknown as Win).__office?.street, null, { timeout: 30_000 });
+  const door = () => page.evaluate(() => ((window as unknown as Win).__office!.street as { doors: () => { key: string }[] }).doors().find((x) => x.key === 'mixue') || null);
+  await expect.poll(door, { timeout: 30_000 }).not.toBeNull();
+  await page.click('#btn-fp');
+  await page.evaluate(() => (window as unknown as Win).__office!.fpToStreet());
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.fp.street), { timeout: 10_000 }).toBe(true);
+  const at = (lx: number, lz: number, look = -1) => page.evaluate(([lx, lz, look]) => {
+    const o = (window as unknown as Win).__office!, d = (o.street as { doors: () => { key: string, x: number, z: number, face: number }[] }).doors().find((x) => x.key === 'mixue')!;
+    const rot = d.face === Math.PI ? 0 : Math.PI / 2, fx = d.x - (rot ? 0.45 : 0), fz = d.z - (rot ? 0 : 0.45);
+    const w = (x: number, z: number) => (rot ? [fx + z, fz - x] : [fx + x, fz + z]), [x, z] = w(lx, lz), [ax, az] = w(lx, lz + look);
+    o.fp.pos!.set(x, z); o.fp.yaw = Math.atan2(ax - x, az - z);
+  }, [lx, lz, look]);
+  // the front, from across the pavement
+  await at(0, 5.5);
+  await page.waitForTimeout(1500);
+  await page.screenshot({ path: path.join(DATA_DIR, '..', 'mixue-front.png') });
+  // up to the door and in: "Mixue xin chào!"
+  await at(0, 1.6);
+  await page.keyboard.down('KeyW');
+  await expect.poll(() => page.evaluate(() => !!((window as unknown as Win).__office!.street as { shop: { inside: () => unknown } }).shop.inside()), { timeout: 20_000 }).toBe(true);
+  await page.keyboard.up('KeyW');
+  await expect(page.locator('.shop-say', { hasText: 'Mixue' }).first()).toBeVisible({ timeout: 5_000 });
+  await at(1.2, -0.3);
+  await page.waitForTimeout(800);
+  await page.screenshot({ path: path.join(DATA_DIR, '..', 'mixue-inside.png') });
+  // a cone at the counter: ordered, then paid
+  await at(0.9, -1.15);
+  await expect(page.locator('#fp-near')).toHaveText(/soft-serve cone/i, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('#fp-near')).toHaveText(/1 item/i, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('.toast').last()).toHaveText(/Mixue/, { timeout: 5_000 });
+  // the CI green again (incidents.js calls the same): someone resting goes to the Mixue for ice cream for everyone
+  await page.keyboard.press('Escape');
+  await page.evaluate(() => { const o = (window as unknown as Win).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(6); });
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.goOut('treat')), { timeout: 45_000 }).toBe(true);
+  const trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
+  expect(trip?.shop).toBe('Mixue');
+  expect(trip?.item).toBe('grocery');
   expect(errors).toEqual([]);
 });
 

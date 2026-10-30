@@ -3,7 +3,7 @@
 // Once seen it does not come back by itself: Settings → More → "Show the tour again", or ?tips.
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { state } from '../core/state.js';
-import { $, el, replay } from '../core/env.js';
+import { $, STATIC, el, replay } from '../core/env.js';
 import { BASE_ZOOM, scene } from '../scene/renderer.js';
 import { focusTarget } from '../core/loop.js';
 import { PROPS, hoverProp, setOutline } from '../interact/props.js';
@@ -22,6 +22,9 @@ const STEPS = [
 ];
 let tour = null;      // { steps, i, card, anchor, outlined }
 let pending = 0;      // a first visit: when to start (performance.now(), once the office has settled), 0 if not
+let asked = false;    // ?tips: show it wherever this is
+// By itself only on the Mac (and in the demo): a phone is you again, and its address may change (the tunnel's), which
+// would make every visit look like the first.
 const seen = () => { try { return localStorage.getItem(KEY) === 'seen'; } catch { return true; } };
 const remember = () => { try { localStorage.setItem(KEY, 'seen'); } catch { /* storage blocked */ } };
 // someone to point at: at work if anyone is, in sight
@@ -96,7 +99,7 @@ function show(i) {
 
 // each frame: start on a first visit once things have settled; stand aside for walking in, photos, replays
 export function updateTips() {
-  if (pending && !tour && performance.now() > pending && state.sim > 0.5 && !fp.on && !state.photo && !replay.on && !lite) { pending = 0; startTips(); }
+  if (pending && !tour && performance.now() > pending && (state.isLocal || asked || STATIC || location.search.includes('demo')) && state.sim > 0.5 && !fp.on && !state.photo && !replay.on && !lite) { pending = 0; startTips(); }
   if (!tour) return;
   if (fp.on || state.photo || replay.on || lite) { endTips(); return; }
   if (state.selectedId && tour.steps[tour.i]?.key === 'person') tipUsed('person');
@@ -105,7 +108,8 @@ export function updateTips() {
 }
 
 export function setup() {
-  pending = !seen() || new URLSearchParams(location.search).has('tips') ? performance.now() + 4500 : 0;   // (real time: a slow machine's office clock lags)
+  asked = new URLSearchParams(location.search).has('tips');
+  pending = !seen() || asked ? performance.now() + 4500 : 0;   // (real time: a slow machine's office clock lags)
   addEventListener('keydown', (e) => { if (tour && e.key === 'Escape') endTips(); });
   $('btn-tips')?.addEventListener('click', () => { togglePop(false); startTips(); });
 }

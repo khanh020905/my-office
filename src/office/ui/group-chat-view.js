@@ -9,17 +9,19 @@
 // on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji,
 // "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. No brand, logo, sticker art or sound
 // of theirs: the stickers are drawn here, the sound is the office's own.
-import { $, el } from '../core/env.js';
+import { $, STATIC, el } from '../core/env.js';
 import { state } from '../core/state.js';
 import { icon } from './icons.js';
 import { avatar } from './chat-avatars.js';
 import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate } from './task-sheet.js';
+import { toast } from './activity.js';
+import { TOKEN } from '../net/live.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
-let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv;
+let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl;
 let replyTo = null, readTo = null, stickTab = 'sticker';   // the message you answer; the last one read when the window shut; the panel's tab
 const RUN_MS = 3 * 60e3, GAP_MS = 20 * 60e3;   // one run of bubbles: the same person within 3 minutes; a time line after 20 quiet minutes
 const seeVotes = new Set();   // polls whose voters are listed
@@ -143,7 +145,7 @@ function row(m, prev, nextM) {
   if (!mine) { const slot = el('span', 'zc-av-slot'); if (first) slot.append(avatar(faceOf(m.from, m.name), 32)); r.append(slot); }
   const bare = !m.recalled && (m.kind === 'sticker' || m.kind === 'photo' || (m.kind === 'text' && bigEmoji(m.text)));
   const bub = el('div', `zc-bub${bare ? ' is-bare' : ''}`);
-  if (!mine && first && !bare) bub.append(el('span', 'zc-name', m.name));
+  if (!mine && first && !bare) { const n = el('span', 'zc-name', m.name); if (m.tag === 'claude') n.append(el('i', 'zc-claude', tr('chat.claudeTag'))); bub.append(n); }
   if (m.reply && !m.recalled) bub.append(quote(m.reply));
   bub.append(content(m));
   if (last && !bare) bub.append(el('span', 'zc-time', fmtTime(m.at)));
@@ -253,6 +255,8 @@ onChat((what, m) => {
 function syncBar() { bar.classList.toggle('has-text', !!input.value.trim()); root.classList.toggle('has-text', !!input.value.trim()); }
 function setReply(m) {
   replyTo = m;
+  const s = m?.tag === 'claude' && sessions.get(m.from);   // (an answer from Claude: what you write back goes to it)
+  if (s?.sid) setTarget({ id: s.id, sid: s.sid, name: dn(s), folder: folderOf(s) });
   replyEl.hidden = !m;
   if (m) {
     const t = m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
@@ -263,6 +267,7 @@ function setReply(m) {
 }
 function send() {
   const v = input.value; input.value = ''; syncBar(); mentionEl.hidden = true; input.style.height = '';
+  if (target && v.trim()) { sendTo(v.trim()); setReply(null); return; }
   if (v.trim()) chatSend(v, { replyTo: replyTo?.id });
   setReply(null);
   // @ a conversation: give it this as work? (one tap opens the sheet with it filled in: its folder, photos, send)
@@ -275,6 +280,62 @@ function send() {
     ask.append(el('span', null, tr('chat.task.ask', { name: dn(tagged), folder: folderOf(tagged) })), no, yes);
     body.append(ask); body.scrollTop = body.scrollHeight;
   }, 300);
+}
+/* ---------- who gets what you write: the whole group (people chatting), or one conversation, Claude for real (it goes to
+   that conversation as work on its own branch, and the answer comes back here from its person: server, POST /api/tasks
+   { chat }); chosen above the input, or by replying to one of Claude's answers ---------- */
+const DEMO_CHAT = STATIC || new URLSearchParams(location.search).has('demo');
+const tq = () => (TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : '');
+let target = null;   // { id, sid, name, folder }, or null: the whole group
+try { target = DEMO_CHAT ? null : JSON.parse(sessionStorage.getItem('office-chat-to') || 'null'); } catch { /* storage blocked */ }
+function setTarget(t) {
+  target = t; try { sessionStorage.setItem('office-chat-to', JSON.stringify(t)); } catch { /* storage blocked */ }
+  if (pickEl) pickEl.hidden = true;
+  drawTarget();
+}
+function drawTarget() {
+  if (!toEl) return;
+  const chip = el('button', `zc-to-chip${target ? ' is-on' : ''}`); chip.type = 'button'; chip.title = tr('chat.to.pick');
+  chip.append(el('small', null, tr('chat.to.label')));
+  if (target) chip.append(avatar(faceOf(target.id, target.name), 20), el('b', null, target.name)); else chip.append(el('b', null, `💬 ${tr('chat.to.group')}`));
+  chip.append(el('i', 'zc-to-caret', '▾'));
+  chip.addEventListener('click', openPick);
+  toEl.replaceChildren(chip);
+  if (target) {
+    const x = el('button', 'zc-ib zc-to-x'); x.type = 'button'; x.title = tr('chat.to.clear'); x.append(icon('x')); x.addEventListener('click', () => setTarget(null));
+    toEl.append(el('small', 'zc-to-sub', tr('chat.to.sub', { folder: target.folder })), x);
+  }
+  input.placeholder = target ? tr('chat.to.placeholder', { name: target.name }) : tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
+  root.classList.toggle('is-to', !!target);
+}
+// the list: the group, then each conversation open now (its folder, what it's doing)
+async function openPick() {
+  if (!pickEl.hidden) { pickEl.hidden = true; return; }
+  mentionEl.hidden = moreEl.hidden = stickersEl.hidden = true;
+  pickEl.replaceChildren(el('small', 'zc-to-h', tr('chat.to.pick'))); pickEl.hidden = false;
+  const r = await fetch(`/api/tasks${tq()}`).then((x) => x.json()).catch(() => null);
+  const opt = (face, title, sub, on, pick, off) => {
+    const b = el('button', `zc-to-o${on ? ' is-sel' : ''}`); b.type = 'button'; b.disabled = !!off;
+    const t = el('span', 'zc-men-t'); t.append(el('b', null, title), el('small', null, sub)); b.append(face, t);
+    b.addEventListener('click', pick); return b;
+  };
+  const items = [opt(el('span', 'zc-to-group', '💬'), tr('chat.to.group'), tr('chat.to.groupSub'), !target, () => setTarget(null))];
+  if (r?.ok && !r.allowed) items.push(el('p', 'zc-to-note', tr('chat.to.notAllowed')));
+  items.push(el('small', 'zc-to-h', tr('chat.to.sessions')));
+  const list = r?.sessions || [];
+  if (!list.length) items.push(el('p', 'zc-to-note', r ? tr('chat.to.none') : tr('drawer.unreachable')));
+  for (const s of list) {
+    const folder = s.dir.split('/').slice(-2).join('/'), st = tr(s.status === 'rest' ? 'chat.memberRest' : s.status === 'wait' ? 'chat.memberWait' : 'chat.memberWork');
+    const o = opt(avatar(faceOf(s.id, s.name), 30), s.name, `📁 ${folder} · ${st}`, target?.sid === s.sid, () => { setTarget({ id: s.id, sid: s.sid, name: s.name, folder }); input.focus(); }, r && !r.allowed);
+    o.dataset.sid = s.sid; items.push(o);
+  }
+  pickEl.replaceChildren(...items);
+}
+async function sendTo(text) {
+  const r = await fetch(`/api/tasks${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ sid: target.sid, text, chat: true }) }).then((x) => x.json()).catch(() => null);
+  if (r?.ok) return;
+  toast(r?.code === 'notAllowed' ? tr('chat.to.notAllowed') : r?.message || tr('drawer.unreachable'), 7000);
+  if (!input.value) { input.value = text; syncBar(); }   // (nothing lost: back in the input)
 }
 // a session's project folder, short (its last two parts), and what it's doing now
 const folderOf = (s) => { const d = String(s?.dir || '').replace(/\/+$/, ''); return d.split('/').slice(-2).join('/') || d; };
@@ -403,7 +464,9 @@ function build() {
   hint.append(el('span', null, tr('chat.hintRc')), hintX);
   try { hint.hidden = localStorage.getItem('office-chat-hint') === 'seen'; } catch { /* storage blocked */ }
   hintX.addEventListener('click', () => { hint.hidden = true; try { localStorage.setItem('office-chat-hint', 'seen'); } catch { /* storage blocked */ } });
-  root.append(head, pinEl, body, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, bar, membersEl);
+  toEl = el('div', 'zc-to'); toEl.hidden = DEMO_CHAT; pickEl = el('div', 'zc-to-pick'); pickEl.hidden = true;
+  root.append(head, pinEl, body, newBtn, typingEl, mentionEl, replyEl, hint, stickersEl, moreEl, toolbar, pickEl, toEl, bar, membersEl);
+  drawTarget();
   $('app').append(root);
 }
 export function toggle(on = !chat.open) {

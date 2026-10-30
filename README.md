@@ -129,7 +129,11 @@ Then open <http://localhost:4310>.
     Xanh SM drivers wear the company's jacket and helmet with its logo on the back, the chest and the helmet; most carry
     a passenger in the company's helmet; GrabFood drivers carry the green box; many riders wear a face mask; people who wait for the green and
     cross on the zebras (umbrellas when it rains), and the shops of the city picked for the weather: GS25, Circle K and
-    7-Eleven in Ho Chi Minh City, Circle K, GS25 and WinMart+ in Hanoi, WinMart+ with mì Quảng and seafood in Đà Nẵng.
+    7-Eleven in Ho Chi Minh City, Circle K, GS25 and WinMart+ in Hanoi, WinMart+ with mì Quảng and seafood in Đà Nẵng;
+    and a Mixue in every city: the red front with its lit white letters, the round light box on its bracket, the Snow
+    King's statue by the window, the order counter with the soft-serve machine, the menu's light boxes at real prices
+    (the 10.000đ cone, the 25.000đ milk tea), staff in black T-shirts, schoolchildren with cones after school and milk tea
+    in the evening, and on weekend evenings the Snow King himself dancing out front to its tune ("Oh! Susanna").
     The streets follow the office clock: in the morning and evening rush twice the scooters, riding three abreast and
     crawling; empty streets in the small hours. Cars pull in to the kerb in front of the shops and along the park,
     indicating, and pull out again later; taxis stop for a fare with their hazard lights on. Street food across the
@@ -182,14 +186,17 @@ Then open <http://localhost:4310>.
     burns votive paper in a steel drum by an offering table (`?lunar=1` to see it any day);
   - going out (city backdrop): before lunch on the company floor a GrabFood rider stops at the kerb and someone resting goes
     down in the lift for the team's lunch; now and then someone resting pops down to the convenience store across the
-    street, waits for the green man, and comes back with a drink. Work coming in calls them back at a run;
+    street, waits for the green man, and comes back with a drink; on a really hot afternoon (the city's real weather,
+    32° and up) the trip is for a 10k cone at the Mixue, and when CI goes green again someone goes for ice cream for
+    everyone. Work coming in calls them back at a run;
   - day and night by the clock;
   - real weather, if you pick a city;
   - seasonal decorations (Halloween, Christmas, Lunar New Year).
 - **Walk in**: explore the office in first person (WASD to move, E to use what is in front of you). Walk up to someone
   asleep and press E to wake them: they stretch, say something, and doze off again (and get crosser if you keep at it).
   With the city outside, press E at the lift (or the door) to go down to the street: walk the pavements, cross (the
-  traffic stops for you), get a drink at the convenience store, a bánh mì at the cart, and E at the door to go back up.
+  traffic stops for you), get a drink at the convenience store, a cone or a milk tea at the Mixue, a bánh mì at the cart,
+  and E at the door to go back up.
 - **A short tour on the first visit** points at what you can click (the lamp, the switch, the coffee machine, the
   printer, the cat, the bell, a person, walking in). Settings → More → "Show the tour again".
 - **A 15-second clip** (in photo mode): a video of the office from morning to evening, square for a feed or vertical
@@ -212,8 +219,8 @@ Then open <http://localhost:4310>.
   the Friday tea with a photo of the table, birthdays), type for a moment first, react and answer each other, and answer
   you: @ someone and they say what they're on, "meeting" rings the bell, "milk tea" brings the Friday tea out. Each
   person's picture is their own chibi; stickers, polls, reactions, a pinned message, the unread count. Kept on this
-  computer (`data/chat.json`) and seen by your phones too. What you write doesn't reach a conversation; to hand Claude
-  something, use **Give work** (below).
+  computer (`data/chat.json`) and seen by your phones too. Written to "The whole group" it is just chatting; pick a
+  conversation in **To** over the input and Claude itself answers (below).
 - **Timeline and replay**: one lane per session; replay the last hour or day at up to ×120; export it as a video.
 - **Weekly recap**: a picture card of your week with Claude, ready to save or paste into a post. It shows the hours,
   prompts, edits and commands, the cost at API prices, and your busiest project.
@@ -261,6 +268,10 @@ Then open <http://localhost:4310>.
 - Open on your phone: same Wi-Fi, or anywhere through the Cloudflare tunnel (below), 6-digit PIN. Watching, plus
   approving if you turn on "Approve from a phone" on the Mac. Claude Code's own Remote Control (`/rc`) works too: the
   session's QR code in its drawer opens that conversation in the Claude app.
+- **To**, over the chat's input: pick a conversation and write (or speak). It goes to that conversation as work, on a
+  branch of it with its whole context (the one open in your editor is left as it is); its person types while Claude
+  works and answers in the group, marked Claude. What you write next carries on the same branch, so it remembers (for 6
+  hours). Replying to one of Claude's answers writes to it too.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and
@@ -296,13 +307,17 @@ Then open <http://localhost:4310>.
   - The server listens on `127.0.0.1` only, until you turn on "Open on phones" in the phone window (or install with
     `--lan`). Then it also listens on the Mac's own network addresses (Wi-Fi, Ethernet, Tailscale), never on all of
     them, and turning it off closes them and cuts the phones off. "New PIN" there signs every phone out.
-  - Phones need the PIN; five wrong tries lock that address for 15 minutes.
+  - Phones need the PIN (a random 6 digits, or your own of 6 to 10 set in the phone window; not an easy one like
+    000000 or 123456); five wrong tries lock that address for 15 minutes. "Remember this device" (ticked at first) keeps
+    the phone signed in for a year, renewed as it's used; untick it on a borrowed phone and it lasts until the browser
+    closes. A new PIN signs every phone out; a phone can change it too (⚙ → More → 📱), with the one it has now.
   - Phones watch. They approve only once you turn on "Approve from a phone" on the Mac (off by default; only the Mac
     can switch it): allow once or deny, answer a question or a plan; never "always", and a risky (red) command can
     only be denied from a phone. Each answer from a phone is logged with its address. Hooks come from the Mac alone.
   - Away from home (mobile data, another Wi-Fi): "Use it when you're out" in the phone window starts a Cloudflare quick
     tunnel (cloudflared, downloaded once; no account, no domain) and shows its https address and QR code. The address
-    stays while it's on, across restarts of the office. What comes through it is from the internet whatever its
+    stays while it's on, across restarts of the office. Quick tunnels hold a stream's data back until it ends, so a page
+    opened through one asks instead (`/api/live`, answered as soon as there is something new). What comes through it is from the internet whatever its
     address: the PIN only (no token links), an https-only cookie, and nothing but the PIN, chat messages, presence,
     approvals and work (these two only if allowed on the Mac) may be sent; hooks, stopping processes, accounts and the
     switches are refused. Off: cloudflared stops and the phones are cut off. A Tailscale network works too (the window
@@ -357,6 +372,7 @@ request.
 | Brand icons | [Simple Icons](https://simpleicons.org) | CC0 |
 | Car models | [Kenney Car Kit](https://kenney.nl/assets/car-kit), see `public/assets/vehicles/README.md` | CC0 |
 | Shop signs and liveries (Circle K, GS25, 7-Eleven, WinMart, Xanh SM, Grab, Shopee) | Wikimedia Commons, see `public/assets/brands/README.md`; the Shopee mark from Simple Icons | public domain as text logos; trademarks of their owners, not affiliated |
+| The Mixue shop | drawn and modelled in code (`shop-mixue.js`): no artwork of the chain's; its tune is "Oh! Susanna" (Stephen Foster, 1848) | public domain melody; the name is its owner's trademark, not affiliated |
 | Weather | [Open-Meteo](https://open-meteo.com) | |
 
 ## Licence

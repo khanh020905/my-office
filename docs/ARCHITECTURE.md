@@ -169,7 +169,8 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/countryside.js` | 186 | Countryside backdrop: rice paddies, dikes, a river, a bridge, a village. |
 | `world/backdrops/index.js` | 49 | Choosing the backdrop: city, countryside or beach. |
 | `world/backdrops/shared.js` | 82 | Pieces shared by the countryside and beach backdrops. |
-| `world/backdrops/shops.js` | 763 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
+| `world/backdrops/shop-mixue.js` | 214 | The Mixue shop (shops.js places it): its printing (sign, menu light boxes, posters, the round light box), its fittings, the Snow King's statue and the dancer. |
+| `world/backdrops/shops.js` | 800 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
 | `world/backdrops/street-corner.js` | 143 | … |
 | `world/backdrops/street-csgt.js` | 738 | … |
 | `world/backdrops/street-folk.js` | 139 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |

@@ -20,19 +20,20 @@ import { sfx } from '../../audio/sfx.js';
 import { parkedScooter } from './street-life.js';
 import { folk, stepper } from './street-folk.js';
 import { puffs } from './street-corner.js';
+import { RM, drawMixue, fitMixue, snowDancer, snowKing } from './shop-mixue.js';
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
-export const SHOPS = 6, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
+export const SHOPS = 7, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
 export const shopDepth = (deep) => Math.min(5.0, deep - 1.4);   // how far in a shop goes, in a building `deep` deep
 const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (level with the pavement), the glass's top, the sign, half the door
 /* what each city has, front-most first (Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25
-   and WinMart+ in Hanoi; WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng).
-   'rent': a shuttered front to let. */
+   and WinMart+ in Hanoi; WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng;
+   Mixue everywhere, 4–6 to a kilometre in the big cities, so one near the office in each). 'rent': a shuttered front to let. */
 const SETS = {
-  hcm: ['gs25', 'circlek', 'seven', 'ministop', 'winmart', 'bhx'], hn: ['circlek', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
-  hp: ['winmart', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'], dn: ['winmart', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  hue: ['winmart', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'], nt: ['winmart', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  dl: ['winmart', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'], ct: ['bhx', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
+  hcm: ['gs25', 'mixue', 'circlek', 'seven', 'ministop', 'winmart', 'bhx'], hn: ['circlek', 'mixue', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
+  hp: ['winmart', 'mixue', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'], dn: ['winmart', 'mixue', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  hue: ['winmart', 'mixue', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo'], nt: ['winmart', 'mixue', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
+  dl: ['winmart', 'mixue', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'], ct: ['bhx', 'mixue', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
 };
 /* the chains: logo, the sign (face, stripes), the staff's shirt, opening hours (null: day and night), a window counter to
    sit at, and the three things you can take: from the fridges, from the chain's own corner (`side`), at the till (`hot`).
@@ -48,6 +49,8 @@ const CHAINS = {
     fridge: { id: 'water', price: 8, carry: 'cup' }, side: { id: 'cone', price: 10, carry: 'cone', unit: 'softserve' }, hot: { id: 'chicken', price: 25, carry: 'chicken', unit: 'fryer' } },
   winmart: { name: 'WinMart+', logo: 'winmart.png', crop: [0.92, 0.7], plus: true, stripes: ['#E21B2A'], accent: '#E21B2A', shirt: '#D21F2C', hours: [6, 22], seats: false,
     fridge: { id: 'milk', price: 32, carry: 'grocery' }, side: { id: 'veg', price: 12, carry: 'grocery', unit: 'produce' }, hot: null },
+  // (an ice cream and tea shop, not a store: its own printing, fittings and people, shop-mixue.js)
+  mixue: { name: 'Mixue', parlour: true, face: '#E50914', stripes: ['#E50914'], accent: '#E50914', shirt: '#1E1E1E', hours: [9, 22], seats: true },
   bhx: { name: 'Bách Hóa Xanh', logo: 'bach-hoa-xanh.png', face: '#008C44', stripes: ['#FFE600', '#008C44'], accent: '#008C44', shirt: '#0B8A43', hours: [6.5, 21.5], seats: false,
     fridge: { id: 'eggs', price: 30, carry: 'grocery' }, side: { id: 'meat', price: 65, carry: 'grocery', unit: 'meat' }, hot: null },
 };
@@ -412,6 +415,7 @@ export function buildShops(G, fronts) {
     g.clearRect(0, 0, canvas.width, canvas.height);
     fronts.forEach((_, n) => {
       const [cx, cy] = cellOf(n), key = set[n] || 'rent', ch = CHAINS[key], at = ([x, y, w, h]) => [cx + x, cy + y, w, h];
+      if (ch?.parlour) { drawMixue(g, cx, cy, !!shut[n]); return; }
       sign(g, ...at(R.sign), key, draw, !!shut[n]);
       if (!ch) { if (EATS[key]) eateryFront(g, ...at(R.front), key); else rentFront(g, ...at(R.front)); return; }
       poster(g, at(R.posterA), PROMO[key][0]); poster(g, at(R.posterB), PROMO[key][1]);
@@ -421,11 +425,12 @@ export function buildShops(G, fronts) {
   }
   document.fonts?.ready.then(() => { if (city) draw(); });   // the lettering, once the font is in
   // a plane showing part of a cell (rect: x, y, w, h in the cell's pixels)
-  const decal = (w, h, n, [rx, ry, rw, rh]) => {
-    const p = new THREE.PlaneGeometry(w, h), uv = p.attributes.uv, [cx, cy] = cellOf(n);
+  const decalOn = (p, n, [rx, ry, rw, rh]) => {   // (any flat geometry with 0–1 uvs: a plane, a disc)
+    const uv = p.attributes.uv, [cx, cy] = cellOf(n);
     for (let i = 0; i < uv.count; i++) uv.setXY(i, (cx + rx + uv.getX(i) * rw) / canvas.width, 1 - (cy + ry + (1 - uv.getY(i)) * rh) / canvas.height);
     return p;
   };
+  const decal = (w, h, n, rect) => decalOn(new THREE.PlaneGeometry(w, h), n, rect);
   const faceM = new THREE.MeshStandardMaterial({ map: tex, emissiveMap: tex, emissive: '#FFFFFF', emissiveIntensity: 0.06, roughness: 0.45, alphaTest: 0.5 });
   // the insides: lit by their own tubes, so each glows in its own colours (per shop: open or shut, day or night)
   const glow = { value: new Array(8).fill(0) };
@@ -460,14 +465,14 @@ export function buildShops(G, fronts) {
       put(boxAt(SHOP_W + 0.3, SIGN_H_M + 0.1, 0.18, 0, FL + GLASS + SIGN_H_M / 2 + 0.05, 0.09, '#D8DCE1'), out);
       put(decal(SHOP_W + 0.2, SIGN_H_M, n, R.sign).translate(0, FL + GLASS + SIGN_H_M / 2 + 0.05, 0.185), faces);
       // (in front of the till, not the window counter; at GS25 the other side, its table is there)
-      const kerb = ch && !ch.outdoor ? [1.15, 2.0, 2.85] : [-2.6, -1.75, -0.9, -0.05].slice(0, ch?.outdoor ? 2 : 3 + (n % 2));
+      const kerb = ch?.parlour ? [2.0, 2.85] : ch && !ch.outdoor ? [1.15, 2.0, 2.85] : [-2.6, -1.75, -0.9, -0.05].slice(0, ch?.outdoor ? 2 : 3 + (n % 2));
       kerb.forEach((x, k) => put(parkedScooter(['#D9534F', '#F2F2F2', '#2E86DE', '#3B3B3B'][(k + n) % 4]).rotateY(0.18 * (k % 2 ? 1 : -1)).translate(x, FL, 1.0), out));
       if (!ch) {   // an eatery or a front to let: painted, in a plain frame
         put(boxAt(SHOP_W + 0.3, GLASS + 0.05, 0.08, 0, FL + GLASS / 2, 0.03, '#5E6670'), out);
         put(decal(SHOP_W, GLASS - FL, n, R.front).translate(0, FL + (GLASS - FL) / 2 + 0.02, 0.075), faces);
         return;
       }
-      Object.assign(S, fitOut(key, D, rnd(n * 7919 + key.length * 131 + 17), low));
+      Object.assign(S, ch.parlour ? fitMixue(D, rnd(n * 7919 + key.length * 131 + 17), low, SHOP_W) : fitOut(key, D, rnd(n * 7919 + key.length * 131 + 17), low));
       inner.push(S.inner.map((geo) => tag(geo.applyMatrix4(M), n)));   // (each shop's own mesh: one out of view isn't drawn)
       for (const geo of S.glass) put(geo, glass);
       S.inner = S.glass = null;
@@ -477,14 +482,31 @@ export function buildShops(G, fronts) {
       put(boxAt(2 * DOOR + 0.1, 0.06, 0.09, 0, FL + 2.12, 0, '#4A515B'), out);
       for (const [x0, x1] of [[-SHOP_W / 2, -DOOR - 0.03], [DOOR + 0.03, SHOP_W / 2]]) put(new THREE.PlaneGeometry(x1 - x0, GLASS - FL - 0.12).translate((x0 + x1) / 2, FL + 0.12 + (GLASS - FL - 0.12) / 2, 0.01), glass);
       put(new THREE.PlaneGeometry(2 * DOOR, GLASS - FL - 2.15).translate(0, FL + 2.15 + (GLASS - FL - 2.15) / 2, 0.01), glass);
-      // the printing: posters on the glass, the door sticker, the menu over the back counter, the till's front, the QR stand, the band along the back
-      put(decal(0.62, 0.9, n, R.posterA).translate(-2.75, FL + 1.55, -0.015), faces);
-      put(decal(0.62, 0.9, n, R.posterB).translate(2.7, FL + 1.55, -0.015), faces);
-      put(decal(0.36, 0.36, n, R.door).translate(DOOR + 0.3, FL + 1.25, -0.015), faces);
-      put(decal(1.48, 0.7, n, R.menu).translate(2.27, 2.3, -2.78), faces);   // (clear of the ceiling)
-      put(decal(1.7, 0.36, n, R.panel).translate(2.2, FL + 0.55, -1.285), faces);
-      put(decal(0.09, 0.09, n, R.qr).translate(1.6, FL + 1.09, -1.343), faces);
-      put(decal(SHOP_W - 0.1, 0.48, n, R.band).translate(0, SHOP_CEIL - 0.3, -D + 0.02), faces);
+      if (ch.parlour) {   // Mixue: its posters, the hours on the door, the menu over the back counter, the counter's front, the
+        // slogan on the wall, the round light box out on its bracket, the Snow King's statue by the window; the Snow King himself
+        put(decal(0.55, 0.7, n, RM.posterA).translate(-2.75, FL + 1.5, -0.015), faces);
+        put(decal(0.55, 0.7, n, RM.posterB).translate(2.75, FL + 1.5, -0.015), faces);
+        put(decal(0.42, 0.072, n, RM.hours).translate(DOOR + 0.3, FL + 1.3, -0.015), faces);
+        put(decal(3.4, 0.6, n, RM.menu).translate(1.5, FL + 2.12, -D + 0.075), faces);
+        put(decal(3.4, 0.66, n, RM.panel).translate(1.5, FL + 0.5, -1.545), faces);
+        put(decal(2.5, 0.37, n, RM.slogan).translate(-1.8, FL + 1.85, -D + 0.07), faces);
+        const bx = SHOP_W / 2 + 0.14, by = FL + GLASS + SIGN_H_M / 2 + 0.05, bz = 0.62;
+        put(boxAt(0.05, 0.05, 0.56, bx, by + 0.45, 0.3, '#2B2F36'), out);
+        put(colorize(new THREE.CylinderGeometry(0.42, 0.42, 0.07, 28).rotateZ(Math.PI / 2).translate(bx, by, bz), '#FFFFFF'), out);
+        for (const s of [1, -1]) put(decalOn(new THREE.CircleGeometry(0.4, 28).rotateY(s * Math.PI / 2).translate(bx + s * 0.037, by, bz), n, RM.blade), faces);
+        put(snowKing().translate(-2.75, FL, 0.42), out);
+        S.dancer = snowDancer(); S.dancer.root.rotation.y = rot;
+        const [dx, dz] = S.toW(-1.45, 1.0); S.dancer.root.position.set(dx, GY + FL, dz); built.add(S.dancer.root);
+      } else {
+        // the printing: posters on the glass, the door sticker, the menu over the back counter, the till's front, the QR stand, the band along the back
+        put(decal(0.62, 0.9, n, R.posterA).translate(-2.75, FL + 1.55, -0.015), faces);
+        put(decal(0.62, 0.9, n, R.posterB).translate(2.7, FL + 1.55, -0.015), faces);
+        put(decal(0.36, 0.36, n, R.door).translate(DOOR + 0.3, FL + 1.25, -0.015), faces);
+        put(decal(1.48, 0.7, n, R.menu).translate(2.27, 2.3, -2.78), faces);   // (clear of the ceiling)
+        put(decal(1.7, 0.36, n, R.panel).translate(2.2, FL + 0.55, -1.285), faces);
+        put(decal(0.09, 0.09, n, R.qr).translate(1.6, FL + 1.09, -1.343), faces);
+        put(decal(SHOP_W - 0.1, 0.48, n, R.band).translate(0, SHOP_CEIL - 0.3, -D + 0.02), faces);
+      }
       if (ch.outdoor) {   // GS25: a table and stools on the pavement under a parasol in its blue
         const tx = 2.3, tz = 0.7;
         put(colorize(new THREE.CylinderGeometry(0.34, 0.34, 0.03, 16).translate(tx, FL + 0.72, tz), '#F2F2F2'), out);
@@ -557,7 +579,7 @@ export function buildShops(G, fronts) {
   function buildPeople() {
     const slots = stores.reduce((a, S) => a + (S.ch ? 4 + S.seats.length : 0), 0);
     crowd = folk(built, Math.max(1, slots), { low, shadows: false });
-    props = propSet(built, 40);
+    props = propSet(built, 64);
     const parts = [];
     for (const S of stores) {
       if (!S.ch) continue;
@@ -572,6 +594,12 @@ export function buildShops(G, fronts) {
       const all = () => [cashier, browser, ...sit, ...out];
       const hand = (i, kind) => { const p = props.take(); if (p == null) return; held.push(p); const hp = crowd.hand(i, V3); props.show(p, kind, hp.x, hp.y - 0.05, hp.z, S.rot); };
       const lay = (kind, x, y, z) => { const p = props.take(); if (p == null) return; held.push(p); const [wx, wz] = at(x, z); props.show(p, kind, wx, sy + y, wz, S.rot); };
+      S.say = (text) => {   // a word from the cashier, over their head
+        const d = el('div', 'tag shop-say'); d.textContent = text; d.style.borderColor = S.ch.accent;
+        const o = new CSS2DObject(d), [x, z] = at(S.cashier.x, S.cashier.z); o.position.set(x, GY + FL + 2.15, z); built.add(o);
+        setTimeout(() => { o.removeFromParent(); d.remove(); }, 2600);
+      };
+      if (S.ch.parlour) { parts.push(parlour(S, { cashier, barista: browser, sit, out, at, face, hand, lay, held, sy, mid, r })); continue; }
       parts.push({
         when: [0, 24], dry: true, at: mid,
         update(t, dt, h) {
@@ -622,13 +650,54 @@ export function buildShops(G, fronts) {
         },
         off() { all().forEach((i) => crowd.hide(i)); for (const p of held) props.hide(p); held.length = 0; puff?.show(0, 0, 0, 0, false); },
       });
-      S.say = (text) => {   // a word from the cashier, over their head
-        const d = el('div', 'tag shop-say'); d.textContent = text; d.style.borderColor = S.ch.accent;
-        const o = new CSS2DObject(d), [x, z] = at(S.cashier.x, S.cashier.z); o.position.set(x, GY + FL + 2.15, z); built.add(o);
-        setTimeout(() => { o.removeFromParent(); d.remove(); }, 2600);
-      };
     }
     step = stepper(parts);
+  }
+
+  /* Mixue's people: the cashier at the till, the other one round the machines, the hours' regulars (office workers at lunch,
+     schoolchildren with cones after school, young people over milk tea in the evening, more at the weekend), someone
+     ordering at the counter, a food rider at the kerb at the busy times; the Snow King dancing out front on weekend
+     evenings, to the tune (audio/sfx.js) */
+  const MX_SIT = [[[11, 13.5], 2, 'office', 'mxcup'], [[16.5, 18.5], 4, 'school', 'cone'], [[19, 21.8], 3, 'genz', 'mxcup']];
+  function parlour(S, { cashier, barista, sit, out, at, face, hand, lay, held, sy, mid, r }) {
+    const all = () => [cashier, barista, ...sit, ...out];
+    crowd.dress(barista, { shirt: '#1E1E1E', pants: '#2B2F36', hair: '#1E1A18' });
+    crowd.dress(out[0], { shirt: '#00A651', pants: '#2B2F36', hair: '#2B2420' });
+    crowd.dress(out[1], { ...LOOK.genz(r), hair: '#3A2A20' });
+    let dressedFor = '', jingleAt = 0;
+    const show = (i, f) => { if (i == null) return; const [x, z] = at(f.x, f.z); crowd.pose(i, { ...f, x, z, y: sy, sit: f.sit != null ? sy + f.sit : undefined, yaw: S.rot + (f.yaw || 0) }); };
+    return {
+      when: [0, 24], dry: true, at: mid,
+      update(t, dt, h) {
+        for (const p of held) props.hide(p); held.length = 0;
+        const open = isOpen(S.ch, h), day = officeNow().getDay(), weekend = day === 0 || day === 6;
+        const dance = open && weekend && h >= 17.5 && h < 20.5 && wx.rain < 0.05;
+        S.dancer.update(t, dance);
+        if (dance && t > jingleAt) { jingleAt = t + 28; sfx.play('mixue'); }
+        if (!open) { all().forEach((i) => crowd.hide(i)); return; }
+        // the cashier, facing you, taking an order now and then (and when you walk in)
+        { const [x, z] = at(S.cashier.x, S.cashier.z), take = S.greetT > now || (t % 13) < 1.6;
+          crowd.pose(cashier, { x, y: sy, z, yaw: face(0, 1) + Math.sin(t * 0.4) * 0.12, arms: take ? [[0.95, -0.1], [0.95 + Math.sin(t * 8) * 0.15, -0.1]] : [[0.15, 0], [0.15, 0]] }); }
+        // the other one round the machines: a cone pulled from the soft-serve, a cup into the sealer, the tea, the syrups
+        { const k = Math.floor(t / 7) % S.stations.length, [sx, sz, dir] = S.stations[k], [x, z] = at(sx, sz), busy = (t % 7) > 1.2;
+          crowd.pose(barista, { x, y: sy, z, yaw: face(0, dir), arms: busy ? [[1.1, -0.1], [1.25 + Math.sin(t * 6) * 0.12, -0.1]] : [[0.15, 0], [0.15, 0]] });
+          if (busy && k < 2) hand(barista, k ? 'mxcup' : 'cone'); }
+        // the regulars
+        const rule = weekend && h >= 14 && h < 21.8 ? [null, 4, 'genz', 'mxcup'] : MX_SIT.find(([[a, b]]) => h >= a && h < b);
+        const many = rule ? Math.min(rule[1], sit.length) : 0;
+        if (rule && dressedFor !== rule[2]) { dressedFor = rule[2]; sit.forEach((i, k) => crowd.dress(i, { ...LOOK[rule[2]](r), hair: HAIR[k % 4] })); }
+        sit.forEach((i, k) => {
+          if (k >= many) { crowd.hide(i); return; }
+          const s = S.seats[k], [x, z] = at(s.x, s.z), bite = ((t + k * 3.1) % 6) < 1.3;
+          crowd.pose(i, { x, z, sit: sy + s.top, yaw: face(...s.dir) + Math.sin(t * 0.3 + k) * 0.08, lean: -0.1, arms: [[1.1, -0.3], bite ? [2.25, -0.4] : [1.1, -0.3]] });
+          if (rule[3] === 'cone') hand(i, 'cone'); else lay('mxcup', ...s.put);
+        });
+        // someone ordering at the counter, then waiting with what they got; a food rider at the kerb at lunch and in the evening
+        if ((t % 50) < 40) { show(out[1], { x: 1.6, z: -1.2, yaw: Math.PI / 2, arms: [[0.2, 0], (t % 50) < 8 ? [0.9, -0.1] : [0.5, -0.1]] }); if ((t % 50) > 22) hand(out[1], (t % 100) < 50 ? 'cone' : 'mxcup'); } else crowd.hide(out[1]);
+        if (((h >= 11 && h < 13) || (h >= 17.5 && h < 21)) && (t % 180) < 110) { show(out[0], { x: 1.05, z: 1.0, sit: 0.92, yaw: 0, lean: 0.15, arms: [[1.3, -0.2], [1.4, -0.2]], hat: true }); lay('courier', 1.3, 0, 1.0); } else crowd.hide(out[0]);
+      },
+      off() { all().forEach((i) => crowd.hide(i)); for (const p of held) props.hide(p); held.length = 0; S.dancer.update(0, false); },
+    };
   }
 
   /* ---------- each frame ---------- */
@@ -689,7 +758,7 @@ export function buildShops(G, fronts) {
       for (const S of stores) {
         if (!S.ch) continue;
         const [lx, lz] = p ? local(S, p[0], p[1]) : [99, 99], inside = Math.abs(lx) < SHOP_W / 2 && lz < -0.3 && lz > -S.D;
-        if (inside && !S.inside && !shut[S.n]) { S.greetT = now + 1.5; S.say?.(`${S.ch.name} xin chào!`); }
+        if (inside && !S.inside && !shut[S.n]) { S.greetT = now + 1.5; S.say?.(`${S.ch.name} xin chào!`); if (S.ch.parlour) sfx.play('mixue'); }
         S.inside = inside;
       }
     },
@@ -724,6 +793,7 @@ function propSet(G, n) {
     noodle: mergeAll([colorize(new THREE.CylinderGeometry(0.055, 0.042, 0.1, 10).translate(0, 0.05, 0), '#F2F2F2'), colorize(new THREE.CylinderGeometry(0.056, 0.056, 0.012, 10).translate(0, 0.1, 0), '#E8742A')]),
     bento: mergeAll([boxAt(0.2, 0.05, 0.14, 0, 0.025, 0, '#1E1E1E'), boxAt(0.2, 0.01, 0.14, 0, 0.055, 0, '#E8E8E8')]),
     chicken: boxAt(0.14, 0.1, 0.1, 0, 0.05, 0, '#E60012'),
+    mxcup: mergeAll([colorize(new THREE.CylinderGeometry(0.042, 0.033, 0.13, 10).translate(0, 0.065, 0), '#C9A27A'), colorize(new THREE.CylinderGeometry(0.044, 0.04, 0.04, 10).translate(0, 0.07, 0), '#E50914'), boxAt(0.008, 0.08, 0.008, 0.012, 0.16, 0, '#F2F2F2')]),
     cone: mergeAll([colorize(new THREE.ConeGeometry(0.03, 0.1, 8).rotateX(Math.PI), '#D9A441'), colorize(new THREE.SphereGeometry(0.035, 8, 6).translate(0, 0.065, 0), '#FFF8EC')]),
     bag: mergeAll([boxAt(0.22, 0.24, 0.1, 0, -0.12, 0, '#F4F3EE'), colorize(new THREE.SphereGeometry(0.05, 6, 4).translate(0.04, 0.02, 0), '#3E8E3A')]),
     courier: mergeAll([parkedScooter('#2E9E4A'), boxAt(0.42, 0.42, 0.42, -0.45, 1.05, 0, '#00A651')]),

@@ -12,6 +12,7 @@ import { DEMO_TODOS, onTodos } from '../ui/whiteboard.js';
 import { TOKEN, freeDesk, removeSession, setConn, upsertSession } from '../net/live.js';
 import { onEvent } from '../life/incidents.js';
 import { onPerm, perms, renderPerms, reportPresence } from '../ui/permissions.js';
+import { renderPhone } from '../ui/topbar.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let DEMO;
@@ -176,6 +177,12 @@ export function startDemo() {
 }
 // One handler for the live stream and for replays. `quiet` (fast-forwarding a replay) places people without walking
 // and fills the feed without bubbles or animations.
+// a newer office than this page (it was updated and restarted): load it, once nothing typed would be lost
+function reloadSoon() {
+  const typing = () => document.activeElement?.matches?.('input, textarea') || [...document.querySelectorAll('textarea')].some((t) => t.value.trim());
+  if (typing()) { setTimeout(reloadSoon, 5000); return; }
+  location.reload();
+}
 export function applyMsg(d, quiet = false) {
   if (d.k === 'snap' || d.k === 'lang') {   // the office's language changed while this page was open: load it again in the new one
     if (d.lang && d.lang !== document.documentElement.lang && !new URLSearchParams(location.search).has('lang')) { location.reload(); return; }
@@ -189,11 +196,12 @@ export function applyMsg(d, quiet = false) {
     if ('local' in d) {   // only the live snapshot carries these
       perms.clear(); for (const p of d.perms || []) perms.set(p.id, p); renderPerms(); reportPresence();
       if (!quiet) chatLoad();   // (the group chat as it is now: after a reconnect, what was missed)
-      state.isLocal = !!d.local; state.lanUrl = d.lan || null; state.lanBase = d.lanBase || null; state.phonePin = d.pin || null; state.tsUrl = d.ts || null; state.tsHere = !!d.tsHere; state.phoneApprove = !!d.phoneApprove; state.lanFixed = !!d.lanFixed;
+      state.isLocal = !!d.local; state.lanUrl = d.lan || null; state.lanBase = d.lanBase || null; state.phonePin = d.pin || null; state.tsUrl = d.ts || null; state.tsHere = !!d.tsHere; state.phoneApprove = !!d.phoneApprove; state.phoneTasks = !!d.phoneTasks; state.lanFixed = !!d.lanFixed;
+      if (d.build) { if (state.build && d.build !== state.build) reloadSoon(); else state.build = d.build; }   // (the office was updated: this page is an older one)
       state.todos = d.todos || []; onTodos();
       if (d.trophies) setTrophies(d.trophies);
       state.limits = d.limits || null; state.limitsNote = d.limitsNote || ''; for (const w of liveWindows()) if (w.pct >= 80) limitWarned.add(`${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`); renderLimits();
-      $('btn-phone').hidden = !state.isLocal; if ($('btn-phone-top')) $('btn-phone-top').hidden = !state.isLocal;
+      $('btn-phone').hidden = false; if ($('btn-phone-top')) $('btn-phone-top').hidden = !state.isLocal;   // (on a phone: its PIN, and what the Mac allows it)
       $('btn-bell').hidden = !('Notification' in window) || !window.isSecureContext;
     }
     state.connectedOnce = true; queueUi();
@@ -207,7 +215,7 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'perm') onPerm(d.p);
   else if (d.k === 'permDone') { perms.delete(d.id); renderPerms(); }
   else if (d.k === 'todos') { state.todos = d.todos || []; onTodos(); }
-  else if (d.k === 'phone') { state.phoneApprove = !!d.approve; for (const c of [...$('perm-stack').children]) c.remove(); renderPerms(); reportPresence(); }   // (approving from a phone, switched on the Mac)
+  else if (d.k === 'phone') { state.phoneApprove = !!d.approve; state.phoneTasks = !!d.tasks; for (const c of [...$('perm-stack').children]) c.remove(); renderPerms(); reportPresence(); if (!$('phone-modal').hidden) renderPhone(); }   // (approving and giving work from a phone, switched on the Mac)
   else if (d.k === 'acctlogin') acctLogin(d);   // (adding an account: a step of its sign-in)
   else if (d.k === 'acctswitch') acctSwitched(d);   // (new sessions moved to another account)
   else if (d.k === 'acctmove') { if (!quiet) acctMoved(d); }
@@ -227,7 +235,31 @@ function relabel(from, to) {
   queueFeed(); queueUi();
 }
 export let liveES = null;
+// Through the Cloudflare quick tunnel a stream's data is held back until it ends (quick tunnels don't do server-sent
+// events): there the page asks instead, GET /api/live, which answers as soon as there is something new (the same messages)
+const VIA_TUNNEL = /\.trycloudflare\.com$/.test(location.hostname);
+function ask() {
+  const stop = new AbortController();
+  liveES = { close: () => stop.abort() };
+  (async () => {
+    let since = -1, fails = 0;
+    while (!stop.signal.aborted) {
+      if (document.hidden) await new Promise((ok) => document.addEventListener('visibilitychange', ok, { once: true }));   // (a phone in a pocket asks nothing)
+      try {
+        const r = await fetch(`/api/live?since=${since}`, { cache: 'no-store', signal: stop.signal });
+        if (r.status === 401) { location.reload(); return; }   // (signed out: back to the PIN)
+        const j = await r.json();
+        fails = 0; setConn(true); since = j.seq;
+        if (!replay.on) for (const d of j.msgs) applyMsg(d);
+      } catch {
+        if (stop.signal.aborted) return;
+        setConn(false); await new Promise((ok) => setTimeout(ok, Math.min(15_000, 1000 * 2 ** fails++)));
+      }
+    }
+  })();
+}
 export function connect() {
+  if (VIA_TUNNEL) { ask(); return; }
   const es = new EventSource(`/stream${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`);
   liveES = es;
   es.onopen = () => setConn(true);

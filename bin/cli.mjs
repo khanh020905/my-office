@@ -160,7 +160,8 @@ async function pin() {
     if (args.includes('--new')) ok(tr('cli.pin.changed'));
   }
   const p = (await fsp.readFile(file, 'utf8')).trim();
-  console.log(`  ${tr('cli.pin.show', { pin: `${p.slice(0, 3)} ${p.slice(3)}` })}`);
+  const shown = p.length % 4 === 0 && p.length % 3 ? p.match(/\d{4}/g).join(' ') : p.replace(/\d{3}(?=\d{2})/g, '$& ');   // (as the phone window shows it)
+  console.log(`  ${tr('cli.pin.show', { pin: shown })}`);
 }
 function start() {
   if (LAN) process.env.OFFICE_HOST = '0.0.0.0';

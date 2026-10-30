@@ -129,6 +129,7 @@ export default {
     lunch7: ['7-Eleven lunch is here, everyone! 🍱', "Bento from 7-Eleven, let's eat! 🍱"],
     lunch7Toast: 'Lunch from 7-Eleven is here, come to the pantry 🍱',
     // on the way down, by what they will bring back (go), and coming out with it (got)
+    treat: { go: ['Off to Mixue, ice cream for everyone 🍦', 'Getting Mixue for the whole team 🍦'], got: ['Ice cream’s here, come and get it 🍦', 'Mixue for everyone, eat it before it melts 🍦'] },
     go: {
       cup: ['Popping down to {shop} for a drink 🥤', 'Off to {shop} for a peach tea 🥤', 'Running to {shop}, want anything? 🛒'],
       noodle: ['Getting cup noodles at {shop} 🍜', "Hungry, I'll make a cup of noodles at {shop} 🍜"],

@@ -17,13 +17,53 @@
 #pm-body > .pm-h + p, #pm-body > .pm-h ~ .pm-note { text-align: left; width: 100%; }
 .pm-url { align-self: stretch; text-align: center; }
 .pm-newpin { margin-left: 4px; }
+.pm-pinin { width: 11.5em; height: 34px; padding: 0 10px; font: 700 1.05rem/1 var(--mono); letter-spacing: .12em; text-align: center; color: var(--ink); background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; outline: none; }
+.pm-pinin:focus { border-color: var(--accent); }
+.pm-side { display: grid; grid-template-columns: 1fr; gap: 8px; width: 100%; }
+.pm-side .pm-pinin { width: 100%; height: 44px; font-size: 1.1rem; }
+.pm-side .btn { height: 42px; font-size: .9rem; }
+.pm-allow { margin: 0; width: 100%; text-align: left; font-size: .82rem; color: var(--muted); }
+.pm-allow.is-on { color: var(--ink); }
 .pm-awake { margin: 0; width: 100%; padding: 8px 10px; box-sizing: border-box; border-radius: 8px; background: var(--card); border: 1px solid var(--line-2); font-size: .76rem; line-height: 1.45; text-align: left; }
 .pm-awake.is-battery { border-color: var(--amber, #F2B544); }
 .pm-err { margin: 0; font-size: .78rem; color: var(--red); text-align: left; width: 100%; }
 .pm-wait { margin: 0; font-size: .8rem; width: 100%; text-align: left; }
 .pm-wait::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: pm-spin .8s linear infinite; vertical-align: -1px; }
 @keyframes pm-spin { to { transform: rotate(360deg); } }
-.modal-card:has(#pm-body) { max-height: calc(100dvh - 32px); overflow-y: auto; }
+.modal-card:has(#pm-body) { width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
+/* the phone window: the two ways in as tabs, the code beside the address, the PIN, what phones may do as switches */
+#pm-body { align-self: stretch; align-items: stretch; text-align: left; }
+.pm-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; padding: 4px; background: var(--card); border: 1px solid var(--line-2); border-radius: 12px; }
+.pm-tab { display: grid; justify-items: center; gap: 2px; padding: 8px 6px; border: 0; border-radius: 9px; background: transparent; color: var(--muted); font: 600 .86rem/1.25 inherit; cursor: pointer; }
+.pm-tab:hover { color: var(--ink); }
+.pm-tab.is-sel { background: var(--side); color: var(--ink); box-shadow: 0 1px 4px rgba(0, 0, 0, .3); }
+.pm-dot { font-style: normal; font-size: .72rem; font-weight: 500; color: var(--muted); }
+.pm-dot::before { content: ''; display: inline-block; width: 7px; height: 7px; margin-right: 5px; border-radius: 50%; background: var(--faint); vertical-align: 1px; }
+.pm-dot.is-on { color: #2FB36C; }
+.pm-dot.is-on::before { background: #2FB36C; box-shadow: 0 0 6px rgba(47, 179, 108, .7); }
+.pm-conn { display: flex; flex-direction: column; gap: 10px; }
+.pm-where { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; }
+.pm-where .qr { padding: 8px; background: #fff; border-radius: 10px; line-height: 0; }
+.pm-info { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.pm-info p { margin: 0; font-size: .8rem; line-height: 1.45; }
+.pm-urlrow { display: flex; gap: 6px; align-items: stretch; }
+.pm-urlrow .pm-url { flex: 1; min-width: 0; padding: 6px 8px; font: 500 .74rem/1.4 var(--mono); text-align: left; background: var(--card); border: 1px solid var(--line-2); border-radius: 8px; overflow-wrap: anywhere; user-select: all; }
+.pm-pinbox { display: grid; gap: 6px; padding: 10px 12px; background: var(--card); border: 1px solid var(--line-2); border-radius: 12px; }
+.pm-pinbox .pm-pin { justify-content: flex-start; }
+.pm-pinlabel { font-weight: 600; font-size: .86rem; margin-right: 4px; }
+.pm-pinacts { display: inline-flex; gap: 6px; margin-left: auto; }
+.pm-list { display: flex; flex-direction: column; gap: 6px; }
+.pm-toggle { gap: 12px; }
+.pm-tt { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.pm-tt b { font-size: .86rem; }
+.pm-tt small { color: var(--muted); font-size: .74rem; line-height: 1.4; font-weight: 400; }
+.pm-toggle input[type=checkbox] { appearance: none; -webkit-appearance: none; position: relative; flex: none; width: 40px; height: 24px; margin: 0; border-radius: 12px; background: var(--line-2); cursor: pointer; transition: background .15s; }
+.pm-toggle input[type=checkbox]::before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgba(0, 0, 0, .35); transition: transform .15s; }
+.pm-toggle input[type=checkbox]:checked { background: var(--accent); }
+.pm-toggle input[type=checkbox]:checked::before { transform: translateX(16px); }
+.pm-toggle input[type=checkbox]:disabled { opacity: .5; cursor: default; }
+.pm-toggle input[type=checkbox]:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+@media (max-width: 460px) { .pm-where { grid-template-columns: 1fr; justify-items: center; } .pm-pinacts { margin-left: 0; } }
 .pm-cmd { margin: 0; width: 100%; font: .74rem/1.5 var(--mono); text-align: left; white-space: pre-wrap; word-break: break-all; background: var(--card); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; user-select: all; }
 
 /* the week-in-review card: the picture scales to the window, the buttons stay under it */

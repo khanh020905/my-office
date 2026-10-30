@@ -11,6 +11,7 @@ if [ "$1" = auth ] && [ "$2" = login ]; then
 fi
 # `claude -p …` (a task given from the office, server/tasks.mjs): its stream, a new session and its last words
 case " $* " in *" -p "*)
+  printf '%s\n' "$*" >> "$HOME/.fake-claude.log"   # (what it was asked to resume, for the tests to read)
   echo '{"type":"system","subtype":"init","session_id":"e2e-task-1"}'
   sleep 1
   echo '{"type":"result","subtype":"success","is_error":false,"result":"Done: the e2e task."}'
