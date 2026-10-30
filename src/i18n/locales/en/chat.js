@@ -107,6 +107,7 @@ export default {
     failed: 'The work in {folder} isn’t done: {error}',
     doneEmpty: 'Done, boss ✅',
     notStarted: 'The work couldn’t start: {why}',
+    shots: 'Pictures of the pages (at a phone\'s size): {pages}',
     threadBusy: '{name} is still on your last message: wait for the answer, then write again',
     macBusy: '{name} is working on the Mac. Wait until it is done, then write from the phone.',
     macTerminal: '{name} is open in a terminal: exit it there (/exit) and write again, and the phone carries on this very conversation.',

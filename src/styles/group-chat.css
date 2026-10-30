@@ -322,3 +322,25 @@
 .zc-nbar > span { flex: 1; }
 .zc .zc-nb-go { all: unset; flex: none; padding: 6px 14px; border-radius: 999px; background: var(--zc-blue); color: #fff; font-weight: 600; font-size: 13px; cursor: pointer; }
 .zc .zc-nb-go:disabled { opacity: .6; }
+
+/* Claude's answer, its Markdown laid out */
+.zc-md { display: block; }
+.zc-md p { margin: 0 0 6px; }
+.zc-md p:last-child, .zc-md ul:last-child, .zc-md ol:last-child { margin-bottom: 0; }
+.zc-md ul, .zc-md ol { margin: 2px 0 6px; padding-left: 20px; }
+.zc-md li { margin: 2px 0; }
+.zc-md li.zc-md-sub { margin-left: 16px; list-style-type: circle; }
+.zc-md b { font-weight: 700; }
+.zc-md code { padding: 1px 5px; border-radius: 4px; background: #EEF1F5; font: 13px/1.4 ui-monospace, Menlo, monospace; word-break: break-word; }
+.zc-md pre { margin: 4px 0 6px; padding: 8px 10px; border-radius: 6px; background: #1E2430; color: #E6EAF0; overflow-x: auto; }
+.zc-md pre code { padding: 0; background: none; color: inherit; font-size: 12.5px; white-space: pre; }
+.zc-md-h { margin: 6px 0 4px; font-weight: 700; }
+.zc-md-h1, .zc-md-h2 { font-size: 16px; }
+.zc-md-h3, .zc-md-h4 { font-size: 15px; }
+.zc-md-q { margin: 2px 0 6px; padding-left: 10px; border-left: 3px solid #C9D3E0; color: var(--zc-grey); }
+.zc-md hr { border: 0; border-top: 1px solid var(--zc-line); margin: 8px 0; }
+.zc-md a { color: var(--zc-blue); text-decoration: underline; word-break: break-all; }
+.zc-md-table { margin: 4px 0 6px; overflow-x: auto; }
+.zc-md-table table { border-collapse: collapse; font-size: 13px; }
+.zc-md-table th, .zc-md-table td { padding: 4px 8px; border: 1px solid var(--zc-line); text-align: left; vertical-align: top; }
+.zc-md-table th { background: #F4F6F9; font-weight: 600; }

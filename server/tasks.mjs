@@ -17,7 +17,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, max
   const imgDir = path.join(dataDir, 'task-images');
   const pub = (t) => ({ id: t.id, dir: t.dir, text: t.text.slice(0, 200), at: t.at, from: t.from || null, sid: t.sid || null });
   /** { dir, text, images: [data URLs], from: { sid, name, fork } | null } -> { ok, task } or { ok: false, code } */
-  function start({ dir, text, images = [], from = null, env: extra = null }) {
+  function start({ dir, text, images = [], from = null, env: extra = null, system = '' }) {
     text = String(text || '').trim().slice(0, MAX_TEXT);
     if (!text) return { ok: false, code: 'empty' };
     if (running.size >= max) return { ok: false, code: 'busy' };
@@ -36,7 +36,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, max
     // the photos by their paths: Claude Code reads them with its Read tool
     const prompt = files.length ? `${text}\n\n${files.length > 1 ? 'Attached images' : 'Attached image'} (read ${files.length > 1 ? 'them' : 'it'}):\n${files.join('\n')}` : text;
     // (from.fork false: carry on that very conversation, one this office started for you, instead of a branch of it)
-    const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : [])];
+    const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : []), ...(system ? ['--append-system-prompt', system] : [])];   // (system: a word from the office, outside the conversation)
     let proc;
     const e = { ...env(), ...extra }; for (const k of Object.keys(e)) if (e[k] == null) delete e[k];   // (extra: the conversation's own account; null unsets)
     try { proc = spawn(bin.file, args, { cwd: dir, env: e, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }

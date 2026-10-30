@@ -107,6 +107,7 @@ export default {
     failed: 'Chưa làm xong việc ở {folder}: {error}',
     doneEmpty: 'Xong rồi sếp ơi ✅',
     notStarted: 'Chưa giao được việc: {why}',
+    shots: 'Ảnh chụp trang (cỡ điện thoại): {pages}',
     threadBusy: '{name} đang làm tin trước của bạn, đợi trả lời xong rồi nhắn tiếp nhé',
     macBusy: '{name} đang làm việc trên Mac. Đợi nó xong rồi nhắn tiếp từ điện thoại nhé.',
     macTerminal: '{name} đang mở trong Terminal: thoát nó ở đó (/exit) rồi nhắn lại, điện thoại sẽ tiếp đúng cuộc trò chuyện này.',

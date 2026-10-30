@@ -22,6 +22,7 @@ import { dangerKey } from '../src/shared/danger.js';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createPush } from './push.mjs';
+import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
@@ -528,12 +529,15 @@ const tasks = createTasks({
     const dm = t.from?.chat, folder = path.basename(t.dir);
     // the answer from whoever you asked (the conversation's person; Claude itself for a new conversation, or if that one has gone)
     const all = [...sessions.values()], who = (t.from?.id && all.some((x) => x.id === t.from.id) && t.from.id) || (dm ? 'claude' : t.sid && all.find((x) => x.sid === t.sid)?.id);
-    const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(String(t.result || tr('chat.task.doneEmpty')), dm ? 3800 : 560);
+    // the pages it changed (its SCREENSHOT lines): named under the answer, then their pictures at a phone's size
+    const { text: said, urls } = shotsIn(t.result);
+    const text = t.error && !t.result ? tr('chat.task.failed', { folder, error: clip(oneLine(t.error), 200) }) : clip(`${said || tr('chat.task.doneEmpty')}${urls.length ? `\n\n📸 ${tr('chat.task.shots', { pages: urls.map((u) => new URL(u).pathname).join(', ') })}` : ''}`, dm ? 3800 : 560);
     const quote = taskQuote.get(t.id) || null; taskQuote.delete(t.id);
     if (dm) { chat.working(t.from.id || 'claude', false); if (t.sid) threads.set(t.from.orig, { sid: t.sid, at: Date.now(), running: false }); else threads.delete(t.from.orig); }   // (no branch made: the next message makes one)
     if (who) chat.say(who, text, { now: true, long: true, reply: quote, tag: 'claude', react: ['❤️', '👍'], reacts: 2 });
     else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
     pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/?chat' });
+    if (who && urls.length) (async () => { for (const u of urls) { const photo = await shoot(u).catch(() => null); if (photo) chat.say(who, '', { photo, now: true }); } })();
   },
 });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
@@ -588,6 +592,7 @@ async function parkForPhone(s) {
   const acct = acctOf(s) || '', pin = path.join(PIN_DIR, s.sid);
   try { fs.mkdirSync(PIN_DIR, { recursive: true }); fs.writeFileSync(pin, `${acct ? dirOfSlug(acct) : ''}\n`); } catch { return { ok: false, message: tr('server.move.failed') }; }
   s.parked = { to: acct, at: Date.now(), phone: true };   // (before the process goes: the scan must not see it leave)
+  closingOnPurpose([s.pid]);
   const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
   if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
   s.pid = null;
@@ -975,6 +980,7 @@ async function autoCloseIdle() {
   const waiting = new Set([...sessions.values()].filter((s) => s.pid && (s.status === 'wait' || [...pending.values()].some((p) => p.sess === s.id))).map((s) => s.pid));
   const items = snap.claude.filter((c) => !c.busy && !c.remote && c.idle >= hours * 3600 && !waiting.has(c.pid)).map((c) => ({ target: c.pid, start: c.start }));
   if (!items.length) return;
+  closingOnPurpose(items.map((i) => i.target));
   const r = await sysAction({ action: 'closeIdle', items }).catch(() => null);
   if (!r?.closed?.length) return;
   const size = sysBytes(r.closed.reduce((a, c) => a + c.mem, 0)), names = r.closed.map((c) => c.name).join(', ');
@@ -1291,6 +1297,10 @@ setInterval(() => { if (watching()) { fetchPlanUsage(); for (const d of otherDir
 // (switching accounts, further down: kept up here because the first scan below already reads them)
 const hits = new Map();   // account ('' = the main one) -> until when a session was told it is out of usage
 const NOW_FILE = path.join(DATA_DIR, 'account-now'), SWITCH_FILE = path.join(DATA_DIR, 'claude-switch.sh');
+const CLOSING_DIR = path.join(DATA_DIR, 'closing');   // the Claude processes the office is closing on purpose (the editor's script reads it)
+// before closing them: their ids, so the editor's script tells the editor they ended well (no red "exited with code 143")
+function closingOnPurpose(pids) { try { fs.mkdirSync(CLOSING_DIR, { recursive: true }); for (const p of pids) if (p) fs.writeFileSync(path.join(CLOSING_DIR, String(p)), ''); } catch { /* read-only data: the editor shows its message */ } }
+setInterval(() => { try { for (const f of fs.readdirSync(CLOSING_DIR)) { const p = path.join(CLOSING_DIR, f); if (Date.now() - fs.statSync(p).mtimeMs > 10 * 60e3) fs.rmSync(p, { force: true }); } } catch { /* none */ } }, 10 * 60e3).unref();
 const PIN_DIR = path.join(DATA_DIR, 'resume-on'), PARK_MS = 24 * 3600e3;   // a conversation moved to another account: <its id> -> that account's folder
 const FULL_PCT = 98;   // a limit this used: no new session on that account
 // what an account's folder takes from the main one, by a link (when the main one has it): a session on any account has
@@ -1572,7 +1582,24 @@ function switchScript() {
     '  fi',
     '  if [ -n "$d" ] && [ -d "$d" ]; then CLAUDE_CONFIG_DIR=$d; export CLAUDE_CONFIG_DIR; fi',
     'fi',
-    'exec "$@"',
+    '[ -t 0 ] && exec "$@"   # (in a terminal: Claude Code itself, as always)',
+    '# From the editor: Claude Code under this script, so that a conversation the office closes on purpose (carried on from',
+    '# a phone, moved to another account, closed when idle: its process id in data/closing) ends well for the editor rather',
+    '# than "exited with code 143". The editor\'s own stops are passed on. (Started with &, a program would ignore Ctrl+C:',
+    '# perl puts that back, then becomes Claude Code.)',
+    `if command -v perl >/dev/null 2>&1; then perl -e '$SIG{INT} = $SIG{QUIT} = "DEFAULT"; exec { $ARGV[0] } @ARGV or exit 127' -- "$@" <&0 &`,
+    'else "$@" <&0 &',
+    'fi',
+    'child=$!',
+    `trap 'kill -TERM "$child" 2>/dev/null' TERM`,
+    "trap ':' INT",
+    `trap 'kill -HUP "$child" 2>/dev/null' HUP`,
+    'while :; do',
+    '  wait "$child"; status=$?',
+    '  kill -0 "$child" 2>/dev/null || break',
+    'done',
+    `if [ -f ${shq(CLOSING_DIR + path.sep)}"$child" ]; then rm -f ${shq(CLOSING_DIR + path.sep)}"$child"; exit 0; fi`,
+    'exit "$status"',
     '',
   ].join('\n'));
   fs.chmodSync(SWITCH_FILE, 0o755);
@@ -1665,6 +1692,7 @@ async function moveNow(s, to, why) {
   const pin = path.join(PIN_DIR, s.sid);
   try { fs.mkdirSync(PIN_DIR, { recursive: true }); fs.writeFileSync(pin, `${to ? dirOfSlug(to) : ''}\n`); } catch { return { ok: false, message: tr('server.move.failed') }; }
   s.parked = { to, at: Date.now() };   // (before the process goes: the scan must not see it leave)
+  closingOnPurpose([s.pid]);
   const r = await sysAction({ action: 'closeIdle', items: [{ target: s.pid, start: proc.start }] }).catch(() => null);
   if (!r?.closed?.length) { delete s.parked; fs.rmSync(pin, { force: true }); return { ok: false, message: tr('server.move.failed') }; }
   s.pid = null;
@@ -1914,7 +1942,7 @@ const server = http.createServer((req, res) => {
       chat.say('me', `@${name} ${text}`, { now: true, long: true });
       const mine = chat.state.msgs.at(-1);
       for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
-      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null });
+      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK });
       if (r.ok) {
         threads.set(key, { sid: from.sid, at: Date.now(), running: true });
         if (s) s.viaOffice = r.task.id;
@@ -1996,6 +2024,7 @@ const server = http.createServer((req, res) => {
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
     readJson(req).then(async (body) => {
       if (!body) { json(res, 400, { ok: false, message: tr('server.badRequest') }); return; }
+      if (body.action === 'closeIdle' && Array.isArray(body.items)) closingOnPurpose(body.items.map((i) => Number(i?.target)).filter((n) => n > 0));   // (closed from the Mac panel: no red line in the editor)
       const result = await sysAction(body).catch((err) => ({ ok: false, message: String(err.message || err) }));
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${req.socket.remoteAddress} ${JSON.stringify(body)} -> ${JSON.stringify(result)}\n`).catch(() => {});
       json(res, 200, result);

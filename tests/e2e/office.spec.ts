@@ -422,13 +422,13 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-in').fill('what are you on?');
   await zc.locator('.zc-in').press('Enter');
   await expect(zc.locator('.zc-row.is-mine', { hasText: 'what are you on?' })).toBeVisible({ timeout: 20_000 });
-  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(new RegExp(`--resume ${base.session_id}$`));
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(new RegExp(`--resume ${base.session_id}( |$)`));
   await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(1);   // (the folder's work answered first)
   await expect(zc.locator('.zc-claude').first()).toBeVisible();
   await zc.locator('.zc-in').fill('and then?');
   await zc.locator('.zc-in').press('Enter');
   await expect.poll(() => asked().trim().split('\n').length, { timeout: 20_000 }).toBeGreaterThan(2);
-  expect(asked().trim().split('\n').pop()).toMatch(new RegExp(`--resume ${base.session_id}$`));
+  expect(asked().trim().split('\n').pop()).toMatch(new RegExp(`--resume ${base.session_id}( |$)`));
   // a new conversation in a project ("＋"): no conversation to carry on the first time, then that one
   const runs = () => asked().trim().split('\n').length;
   await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(2);
@@ -443,7 +443,16 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(3);
   await zc.locator('.zc-in').fill('and go on');
   await zc.locator('.zc-in').press('Enter');
-  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1$/);
+  await expect.poll(() => asked().trim().split('\n').pop(), { timeout: 20_000 }).toMatch(/--resume e2e-task-1( |$)/);
+  // an answer in Markdown (laid out), and a picture of the page it names (SCREENSHOT: this computer's), asked for outside the conversation
+  await expect.poll(claudeSaid, { timeout: 30_000 }).toBeGreaterThan(4);   // ('and go on' answered: the next one may go)
+  await zc.locator('.zc-in').fill('and now with a picture');
+  await zc.locator('.zc-in').press('Enter');
+  await expect(zc.locator('.zc-md b', { hasText: 'Done' }).last()).toBeVisible({ timeout: 30_000 });
+  await expect(zc.locator('.zc-md li').last()).toContainText('code');
+  await expect(zc.locator('.zc-md').last()).toContainText('📸');
+  await expect(zc.locator('.zc-photo img').last()).toBeVisible({ timeout: 60_000 });
+  expect(asked().trim().split('\n').pop()).toContain('--append-system-prompt');
   await zc.locator('.zc-to-x').click();
   await expect(zc.locator('.zc-to-chip')).not.toHaveClass(/is-on/);
   // from a phone (through the tunnel's listener, with the PIN): refused until the Mac allows it
