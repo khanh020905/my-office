@@ -88,6 +88,7 @@ export default {
     pick: 'Choose who gets it',
     sessions: 'Write to a conversation (Claude does it for real)',
     placeholder: 'Message {name}…',
+    placeholderShort: 'Message Claude…',
     sub: '📁 {folder} · Claude does it for real and answers in the group',
     clear: 'Back to the whole group',
     notAllowed: 'Giving work from a phone isn’t allowed yet. On the Mac: click 📱 and switch on “Give Claude work from a phone”.',
