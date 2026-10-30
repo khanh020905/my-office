@@ -87,19 +87,19 @@ engine switches to demo mode and talks to no API.
 
 | Module | Lines | What it is |
 | --- | ---: | --- |
-| `audio/sfx.js` | 61 | Sounds, synthesized in the browser. |
+| `audio/sfx.js` | 69 | Sounds, synthesized in the browser. |
 | `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
 | `core/loop.js` | 222 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
-| `demo/demo.js` | 253 | Demo mode: fictional projects and a fictional Mac. |
+| `demo/demo.js` | 285 | Demo mode: fictional projects and a fictional Mac. |
 | `interact/first-person.js` | 261 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
 | `interact/props.js` | 276 | Furniture you can point at: highlight, tooltip, click actions. |
 | `interact/rings.js` | 16 | Selection and hover rings on the floor. |
 | `life/altar.js` | 172 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
-| `life/incidents.js` | 89 | Incidents: repeated failures turn the office red. |
+| `life/incidents.js` | 90 | Incidents: repeated failures turn the office red. |
 | `life/nap.js` | 63 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
 | `life/post.js` | 113 | The post box: every commit is a letter in it. |
 | `life/quota.js` | 139 | Out of Claude: an account's plan limit used up, its people on a break until it resets. |
@@ -127,7 +127,7 @@ engine switches to demo mode and talks to no API.
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
 | `people/navigation.js` | 255 | The walking graph, desk spots and stations people go to. |
 | `people/nhau.js` | 231 | An evening at the quán nhậu across the street (world/backdrops/street-nhau.js). |
-| `people/outings.js` | 498 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
+| `people/outings.js` | 510 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
 | `people/rounds.js` | 130 | The director's rounds (company floor): twice a day out of the corner office and round the desks. |
 | `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
@@ -144,8 +144,8 @@ engine switches to demo mode and talks to no API.
 | `ui/chat-avatars.js` | 71 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 123 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
-| `ui/group-chat-view.js` | 432 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
-| `ui/group-chat.js` | 164 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
+| `ui/group-chat-view.js` | 495 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
+| `ui/group-chat.js` | 165 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 47 | List mode: the sessions as cards, no 3D. |
@@ -160,8 +160,8 @@ engine switches to demo mode and talks to no API.
 | `ui/settings.js` | 122 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/task-sheet.js` | 98 | "Giao việc": giving Claude work from the group chat (server/tasks.mjs runs it on the Mac). |
 | `ui/timelapse.js` | 156 | A 15-second clip of the office to share: square (1080 × 1080) for a feed or vertical (1080 × 1920) for Reels, TikTok and Shorts, the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds, with an original lo-fi tune under it (clip-music.js; it can be turned off). |
-| `ui/tips.js` | 111 | The first visit: a short tour of what you can click. |
-| `ui/topbar.js` | 111 | Phone modal, notifications, the night switch. |
+| `ui/tips.js` | 115 | The first visit: a short tour of what you can click. |
+| `ui/topbar.js` | 178 | Phone modal, notifications, the night switch. |
 | `ui/whiteboard.js` | 282 | The whiteboard: agents' tasks and your own sticky notes. |
 | `ui/wrapped.js` | 107 | The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as a PNG or copy, for sharing. |
 | `world/backdrops/beach.js` | 117 | Beach backdrop: sand, surf, palms, umbrellas and loungers. |
@@ -169,8 +169,8 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/countryside.js` | 186 | Countryside backdrop: rice paddies, dikes, a river, a bridge, a village. |
 | `world/backdrops/index.js` | 49 | Choosing the backdrop: city, countryside or beach. |
 | `world/backdrops/shared.js` | 82 | Pieces shared by the countryside and beach backdrops. |
-| `world/backdrops/shop-mixue.js` | 214 | The Mixue shop (shops.js places it): its printing (sign, menu light boxes, posters, the round light box), its fittings, the Snow King's statue and the dancer. |
-| `world/backdrops/shops.js` | 800 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
+| `world/backdrops/shop-mixue.js` | 263 | Mixue (Mixue Ice Cream & Tea), as its shops look in Vietnam in 2026: a red front (about #E50914) with "MIXUE" in white letters lit from inside and standing off the board on black sides, "Since 1997" and "Ice Cream & Tea" beside it, the Snow King holding a cone; a round snowman light box out on a bracket; the "I LOVE YOU ♥ YOU LOVE ME" sign; an order counter facing the street with the soft-serve machine on it, the tea brewers and the cup sealer behind, the menu's light boxes across the back wall (the prices of the Đà Nẵng AEON store's June 2026 menu: the 10.000đ cone, the 25.000đ sundae and milk tea…), white tables and low brown stools; staff in black T-shirts; open 9:00–22:00; the Snow King's statue by the door, and on weekend evenings the Snow King himself dancing out front to the tune. |
+| `world/backdrops/shops.js` | 833 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
 | `world/backdrops/street-corner.js` | 143 | … |
 | `world/backdrops/street-csgt.js` | 738 | … |
 | `world/backdrops/street-folk.js` | 139 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
