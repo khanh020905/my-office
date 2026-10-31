@@ -27,6 +27,7 @@ import { tvClick } from '../people/gaming.js';
 import { BIL } from '../world/props/billiards.js';
 import { tableClick } from '../people/billiards.js';
 import { KTV } from '../world/props/karaoke.js';
+import { MW, mwMeshes, openOven } from '../world/props/microwave.js';
 import { boothClick } from '../people/karaoke.js';
 import { neonG, neonM } from '../world/props/neon.js';
 import { SOFA, cat, catGo, petCat } from '../world/props/cat.js';
@@ -166,6 +167,8 @@ export function buildProps() {
     prop('foosball', { name: tr('props.foosball.name'), hint: tr('props.foosball.hint'), place: 'lounge', meshes: meshesOf(PRO_FX.foosball), bounce: PRO_FX.foosball, act: () => sfx.play('click') });
     if (GTV) prop('gametv', { name: tr('props.gametv.name'), hint: tr('props.gametv.hint'), meshes: meshesOf(GTV.g), act: tvClick });
     if (BIL) prop('billiards', { name: tr('props.billiards.name'), hint: tr('props.billiards.hint'), place: 'lounge', meshes: [...meshesOf(BIL.g), ...meshesOf(BIL.rack)], act: tableClick });
+    // the microwaves (people/comnha.js): a click opens a free one's door, or shuts it
+    if (MW.g) prop('microwave', { name: tr('props.microwave.name'), hint: tr('props.microwave.hint'), place: 'coffee', meshes: mwMeshes(), act: () => { const O = MW.ovens.find((o) => o.stage === 'idle' && !o.by); if (O) { openOven(O, O.openGoal < 1); sfx.play('click'); } } });
     if (KTV) prop('karaoke', { name: tr('props.karaoke.name'), hint: tr('props.karaoke.hint'), meshes: meshesOf(KTV.g), act: boothClick });
   }
   if (seasonProp) prop('season', { name: tr('props.season.' + SEASON), hint: tr('props.season.hint', { season: seasonName(SEASON) }), meshes: meshesOf(seasonProp),

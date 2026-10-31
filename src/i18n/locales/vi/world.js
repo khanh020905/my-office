@@ -224,4 +224,6 @@ export default {
       tea: 'Trà đá',
     },
   },
+  // the note taped to the pantry's microwave cabinet (world/props/microwave.js)
+  microwave: { note1: 'MỞ NẮP KHI HÂM!', note2: 'Hâm xong lau lò giùm', note3: 'Hạn chế hâm cá, mắm 🙏' },
 };

@@ -355,4 +355,19 @@ export default {
     tally: { run: '{label} running… the next point is its 🏓', count: '✓ {n}/{of} tests · {label}', pass: '✓ {n} tests over the net · {label} · point!', fail: '✗ {f} failing · into the net after {n} shots · {label}' },
     where: { going: 'Off to the pickleball court', playing: 'Playing pickleball', filming: 'Filming at the pickleball court', back: 'Pickleball done, on the way back' },
   },
+  // lunch from home, warmed at the pantry's microwaves (people/comnha.js)
+  micro: {
+    say: {
+      go: ['Off to warm my lunch 🍱', 'Microwave time 🍱', 'Brought rice from home, just needs warming 🍱'],
+      start: ['Two minutes, that’s all', 'Two minutes and it’s perfect', 'Two and a half for good measure'],
+      beep: ['Beep beep beep, done!', 'Done, piping hot 🔥'],
+      next: ['My turn!', 'Me next!'],
+      hot: ['Hot hot hot 🔥', 'Off to the table 😋'],
+      desk: ['Lunch at my desk with a show 😋', 'Eating at my desk, quicker'],
+      smell: ['Who’s warming braised fish? 😷', 'That fish sauce smell… 😭', 'What IS that smell 😷'],
+      pop: ['Oops, forgot to open the lid 😅', 'Pop! Forgot the vent 😅'],
+      called: ['Work! I’ll get it later!', 'Oh, work, back to my desk first!'],
+    },
+    where: { line: 'In line at the microwave ({n} ahead)', heat: 'Warming lunch at the microwave', eat: 'Taking lunch to a table' },
+  },
 };
