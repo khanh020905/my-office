@@ -32,6 +32,14 @@ function bodyParts() {
     hat: [colorize(new THREE.SphereGeometry(0.27, 12, 8, 0, Math.PI * 2, 0, Math.PI / 2).translate(-0.02, 1.6, 0), '#6B7343'), colorize(at(new THREE.CylinderGeometry(0.34, 0.34, 0.02, 16), -0.02, 1.6, 0), '#5E6638')],
     racket,
     non: [colorize(new THREE.ConeGeometry(0.4, 0.22, 16).translate(0, 1.84, 0), '#E5D49C')],   // a conical hat (nón lá)
+    // the pickleball court's (street-pickle.js): a sun visor (a band and its brim, painted), a pleated tennis skirt over
+    // the hips (painted), white court shoes over the dark ones, a paddle in the right hand, a phone held up to film
+    visor: [W(new THREE.CylinderGeometry(0.262, 0.262, 0.07, 16, 1, true).translate(0, 1.6, 0)), W(new THREE.CylinderGeometry(0.17, 0.17, 0.015, 16, 1, false, 0, Math.PI).translate(0.2, 1.575, 0))],
+    skirt: [W(new THREE.CylinderGeometry(0.215, 0.29, 0.24, 14, 1, true).scale(0.8, 1, 1).translate(0, 0.66, 0))],
+    shoes: [boxAt(0.235, 0.09, 0.17, 0.035, -0.6, 0, '#F4F5F2'), boxAt(0.24, 0.025, 0.175, 0.035, -0.64, 0, '#C9CED6')],
+    paddle: [colorize(new THREE.CylinderGeometry(0.018, 0.018, 0.13, 6).translate(0, -0.56, 0), '#2B2F36'),
+      W(new THREE.BoxGeometry(0.02, 0.27, 0.2).translate(0, -0.76, 0)), colorize(new THREE.BoxGeometry(0.024, 0.28, 0.012).translate(0, -0.76, 0.1), '#2B2F36'), colorize(new THREE.BoxGeometry(0.024, 0.28, 0.012).translate(0, -0.76, -0.1), '#2B2F36')],
+    phone: [boxAt(0.02, 0.15, 0.075, 0.03, -0.55, 0, '#1E2125'), colorize(new THREE.PlaneGeometry(0.068, 0.135).rotateY(Math.PI / 2).translate(0.041, -0.55, 0), '#8FD3FF')],
   };
 }
 
@@ -39,17 +47,19 @@ function bodyParts() {
     ground), z, yaw, s (scale: 0.62 a child), sit (the seat's top, world y, instead of y), lean (forward < 0), arms:
     [[swing, raise], [swing, raise]] (left, right; swing forward > 0, π straight up; raise out to the side), legs: [l, r]
     (forward > 0), hat (true: a pith helmet; 'non': a conical hat), racket (in the right hand), tip (the whole body tipped back about the hips: π/2 lies on its back,
-    head towards -x), faceHat (the hat over the face, for a nap) } */
+    head towards -x), faceHat (the hat over the face, for a nap); on the pickleball court: visor, skirt, shoes (white court
+    shoes), paddle (in the right hand), phone (the left hand, filming) } */
 export function folk(G, n, { low = false, shadows = true } = {}) {
   const P = bodyParts(), m = {};
   for (const [k, list] of Object.entries(P)) {
-    const o = new THREE.InstancedMesh(mergeAll(list), vmat({ roughness: 0.85, side: k === 'racket' ? THREE.DoubleSide : THREE.FrontSide }), k === 'arm' || k === 'leg' ? n * 2 : n);
+    const o = new THREE.InstancedMesh(mergeAll(list), vmat({ roughness: 0.85, side: k === 'racket' || k === 'visor' || k === 'skirt' ? THREE.DoubleSide : THREE.FrontSide }), k === 'arm' || k === 'leg' || k === 'shoes' ? n * 2 : n);
     o.frustumCulled = false; o.visible = false;
     for (let i = 0; i < o.count; i++) o.setMatrixAt(i, Z0);
     if (shadows && (k === 'torso' || k === 'head')) o.castShadow = !low;
     o.userData.setPiece = true; G.add(o); m[k] = o;
   }
   const on = new Uint8Array(n), hat = new Uint8Array(n), non = new Uint8Array(n), racket = new Uint8Array(n), col = new THREE.Color();
+  const kit = { visor: new Uint8Array(n), skirt: new Uint8Array(n), shoes: new Uint8Array(n), paddle: new Uint8Array(n), phone: new Uint8Array(n) };   // (the court's)
   const B = new THREE.Matrix4(), U = new THREE.Matrix4(), A = new THREE.Matrix4(), T = new THREE.Matrix4(), R = new THREE.Matrix4();
   const q = new THREE.Quaternion(), p = new THREE.Vector3(), sc = new THREE.Vector3();
   let free = 0, dirty = false;
@@ -57,24 +67,28 @@ export function folk(G, n, { low = false, shadows = true } = {}) {
   function hide(i) {
     if (!on[i]) return;
     on[i] = hat[i] = non[i] = racket[i] = 0; dirty = true;
-    for (const k of ['torso', 'head', 'hair', 'lap', 'hat', 'non', 'racket']) m[k].setMatrixAt(i, Z0);
-    for (const k of ['arm', 'leg']) { m[k].setMatrixAt(i * 2, Z0); m[k].setMatrixAt(i * 2 + 1, Z0); }
+    for (const k of ['torso', 'head', 'hair', 'lap', 'hat', 'non', 'racket', 'visor', 'skirt', 'paddle', 'phone']) m[k].setMatrixAt(i, Z0);
+    for (const k of ['arm', 'leg', 'shoes']) { m[k].setMatrixAt(i * 2, Z0); m[k].setMatrixAt(i * 2 + 1, Z0); }
+    for (const a of Object.values(kit)) a[i] = 0;
   }
   return {
     // n slots for one owner
     take(k) { const out = []; for (let j = 0; j < k && free < n; j++) out.push(free++); return out; },
-    dress(i, { shirt = '#3F7CC4', hair = '#2B2420', pants = '#363D4C', sleeves } = {}) {
+    dress(i, { shirt = '#3F7CC4', hair = '#2B2420', pants = '#363D4C', sleeves, visor = '#F4F4F2', skirt = '#F4F4F2', paddle = '#D8323C' } = {}) {
       paint(m.torso, i, shirt); paint(m.hair, i, hair); paint(m.leg, i * 2, pants); paint(m.leg, i * 2 + 1, pants); paint(m.lap, i, pants);
       paint(m.arm, i * 2, sleeves || shirt); paint(m.arm, i * 2 + 1, sleeves || shirt);
+      paint(m.visor, i, visor); paint(m.skirt, i, skirt); paint(m.paddle, i, paddle);
     },
     pose(i, f) {
       on[i] = 1; hat[i] = (f.hat && f.hat !== 'non') || f.faceHat ? 1 : 0; non[i] = f.hat === 'non' ? 1 : 0; racket[i] = f.racket ? 1 : 0; dirty = true;
+      for (const k in kit) kit[k][i] = f[k] ? 1 : 0;
       const s = f.s ?? 1, sit = f.sit != null;
       q.setFromAxisAngle(UP, f.yaw || 0); p.set(f.x, (sit ? f.sit - SEAT * s : f.y) + (f.bob || 0), f.z); sc.setScalar(s); B.compose(p, q, sc);
       if (f.tip) B.multiply(T.makeTranslation(0, HIP, 0)).multiply(R.makeRotationZ(f.tip)).multiply(T.makeTranslation(0, -HIP, 0));
       U.copy(B);
       if (f.lean) U.multiply(T.makeTranslation(0, HIP, 0)).multiply(R.makeRotationZ(f.lean)).multiply(T.makeTranslation(0, -HIP, 0));
       m.torso.setMatrixAt(i, U); m.head.setMatrixAt(i, U); m.hair.setMatrixAt(i, U);
+      m.visor.setMatrixAt(i, f.visor ? U : Z0); m.skirt.setMatrixAt(i, f.skirt && !sit ? B : Z0);
       if (f.faceHat) m.hat.setMatrixAt(i, A.copy(U).multiply(T.makeTranslation(0.12, 1.52, 0)).multiply(R.makeRotationZ(-Math.PI / 2)).multiply(T.makeTranslation(0, -1.52, 0)));
       else m.hat.setMatrixAt(i, f.hat && f.hat !== 'non' ? U : Z0);
       m.non.setMatrixAt(i, f.hat === 'non' ? U : Z0);
@@ -82,13 +96,14 @@ export function folk(G, n, { low = false, shadows = true } = {}) {
         const [sw = 0, rs = 0] = f.arms?.[k] || [];
         A.copy(U).multiply(T.makeTranslation(0, SHOULDER, side * 0.25)).multiply(R.makeRotationX(-side * rs)).multiply(T.makeRotationZ(sw));
         m.arm.setMatrixAt(i * 2 + k, A);
-        if (k === 1) m.racket.setMatrixAt(i, f.racket ? A : Z0);
+        if (k === 1) { m.racket.setMatrixAt(i, f.racket ? A : Z0); m.paddle.setMatrixAt(i, f.paddle ? A : Z0); }
+        else m.phone.setMatrixAt(i, f.phone ? A : Z0);
       }
-      if (sit) { m.lap.setMatrixAt(i, B); m.leg.setMatrixAt(i * 2, Z0); m.leg.setMatrixAt(i * 2 + 1, Z0); return; }
+      if (sit) { m.lap.setMatrixAt(i, B); for (const j of [0, 1]) { m.leg.setMatrixAt(i * 2 + j, Z0); m.shoes.setMatrixAt(i * 2 + j, Z0); } return; }
       m.lap.setMatrixAt(i, Z0);
       for (const [k, side] of [[0, -1], [1, 1]]) {
         A.copy(B).multiply(T.makeTranslation(0, HIP, side * 0.1)).multiply(R.makeRotationZ(f.legs?.[k] || 0));
-        m.leg.setMatrixAt(i * 2 + k, A);
+        m.leg.setMatrixAt(i * 2 + k, A); m.shoes.setMatrixAt(i * 2 + k, f.shoes ? A : Z0);
       }
     },
     hide,
@@ -98,7 +113,7 @@ export function folk(G, n, { low = false, shadows = true } = {}) {
     flush() {
       if (!dirty) return; dirty = false;
       const top = (a) => { for (let i = n - 1; i >= 0; i--) if (a[i]) return i + 1; return 0; };
-      const all = top(on), tops = { arm: all * 2, leg: all * 2, hat: top(hat), non: top(non), racket: top(racket) };
+      const all = top(on), tops = { arm: all * 2, leg: all * 2, hat: top(hat), non: top(non), racket: top(racket), visor: top(kit.visor), skirt: top(kit.skirt), shoes: top(kit.shoes) * 2, paddle: top(kit.paddle), phone: top(kit.phone) };
       for (const [k, o] of Object.entries(m)) { o.count = tops[k] ?? all; o.visible = o.count > 0; o.instanceMatrix.needsUpdate = true; }
     },
   };

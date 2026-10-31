@@ -132,6 +132,9 @@ export function chatLife(kind, v = {}) {
     case 'atm': if (v.id) chatSay(v.id, life('atm'), { key, answer: [{ key: 'atmAsk', chance: 0.5 }] }); break;
     // lunch at the quán cơm across the street (people/comtrua.js); Fridays bún đậu mắm tôm
     case 'com': chatSay(v.id || restingOne(), life(v.friday ? 'comFriday' : 'com'), { key, react: ['😋', '👍'], reacts: 3, answer: [{ key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.9 }, { key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.6 }] }); break;
+    // pickleball after work on a green-CI day (people/pickle.js): the question at five; the clip and everyone's share after
+    case 'pickleAsk': chatSay(v.id || restingOne(), life('pickleAsk'), { key, react: ['🏓', '👍', '😆'], reacts: 4, answer: [{ key: 'pickleAsk', chance: 0.95 }, { key: 'pickleAsk', chance: 0.8 }, { key: 'pickleAsk', chance: 0.5 }] }); break;
+    case 'pickleDone': if (v.id) chatSay(v.id, life('pickleDone', { share: v.share }), { key, photo: v.photo || null, react: ['🏓', '😆', '❤️'], reacts: 4, answer: [{ key: 'pickleDone', chance: 0.8 }, { key: 'pickleDone', chance: 0.5 }] }); break;
   }
 }
 

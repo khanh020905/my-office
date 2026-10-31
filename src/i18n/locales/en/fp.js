@@ -38,6 +38,11 @@ export default {
   comDone: 'Braised pork and egg, sour soup, free iced tea: 35,000 đồng 🍚',
   comBdDone: 'A tray of bún đậu mắm tôm, the tofu hot and crisp: 45,000 đồng 🤤',
   comJoin: 'You sit down to eat with {names} 🍚',
+  // the pickleball court by the park (world/backdrops/street-pickle.js)
+  pickle: 'Pickleball court · {price} an hour after 5 pm',
+  pickleOffice: 'The office has the court tonight: {fee} an hour, 70,000 đồng each 🏓',
+  pickleLocals: 'The neighbours are playing doubles: take a seat on the bench and wait your turn 🏓',
+  pickleFree: 'The court is free: {fee} an hour after 5 pm, paddles to rent 🏓',
   bil: {
     you: 'You',
     busy: '{a} and {b} are playing, wait for the next frame',

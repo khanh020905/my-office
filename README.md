@@ -183,6 +183,14 @@ Then open <http://localhost:4310>.
     police stand on the quán's street, and a regular who rides off on his own scooter is stopped and breath-tested. The
     quán's chip opens its menu (illustrative prices) and who from the office is at the table; in first person, E to sit
     down with them (`?nhau` to see it any time);
+  - a pickleball court by a park, at its real size (20 × 44 ft, the kitchen 7 ft each side of the net, the net 34 in in
+    the middle and 36 in at the posts), blue on green, chain-link fence and windscreens, LED floodlights in the evening,
+    "200.000–300.000đ/giờ sau 17h" on the board at the gate; the neighbourhood plays doubles on weekday evenings and
+    weekend mornings and evenings, in visors, tennis skirts and court shoes. On a day the CI has stayed green someone asks
+    "Tối nay kèo pick không?" in the group chat at five, and at half past four people resting go down to play (a fifth
+    films it); a test run while they play is a point, each passing test a shot over the net and the first failing one
+    into the net. After an hour the clip goes into the chat with everyone's share of the court (70k). In first person,
+    E at the gate (`?pickle` to see the court in use);
   - traffic lights have Vietnam's countdown boxes beside them, red or green digits counting down the light. On a hot
     sunny day (33 °C+, from the real weather) scooters wait at a red light back in a street tree's shade instead of at
     the stop line;

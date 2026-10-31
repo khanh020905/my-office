@@ -87,8 +87,8 @@ function demoRun(s, task, at = 0) {
     if (type === 'test') {   // the run at the test board, then its result (mostly green; the first run of a new test red)
       later(t, () => demoEmit(s, 'test', label, { runner }));
       t += rand(3500, 6500);
-      const ok = outcome ? outcome === 'ok' : Math.random() < 0.85;
-      later(t, () => demoEmit(s, ok ? 'testok' : 'testfail', runner));
+      const ok = outcome ? outcome === 'ok' : Math.random() < 0.85, n = 12 + Math.floor(Math.random() * 30);   // (how many passed and failed, as a runner's summary says)
+      later(t, () => demoEmit(s, ok ? 'testok' : 'testfail', runner, ok ? { pass: n, fail: 0 } : { pass: n - 1, fail: 1 }));
     } else later(t, () => demoEmit(s, type, label));
   });
   // most tasks end in a commit (a letter in the lobby's post box); every third one is pushed (the postman comes)

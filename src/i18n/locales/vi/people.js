@@ -301,4 +301,19 @@ export default {
     },
     where: { going: 'Đang xuống quán cơm bình dân', goingBd: 'Đang đi ăn bún đậu mắm tôm', eating: 'Đang ăn cơm ở quán cô Ba', eatingBd: 'Đang ăn bún đậu mắm tôm', back: 'Ăn xong, đang về' },
   },
+  // pickleball after work at the court by the park (people/pickle.js, world/backdrops/street-pickle.js)
+  pickle: {
+    say: {
+      go: ['Đi pick thôi anh em 🏓', 'Ra sân thôi, CI xanh rồi 🏓'],
+      ready: ['Đội visor vô, khởi động xíu 🧢', 'Sân đẹp quá, chơi thôi!'],
+      film: ['Để em quay lại nha 📱', 'Cười lên, em quay nè 📱'],
+      net: ['Vào lưới rồi 😭', 'Ôi lưới!', 'Tiếc quá, lưới!'],
+      out: ['Out!', 'Ra ngoài rồi 😅', 'Dài quá!'],
+      winner: ['Đẹp!', 'Ăn điểm! 💪', 'Cú này hay nè 😆'],
+      work: ['Có việc, em về trước nha! 🏃', 'Ơ có việc, anh em đánh tiếp nha!'],
+      end: ['Hết giờ sân rồi, về thôi', 'Mỏi chân quá 😆 về thôi'],
+    },
+    tally: { run: '{label} đang chạy… điểm kế tiếp là của nó 🏓', count: '✓ {n}/{of} test · {label}', pass: '✓ {n} test qua lưới · {label} · ăn điểm!', fail: '✗ {f} test hỏng · bóng vào lưới sau {n} cú · {label}' },
+    where: { going: 'Đang ra sân pickleball', playing: 'Đang đánh pickleball', filming: 'Đang quay clip ở sân pickleball', back: 'Đánh pick xong, đang về' },
+  },
 };
