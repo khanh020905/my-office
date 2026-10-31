@@ -301,6 +301,20 @@ export default {
     },
     where: { going: 'Đang xuống quán cơm bình dân', goingBd: 'Đang đi ăn bún đậu mắm tôm', eating: 'Đang ăn cơm ở quán cô Ba', eatingBd: 'Đang ăn bún đậu mắm tôm', back: 'Ăn xong, đang về' },
   },
+  // a release: a strip at the photo booth across the street (people/photobooth.js, world/backdrops/street-photo.js)
+  photo: {
+    say: {
+      go: ['Đi chụp photobooth thôi 📸', 'Kỷ niệm ra bản mới nào 🎉'],
+      frame0: ['3… 2… 1… Tai mèo nè 🐱', 'Đeo băng đô vô, cười lên! 📸'],
+      frame1: ['Kính trái tim! 3… 2… 1… 😎', 'Ngầu lên nào 😎'],
+      frame2: ['Nón tiệc! 3… 2… 1… 🥳', 'Phồng má lên nào 🥳'],
+      frame3: ['Khung cuối, tự do! 📸', 'Lè lưỡi đi mọi người 😜'],
+      done: ['In xong rồi! Đẹp quá trời 😆', 'Ra lò rồi nè 📸'],
+      pin: ['Dán bản {tag} lên bảng nè 📌', 'Thêm một tấm vào bảng kỷ niệm 📌'],
+      work: ['Có việc, em về trước nha! 🏃', 'Ơ có việc, mọi người chụp tiếp nha!'],
+    },
+    where: { going: 'Đang qua tiệm chụp ảnh Hàn Quốc', wait: 'Đang chờ tới lượt chụp ảnh', queue: 'Đang xếp hàng chụp ảnh (cuối tuần đông)', booth: 'Đang chụp photobooth ({tag})', back: 'Chụp ảnh xong, đang về' },
+  },
   // pickleball after work at the court by the park (people/pickle.js, world/backdrops/street-pickle.js)
   pickle: {
     say: {

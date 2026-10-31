@@ -191,6 +191,13 @@ Then open <http://localhost:4310>.
     films it); a test run while they play is a point, each passing test a shot over the net and the first failing one
     into the net. After an hour the clip goes into the chat with everyone's share of the court (70k). In first person,
     E at the gate (`?pickle` to see the court in use);
+  - a Korean-style self photo studio across the street: a pink container, "Chụp ảnh Hàn Quốc" in pink neon, two booths
+    behind their curtains (feet showing under them), a basket of props (cat-ear headbands, giant heart sunglasses, party
+    hats), the price board (a 4-frame strip 70k, the big print 100k), young people coming in the evening and queueing at
+    the weekend. A release (a new version tag in a session's repository, or a GitHub release) sends four people resting
+    there: four frames, four silly poses with the props, the flash; the strip goes into the group chat and they come back
+    up still wearing the props and pin it on the whiteboard, the version under it: the six newest stay, a release history.
+    At the weekend they are back nearly two hours later. In first person, E at the door for a strip of your own;
   - traffic lights have Vietnam's countdown boxes beside them, red or green digits counting down the light. On a hot
     sunny day (33 °C+, from the real weather) scooters wait at a red light back in a street tree's shade instead of at
     the stop line;

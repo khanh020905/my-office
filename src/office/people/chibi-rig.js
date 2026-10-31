@@ -749,6 +749,15 @@ export function chibiPose(P, anim, ph, o = {}) {
       p.armL = [-0.55, -0.3, -0.7];
       break;
     }
+    case 'photo': {   // a silly pose in the photo booth (people/photobooth.js), P.photo: 'v' a V by the face, 'heart' arms in
+      // a heart over the head, 'cheek' both hands on the cheeks (an "o"), 'jump' arms up and a hop
+      const k = P.photo || 'v';
+      if (k === 'v') { p.armR = reach(1, 0.12, headY() - R * 0.1, headZ() + R * 0.75); p.armL = [-0.2, -0.5, -0.6]; p.head = [0, 0, 0.18]; p.tilt = 0.06; }
+      else if (k === 'heart') { p.armL = [-2.75, -0.55, -1.3]; p.armR = [-2.75, 0.55, -1.3]; p.head = [-0.05, 0, 0]; }
+      else if (k === 'cheek') { p.armL = reach(-1, -R * 0.75, headY() - R * 0.2, headZ() + R * 0.55); p.armR = reach(1, R * 0.75, headY() - R * 0.2, headZ() + R * 0.55); p.mouth = 'o'; p.head = [0, 0, -0.12]; }
+      else { p.armL = [0, -2.6, -0.3]; p.armR = [0, 2.6, -0.3]; p.y += Math.abs(Math.sin(ph * 7)) * 0.18; p.mouth = 'o'; }
+      break;
+    }
     case 'film': {   // filming the game on a phone (people/pickle.js): held up in both hands in front of the face
       p.visor = true; p.held = 'phone'; p.head = [0.05, 0, 0]; p.lean = -0.02;
       const y = headY() - R * 0.35, z = headZ() + R * 0.9 + 0.1;

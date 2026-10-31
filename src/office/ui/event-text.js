@@ -32,6 +32,7 @@ export const ACT = {
   push:    { station: null,      anim: 'celebrate', icon: '🚀', dwell: 2 },
   cired:   { station: null,      anim: 'sweat',   icon: '🚨', kind: 'fail', priority: true, dwell: 2.4 },
   cigreen: { station: null,      anim: 'celebrate', icon: '✅', dwell: 2 },
+  release: { station: null,      anim: 'celebrate', icon: '🏷️', dwell: 2 },   // a version tag or a release (people/photobooth.js)
   // a test run: watch it at the test board (life/tests.js), then a cheer or a puzzled look
   test:    { station: 'tests',   anim: 'think',   icon: '🧪', dwell: 1.6 },
   testok:  { station: 'tests',   anim: 'celebrate', icon: '✅', dwell: 2.2 },
@@ -74,6 +75,7 @@ export function verb(e) {
     case 'deploy': return V('deploy', { label });
     case 'commit': return state.streamer ? V('commitHidden') : V('commit', { label });
     case 'push': return V('push', { target: state.streamer ? 'git' : label });
+    case 'release': return V('release', { tag: label });
     case 'cired': return V('ciRed', { label: label || V('ciRedDefault') });
     case 'cigreen': return V('ciGreen', { label: label || V('ciGreenDefault') });
     case 'test': return V('test', { label });

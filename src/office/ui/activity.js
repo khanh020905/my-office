@@ -23,7 +23,7 @@ const ATT = new Set(['wait', 'ask', 'fail', 'cired']);
 export const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 // Consecutive events from the same session (or subagent) within four minutes share one card; alerts stand alone
 // with their actions, so "needs you" never hides inside a group.
-const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'cired', 'cigreen'], edit: ['edit', 'write'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
+const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'release', 'cired', 'cigreen'], edit: ['edit', 'write'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
 const typeFilter = new Set();
 const kindOk = (e) => !typeFilter.size || [...typeFilter].some((k) => KIND[k].includes(e.type));
 function lineOf(e) {

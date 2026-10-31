@@ -22,6 +22,7 @@ import { onCommit, onPush, postAction } from './post.js';
 import { chatEvent } from '../ui/group-chat.js';
 import { headache, treat } from '../people/outings.js';
 import { pickleCi, pickleTest } from '../people/pickle.js';
+import { photoRelease } from '../people/photobooth.js';
 
 /* ---------- incidents: three failures in five minutes turn the office red for a while ---------- */
 export const fails = [];
@@ -43,6 +44,7 @@ export function onEvent(e) {
   if (e.type === 'test' || e.type === 'testok' || e.type === 'testfail') { onTest(e); if (!e.agent) pickleTest(e); }   // the test board's lamps (tests.js); a point on the pickleball court (people/pickle.js)
   if (e.type === 'commit') onCommit(e); if (e.type === 'push') onPush(e);   // a letter in the post box; the postman (post.js)
   if (e.type === 'push' || e.type === 'deploy') applaud(e.sess);
+  if (e.type === 'release') photoRelease(e.label);   // (four of them to the photo booth across the street: people/photobooth.js)
   if (e.type === 'push') { launchRocket(); sfx.play('deploy'); toast(tr('incident.pushed', { name: dn(sessions.get(e.sess)) || e.repo, branch: state.streamer ? 'git' : e.branch || 'git' })); }
   if (e.type === 'cired') { pickleCi(e); sfx.play('siren'); toast(tr('incident.ciRed', { label: e.label || tr('incident.ciRedDefault'), repo: e.repo }), 6500); }
   if (e.type === 'cigreen') { toast(tr('incident.ciGreen', { label: e.label || '', repo: e.repo })); treat(); }   // (green again: ice cream from the Mixue for everyone)

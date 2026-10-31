@@ -38,6 +38,9 @@ export default {
   comDone: 'Cơm thịt kho trứng, canh chua, trà đá miễn phí: 35.000đ 🍚',
   comBdDone: 'Một mẹt bún đậu mắm tôm, đậu nóng giòn: 45.000đ 🤤',
   comJoin: 'Ngồi ăn chung bàn với {names} 🍚',
+  // the photo booth across the street (world/backdrops/street-photo.js)
+  photo: 'Chụp ảnh Hàn Quốc · 4 khung {price}',
+  photoDone: 'Tách! Một dải 4 khung của bạn, 70.000đ 📸',
   // the pickleball court by the park (world/backdrops/street-pickle.js)
   pickle: 'Sân pickleball · {price}/giờ sau 17h',
   pickleOffice: 'Tối nay văn phòng thuê sân: {fee}/giờ, chia 4 mỗi người 70k 🏓',

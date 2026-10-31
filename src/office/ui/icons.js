@@ -69,10 +69,10 @@ const ICONS = {
   gear: '<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z"/>',
   door: '<path d="M13 4h3a2 2 0 0 1 2 2v14"/><path d="M2 20h3"/><path d="M13 20h9"/><path d="M10 12v.01"/><path d="M13 4.56v16.86a.5.5 0 0 1-.63.48L5 20V5.56a1 1 0 0 1 .76-.97l6-1.5a1 1 0 0 1 1.24.97Z"/>',
 };
-export const TYPE_ICON = { commit: 'check', push: 'rocket', cired: 'alert', cigreen: 'check', test: 'terminal', testok: 'check', testfail: 'alert', prompt: 'clipboard', read: 'file', grep: 'search', glob: 'search', skill: 'book', edit: 'pencil', write: 'file', plan: 'list', bash: 'terminal',
+export const TYPE_ICON = { commit: 'check', push: 'rocket', release: 'sparkle', cired: 'alert', cigreen: 'check', test: 'terminal', testok: 'check', testfail: 'alert', prompt: 'clipboard', read: 'file', grep: 'search', glob: 'search', skill: 'book', edit: 'pencil', write: 'file', plan: 'list', bash: 'terminal',
   web: 'globe', fetch: 'globe', mcp: 'plug', agent: 'users', other: 'sparkle', compact: 'sparkle', ask: 'alert', wait: 'alert', fail: 'alert', stop: 'coffee',
   idle: 'coffee', interrupt: 'x', deploy: 'rocket', lamp: 'bulb', print: 'file', coffee: 'coffee', cat: 'paw', meet: 'users', party: 'sparkle', plant: 'leaf', start: 'door', end: 'door', substart: 'users', substop: 'check' };
-export const TYPE_TONE = { commit: 'green', push: 'green', cired: 'red', cigreen: 'green', bash: 'green', deploy: 'green', wait: 'red', ask: 'red', fail: 'red', substart: 'blue', substop: 'blue', agent: 'blue', prompt: 'amber' };
+export const TYPE_TONE = { commit: 'green', push: 'green', release: 'green', cired: 'red', cigreen: 'green', bash: 'green', deploy: 'green', wait: 'red', ask: 'red', fail: 'red', substart: 'blue', substop: 'blue', agent: 'blue', prompt: 'amber' };
 export function icon(name, cls = 'ic') {
   const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('class', cls); svg.setAttribute('aria-hidden', 'true');

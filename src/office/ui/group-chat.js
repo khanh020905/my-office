@@ -134,6 +134,10 @@ export function chatLife(kind, v = {}) {
     case 'com': chatSay(v.id || restingOne(), life(v.friday ? 'comFriday' : 'com'), { key, react: ['😋', '👍'], reacts: 3, answer: [{ key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.9 }, { key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.6 }] }); break;
     // pickleball after work on a green-CI day (people/pickle.js): the question at five; the clip and everyone's share after
     case 'pickleAsk': chatSay(v.id || restingOne(), life('pickleAsk'), { key, react: ['🏓', '👍', '😆'], reacts: 4, answer: [{ key: 'pickleAsk', chance: 0.95 }, { key: 'pickleAsk', chance: 0.8 }, { key: 'pickleAsk', chance: 0.5 }] }); break;
+    // a release (people/photobooth.js): off to the photo booth; the strip; the weekend's queue
+    case 'photoGo': chatSay(v.id || restingOne(), life('photoGo', { tag: v.tag }), { key: `${key}:${v.tag}`, react: ['📸', '🎉', '❤️'], reacts: 4, answer: [{ key: 'photoGo', chance: 0.9 }, { key: 'photoGo', chance: 0.5 }] }); break;
+    case 'photoStrip': if (v.id) chatSay(v.id, life('photoStrip', { tag: v.tag }), { key: `${key}:${v.tag}`, photo: v.photo || null, react: ['😆', '❤️', '📸'], reacts: 5, answer: [{ key: 'photoStrip', chance: 0.9 }, { key: 'photoStrip', chance: 0.6 }] }); break;
+    case 'photoQueue': if (v.id) chatSay(v.id, life('photoQueue'), { key, react: ['😭', '😆'], reacts: 3 }); break;
     case 'pickleDone': if (v.id) chatSay(v.id, life('pickleDone', { share: v.share }), { key, photo: v.photo || null, react: ['🏓', '😆', '❤️'], reacts: 4, answer: [{ key: 'pickleDone', chance: 0.8 }, { key: 'pickleDone', chance: 0.5 }] }); break;
   }
 }

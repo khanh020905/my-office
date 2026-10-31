@@ -94,20 +94,21 @@ engine switches to demo mode and talks to no API.
 
 | Module | Lines | What it is |
 | --- | ---: | --- |
-| `audio/sfx.js` | 70 | Sounds, synthesized in the browser. |
+| `audio/sfx.js` | 71 | Sounds, synthesized in the browser. |
 | `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
 | `core/loop.js` | 223 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
-| `demo/demo.js` | 314 | Demo mode: fictional projects and a fictional Mac. |
+| `demo/demo.js` | 315 | Demo mode: fictional projects and a fictional Mac. |
 | `interact/first-person.js` | 261 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
 | `interact/props.js` | 276 | Furniture you can point at: highlight, tooltip, click actions. |
 | `interact/rings.js` | 16 | Selection and hover rings on the floor. |
 | `life/altar.js` | 172 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
-| `life/incidents.js` | 92 | Incidents: repeated failures turn the office red. |
+| `life/incidents.js` | 94 | Incidents: repeated failures turn the office red. |
 | `life/nap.js` | 63 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
+| `life/photostrips.js` | 135 | The release history on the whiteboard: each version tag sends four people to the photo booth across the street (people/photobooth.js) and the strip they bring back, four frames of silly poses with the version written under them, is pinned along the bottom of the board's right half. |
 | `life/post.js` | 113 | The post box: every commit is a letter in it. |
 | `life/quota.js` | 139 | Out of Claude: an account's plan limit used up, its people on a break until it resets. |
 | `life/rain.js` | 77 | Umbrellas and a wet-floor sign when it rains. |
@@ -121,7 +122,7 @@ engine switches to demo mode and talks to no API.
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
 | `people/billiards.js` | 484 | Pool in the lounge (company floor; the table: world/props/billiards.js). |
 | `people/breaks.js` | 64 | Lunch and the afternoon coffee queue. |
-| `people/chibi-rig.js` | 809 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
+| `people/chibi-rig.js` | 818 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/comtrua.js` | 169 | Lunch at the quán cơm bình dân across the street (world/backdrops/eat-com.js). |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
 | `people/errands.js` | 283 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
@@ -135,8 +136,9 @@ engine switches to demo mode and talks to no API.
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
 | `people/navigation.js` | 255 | The walking graph, desk spots and stations people go to. |
 | `people/nhau.js` | 231 | An evening at the quán nhậu across the street (world/backdrops/street-nhau.js). |
-| `people/outings.js` | 582 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
+| `people/outings.js` | 584 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
 | `people/payday.js` | 124 | Payday (the 5th, the 10th or the month's last day: world/backdrops/street-atm.js isPayday). |
+| `people/photobooth.js` | 223 | A strip from the photo booth for every release (world/backdrops/street-photo.js; the release: a new version tag in a session's repository or a GitHub release, server/git.mjs). |
 | `people/pickle.js` | 193 | Pickleball after work (world/backdrops/street-pickle.js). |
 | `people/rounds.js` | 130 | The director's rounds (company floor): twice a day out of the corner office and round the desks. |
 | `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
@@ -155,9 +157,9 @@ engine switches to demo mode and talks to no API.
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
 | `ui/chat-avatars.js` | 72 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
-| `ui/event-text.js` | 123 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
+| `ui/event-text.js` | 125 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
 | `ui/group-chat-view.js` | 891 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type; writing to Claude, a prompt helper over it. |
-| `ui/group-chat.js` | 179 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
+| `ui/group-chat.js` | 183 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
@@ -198,11 +200,12 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/street-corner.js` | 143 | … |
 | `world/backdrops/street-csgt.js` | 738 | … |
 | `world/backdrops/street-folk.js` | 154 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
-| `world/backdrops/street-life.js` | 1175 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
+| `world/backdrops/street-life.js` | 1178 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
 | `world/backdrops/street-lunar.js` | 84 | … |
 | `world/backdrops/street-morning.js` | 103 | … |
 | `world/backdrops/street-nhau.js` | 272 | … |
 | `world/backdrops/street-park.js` | 360 | … |
+| `world/backdrops/street-photo.js` | 213 | A Korean-style self photo studio across the street (city backdrop), the kind that opened on every busy street in Vietnam's cities in 2024–2026: a pink container on a park's edge, "Chụp ảnh Hàn Quốc" in pink neon over the glass, and inside two booths behind their curtains (pink and black; the feet of whoever is in there show under them), each with its camera and screen and a ring light, the props table by the door (a basket of cat-ear and bunny-ear headbands, giant heart sunglasses, party hats and bucket hats), a mirror, the printer and a wall of sample strips; the price board out on the pavement (a 4-frame strip 70k, the big 6-frame one 100k). |
 | `world/backdrops/street-pickle.js` | 480 | A pickleball court by a park near the office (city backdrop), as they have sprung up all over Vietnam's cities since 2024: one outdoor court, the real size (20 × 44 ft: 6.10 × 13.41 m), laid lengthways across the park's edge and the old lane of a street no traffic uses any more; the blue acrylic court on green, its white lines 2 in wide (the non-volley zone, the "kitchen", 7 ft either side of the net; the centre lines from it to the baselines), the net 34 in high in the middle and 36 in at the posts (22 ft long, the posts a foot outside the sidelines), a chain-link fence round it with dark green windscreens at the ends, four poles of LED floodlights for the evening, the board at the gate ("Sân pickleball · 200.000–300.000đ/giờ sau 17h"), two benches with water bottles, bags, spare paddles and a bucket of balls (the perforated yellow ones). |
 | `world/backdrops/street-repair.js` | 120 | … |
 | `world/backdrops/street-riders.js` | 148 | … |

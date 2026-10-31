@@ -34,6 +34,7 @@ export default {
     commit: 'commit: “{label}” 🖨️',
     commitHidden: 'commit 🖨️',
     push: 'đẩy code lên {target} 🚀',
+    release: 'ra bản {tag} 🏷️',
     ciRed: 'CI đỏ: {label}',
     ciRedDefault: 'kiểm thử hỏng',
     ciGreen: 'CI xanh lại: {label}',
