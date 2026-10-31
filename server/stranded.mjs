@@ -21,6 +21,8 @@ function git(args, cwd, timeout = 5000) {
 }
 const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
 export const idOf = (p) => crypto.createHash('sha1').update(p).digest('hex').slice(0, 12);
+// git writes paths with / on Windows too (D:/a/b): this computer's own form, so they compare with the session folders
+const ours = (list) => list.map((w) => ({ ...w, path: w.path && path.resolve(w.path) }));
 const inside = (child, dir) => !!child && (child === dir || child.startsWith(dir.endsWith(path.sep) ? dir : dir + path.sep));
 
 // a lock or prune reason git wrote C-style (in quotes, \n for a new line) when it isn't asked for -z
@@ -110,7 +112,7 @@ export function createStranded({ dirs, inUse = () => false, home = os.homedir(),
   const byId = new Map();   // id -> the worktree as read (with its repository: { root, common, remotes, mainHead })
   const sizes = new Map();   // path -> { at, bytes } (du, at most every 15 minutes)
   let sizing = null;
-  const tilde = (p) => (p && inside(p, home) ? '~' + p.slice(home.length) : p);
+  const tilde = (p) => (p && inside(p, home) ? '~' + p.slice(home.length).split(path.sep).join('/') : p);   // (shown with /, on Windows too)
 
   // every repository behind the folders: its common git directory, read from inside any of its worktrees
   async function repos() {
@@ -164,7 +166,7 @@ export function createStranded({ dirs, inUse = () => false, home = os.homedir(),
     const list = await repos();
     for (const r of list) {
       const wl = await git(['worktree', 'list', '--porcelain', '-z'], r.from, 5000);
-      const all = wl.ok ? parseWorktrees(wl.out) : [];
+      const all = wl.ok ? ours(parseWorktrees(wl.out)) : [];
       if (!all.length) continue;
       const main = all[0], root = main.bare ? r.common : main.path;
       const [rem, stash] = await Promise.all([git(['remote'], root, 3000), main.bare ? null : git(['stash', 'list', '--format=%gd'], root, 3000)]);
@@ -231,7 +233,7 @@ export function createStranded({ dirs, inUse = () => false, home = os.homedir(),
     },
     /** A folder from the last look ('~/…' or absolute), for giving Claude the rest of its work. */
     dirOf(dir) {
-      const want = String(dir || '').replace(/^~(?=$|\/)/, home);
+      const want = path.resolve(String(dir || '').replace(/^~(?=$|[\\/])/, home));
       return last.items.find((it) => it.path === want)?.path || null;
     },
     entry: (id) => byId.get(String(id || '')) || null,
@@ -242,7 +244,7 @@ export function createStranded({ dirs, inUse = () => false, home = os.homedir(),
       const busy = !!inUse(real(was.path)) || !!inUse(was.path);
       if (!canRemove({ ...was, inUse: busy })) return { ok: false, code: busy ? 'inUse' : 'notClean', w: was };
       // again, now: still one of the repository's linked worktrees, not locked, nothing new in it
-      const wl = await git(['worktree', 'list', '--porcelain', '-z'], was.repoRoot, 5000), all = wl.ok ? parseWorktrees(wl.out) : [];
+      const wl = await git(['worktree', 'list', '--porcelain', '-z'], was.repoRoot, 5000), all = wl.ok ? ours(parseWorktrees(wl.out)) : [];
       const w = all.find((x) => x.path === was.path);
       if (!w || w.main) return { ok: false, code: 'gone', w: was };
       const rem = await git(['remote'], was.repoRoot, 3000);
