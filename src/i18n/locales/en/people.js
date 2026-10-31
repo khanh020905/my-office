@@ -315,6 +315,20 @@ export default {
     },
     where: { going: 'Going down to the rice place', goingBd: 'Off for bún đậu mắm tôm', eating: "Having lunch at cô Ba's", eatingBd: 'Eating bún đậu mắm tôm', back: 'Lunch done, on the way back' },
   },
+  // a release: a strip at the photo booth across the street (people/photobooth.js, world/backdrops/street-photo.js)
+  photo: {
+    say: {
+      go: ['Photo booth time 📸', "A picture for the new release 🎉"],
+      frame0: ['3… 2… 1… Cat ears 🐱', 'Headbands on, smile! 📸'],
+      frame1: ['Heart sunglasses! 3… 2… 1… 😎', 'Look cool 😎'],
+      frame2: ['Party hats! 3… 2… 1… 🥳', 'Puff your cheeks 🥳'],
+      frame3: ['Last one, anything goes! 📸', 'Tongues out, everyone 😜'],
+      done: ["Printed! It's so good 😆", 'Fresh out of the printer 📸'],
+      pin: ['{tag} on the board 📌', 'One more for the release wall 📌'],
+      work: ['Work came in, heading back! 🏃', 'Oh, work: you carry on!'],
+    },
+    where: { going: 'Off to the photo booth', wait: 'Waiting for the photo booth', queue: 'In the photo booth queue (weekend crowds)', booth: 'In the photo booth ({tag})', back: 'Photos done, on the way back' },
+  },
   // pickleball after work at the court by the park (people/pickle.js, world/backdrops/street-pickle.js)
   pickle: {
     say: {

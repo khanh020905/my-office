@@ -41,6 +41,7 @@ export default {
     commit: 'commit: “{label}” 🖨️',
     commitHidden: 'commit 🖨️',
     push: 'push code to {target} 🚀',
+    release: 'release {tag} 🏷️',
     ciRed: 'CI is red: {label}',
     ciRedDefault: 'tests failing',
     ciGreen: 'CI is green again: {label}',

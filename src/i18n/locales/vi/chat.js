@@ -254,6 +254,8 @@ export default {
     comAsk: ['Cho em theo với 🙋', 'Đợi em xíu, em xuống liền', 'Gọi giùm em đĩa cơm cá kho nha 😋', 'Em ăn cơm hộp rồi, mọi người đi vui nha'],
     bunDauAsk: ['Có liền 🙋', 'Nhớ gọi thêm chả cốm nha 🤤', 'Mắm tôm phải vắt chanh với ớt 🌶️', 'Mẹt đầy đủ luôn nha 😋'],
     pickleAsk: ['Có em! 🙋', 'Em mang vợt theo rồi 🏓', 'Cho em một slot nha', 'Hôm nay em kẹt rồi 😭 kèo sau nha', 'Đánh đôi nam nữ đi 😆', 'Em đặt sân liền'],
+    photoGo: ['Đi liền! 📸', 'Nhớ lấy băng đô tai mèo cho em 🐱', 'Khung 4 ảnh 70k chia ra rẻ mà 😆', 'Em đang bận, chụp đẹp nha!', 'Đội nón tiệc vô nha 🥳'],
+    photoStrip: ['Ảnh dìm em rồi 😭', 'Kính trái tim hợp với sếp ghê 😆', 'Dán lên bảng nha!', 'Cho em xin ảnh gốc 😍', 'Bản sau đi tiếp nha 📸'],
     pickleDone: ['Chuyển rồi nha 💸', 'Mai đánh tiếp!', 'Cú lob cuối đỉnh quá 😆', 'Mỏi chân quá trời 😭', 'Clip đẹp đó, đăng TikTok đi'],
   },
   // life in the office (the staff or a session, as it happens)
@@ -281,6 +283,9 @@ export default {
     payday: ['Lương về rồi anh em ơi 💸', 'Ting ting 📲 Lương về rồi anh em ơi 💸', 'Lương về rồi anh em ơi 💸 Trưa nay ai ra ATM không?'],
     atm: ['Em xuống cây ATM Vietcombank rút tiền, ai cần gì không? 💸', 'Ra ATM rút tiền đây, hôm nay hàng dài quá trời 😅'],
     com: ['Trưa nay xuống quán cơm bình dân không mọi người? 35k một đĩa 🍚', 'Ai đi ăn cơm cô Ba với em không? Hôm nay có cá kho tộ 🍚', 'Đi ăn cơm thôi cả nhà, quán dưới đường nha 🍚'],
+    photoGo: ['Ra bản {tag} rồi anh em ơi! Đi chụp photobooth kỷ niệm nha 📸', 'Bản {tag} lên rồi 🎉 Qua tiệm chụp ảnh Hàn Quốc chụp 4 khung đi!', 'Release {tag} 🎉 Ai rảnh đi chụp hình kỷ niệm với em? 📸'],
+    photoStrip: ['Ảnh kỷ niệm bản {tag} nè 📸 Về dán lên bảng trắng nha', 'Bản {tag} 🎉 Ra lò rồi, 4 khung dìm hàng 😆', 'Kỷ niệm {tag} đây cả nhà 📸'],
+    photoQueue: ['Cuối tuần đông quá, chờ gần 2 tiếng mới tới lượt 😭', 'Xếp hàng gần 2 tiếng mới được vô chụp 😭 Đáng không?', 'Cuối cùng cũng tới lượt, chờ gần 2 tiếng 😮‍💨'],
     pickleAsk: ['Tối nay kèo pick không anh em? Sân sau 17h 280k, chia 4 là 70k/người 🏓', 'CI xanh cả ngày rồi, tối nay đi pickleball không? 🏓', 'Kèo pick 17h30 nha, ai chơi điểm danh 🏓'],
     pickleDone: ['Xong kèo! Clip đây 🏓 Mỗi người chuyển em {share} nha 💸', 'Hết giờ sân rồi 😆 Tiền sân {share}/người nha 💸', 'Kèo pick tối nay đây 🏓 Ai chưa chuyển {share} thì chuyển em nha'],
     comFriday: ['Thứ Sáu rồi, bún đậu mắm tôm không anh em? 🤤', 'Thứ Sáu là phải bún đậu mắm tôm! Ai đi? 🤤', 'Trưa nay mẹt bún đậu đầy đủ nha mọi người 🤤'],

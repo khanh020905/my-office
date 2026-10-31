@@ -254,6 +254,8 @@ export default {
     comAsk: ['I’m in 🙋', 'Wait for me, coming down', 'Order me a plate of braised fish 😋', 'Had a lunch box already, enjoy'],
     bunDauAsk: ['I’m in 🙋', 'Get extra chả cốm 🤤', 'Mắm tôm needs lime and chili 🌶️', 'The full tray, please 😋'],
     pickleAsk: ['I’m in! 🙋', 'Already got my paddle 🏓', 'Save me a spot', 'Can’t tonight 😭 next time', 'Mixed doubles 😆', 'I’ll book the court'],
+    photoGo: ['Coming! 📸', 'Grab me the cat-ear headband 🐱', '70k for four frames, split it 😆', 'Busy, take a nice one!', 'Party hats on 🥳'],
+    photoStrip: ['That’s a terrible one of me 😭', 'The heart sunglasses suit the boss 😆', 'On the board with it!', 'Send me the original 😍', 'Again next release 📸'],
     pickleDone: ['Sent 💸', 'Again tomorrow!', 'That last lob was something 😆', 'My legs are gone 😭', 'Nice clip, post it'],
   },
   life: {
@@ -280,6 +282,9 @@ export default {
     payday: ['Salary’s in, everyone 💸', 'Ting ting 📲 payday, everyone 💸', 'Salary’s in 💸 Anyone going to the ATM at lunch?'],
     atm: ['Going down to the Vietcombank ATM, anyone need anything? 💸', 'Off to the ATM, the line’s huge today 😅'],
     com: ['The rice place downstairs for lunch, anyone? 35k a plate 🍚', 'Who’s coming to cô Ba’s for lunch? Braised fish today 🍚', 'Lunch time, the place across the street 🍚'],
+    photoGo: ['{tag} is out, everyone! Off to the photo booth for a picture 📸', '{tag} released 🎉 Let’s get a four-frame strip at the photo booth!', 'Release {tag} 🎉 Who’s free for a photo to remember it? 📸'],
+    photoStrip: ['Our {tag} strip 📸 Going on the whiteboard', '{tag} 🎉 Fresh out of the printer, four silly frames 😆', 'To remember {tag}, everyone 📸'],
+    photoQueue: ['Weekend crowds: nearly two hours in the queue 😭', 'Almost two hours in line before our turn 😭 Worth it?', 'Our turn at last, after nearly two hours 😮‍💨'],
     pickleAsk: ['Pickleball tonight? The court’s 280k an hour after five, 70k each 🏓', 'CI’s been green all day: pickleball tonight? 🏓', 'Pickleball at 5:30, who’s in? 🏓'],
     pickleDone: ['Game over! Here’s the clip 🏓 {share} each for the court, please 💸', 'Court time’s up 😆 {share} each 💸', 'Tonight’s pickleball 🏓 {share} each if you haven’t paid yet'],
     comFriday: ['It’s Friday: bún đậu mắm tôm, anyone? 🤤', 'Friday means bún đậu mắm tôm! Who’s in? 🤤', 'The full bún đậu tray for lunch, everyone 🤤'],

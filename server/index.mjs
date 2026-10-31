@@ -260,6 +260,7 @@ const git = createGit({
   onCommit: (r, subject) => gitEvent(r, 'commit', clip(redact(oneLine(subject)), 64)),
   onPush: (r) => gitEvent(r, 'push', r.branch),
   onCi: (r) => gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName),
+  onRelease: (r, tag) => gitEvent(r, 'release', clip(redact(oneLine(tag)), 40)),   // (four of them off to the photo booth: people/photobooth.js)
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
 setInterval(() => { if (watching()) pollGit(); }, 20_000).unref();

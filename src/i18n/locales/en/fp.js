@@ -38,6 +38,9 @@ export default {
   comDone: 'Braised pork and egg, sour soup, free iced tea: 35,000 đồng 🍚',
   comBdDone: 'A tray of bún đậu mắm tôm, the tofu hot and crisp: 45,000 đồng 🤤',
   comJoin: 'You sit down to eat with {names} 🍚',
+  // the photo booth across the street (world/backdrops/street-photo.js)
+  photo: 'Korean photo booth · 4 frames {price}',
+  photoDone: 'Click! A four-frame strip of you, 70,000 đồng 📸',
   // the pickleball court by the park (world/backdrops/street-pickle.js)
   pickle: 'Pickleball court · {price} an hour after 5 pm',
   pickleOffice: 'The office has the court tonight: {fee} an hour, 70,000 đồng each 🏓',

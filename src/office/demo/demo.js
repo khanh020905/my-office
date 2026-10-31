@@ -40,7 +40,7 @@ function demoProjects() {
       { prompt: d('staging.prompt'), steps: [['read', 'terraform/staging.tf'], ['edit', 'terraform/staging.tf'], ['bash', 'terraform plan']], wait: d('staging.wait') } ] },
   ];
 }
-let demoSeq = 0;
+let demoSeq = 0, demoReleases = 3;
 export const demoLog = new Map(), demoTimers = [];
 function demoEmit(s, type, label = '', extra = {}) {
   const now = Date.now(), e = { id: ++demoSeq, ts: now, sess: s.id, name: s.name, type, label, ...extra };
@@ -97,6 +97,7 @@ function demoRun(s, task, at = 0) {
     later(t, () => {
       demoEmit(s, 'commit', task.prompt); s.commits = (s.commits || 0) + 1;
       if (s.commits % 3 === 0) later(rand(4000, 9000), () => demoEmit(s, 'push', 'main', { branch: 'main', repo: s.name }));
+      if (s.commits % 6 === 0) later(rand(12000, 16000), () => demoEmit(s, 'release', `v1.${(demoReleases += 1)}.0`, { repo: s.name }));   // (a version tag now and then: the photo booth, people/photobooth.js)
     });
   }
   if (task.deploy) { t += step(); later(t, () => demoEmit(s, 'deploy', task.deploy)); }

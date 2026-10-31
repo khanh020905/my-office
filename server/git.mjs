@@ -1,8 +1,9 @@
 // Git in the office. For each open session's folder: the repository's branch, how many files are changed and not yet
 // committed (that desk gets messier), commits and pushes (the printer prints, the rocket launches), and the latest CI run
 // on GitHub (a red beacon in the server room when it fails). Commits and pushes are noticed by watching HEAD and the
-// upstream, so they count whether Claude or you made them. Read with `git` and `gh` on this Mac, only while an office
-// page is open; nothing is written. OFFICE_CI=0 stops the GitHub check.
+// upstream, so they count whether Claude or you made them; a new version tag (or a GitHub release) is a release (the
+// office goes to the photo booth across the street). Read with `git` and `gh` on this Mac, only while an office page is
+// open; nothing is written. OFFICE_CI=0 stops the GitHub check.
 import { execFile } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
@@ -19,9 +20,9 @@ const GH = [process.env.GH_PATH, path.join(os.homedir(), '.local/bin/gh'), '/opt
 const CI_ON = process.env.OFFICE_CI !== '0';
 
 /**
- * @param {{ onRepo: (r: object) => void, onCommit: (r: object, subject: string) => void, onPush: (r: object) => void, onCi: (r: object, was: string|null) => void }} o
+ * @param {{ onRepo: (r: object) => void, onCommit: (r: object, subject: string) => void, onPush: (r: object) => void, onCi: (r: object, was: string|null) => void, onRelease?: (r: object, tag: string) => void }} o
  */
-export function createGit({ onRepo, onCommit, onPush, onCi }) {
+export function createGit({ onRepo, onCommit, onPush, onCi, onRelease = () => {} }) {
   const roots = new Map();   // folder -> its repository root, '' when it is not in one
   const repos = new Map();   // root -> { root, name, branch, dirty, ahead, head, upstream, ci, ciName, ciUrl, born }
   let polling = null, ciPolling = null;
@@ -33,16 +34,17 @@ export function createGit({ onRepo, onCommit, onPush, onCi }) {
   }
   async function read(root) {
     // GIT_OPTIONAL_LOCKS=0: `git status` must not take the index lock while Claude is committing in the same repo
-    const [status, head, upstream, ahead] = await Promise.all([
+    const [status, head, upstream, ahead, tag] = await Promise.all([
       run('git', ['status', '--porcelain=v1', '--branch', '--untracked-files=normal'], root, 8000),
       run('git', ['rev-parse', 'HEAD'], root),
       run('git', ['rev-parse', '@{u}'], root),
       run('git', ['rev-list', '--count', '@{u}..HEAD'], root),
+      run('git', ['for-each-ref', '--sort=-creatordate', '--count=100', '--format=%(refname:short)', 'refs/tags'], root),   // (the newest tags)
     ]);
     if (status == null) return null;
     const lines = status.split('\n').filter(Boolean);
     const branch = (lines[0] || '').replace(/^## /, '').replace(/^No commits yet on /, '').split('...')[0].trim();
-    return { branch, dirty: Math.max(0, lines.length - 1), head: (head || '').trim(), upstream: (upstream || '').trim(), ahead: Number(ahead) || 0 };
+    return { branch, dirty: Math.max(0, lines.length - 1), head: (head || '').trim(), upstream: (upstream || '').trim(), ahead: Number(ahead) || 0, tags: tag == null ? null : tag.split('\n').map((x) => x.trim()).filter(Boolean) };
   }
   async function pollNow(cwds) {
     const live = new Set();
@@ -58,6 +60,8 @@ export function createGit({ onRepo, onCommit, onPush, onCi }) {
         onCommit(cur, subject);
       }
       if (was && now.upstream && now.upstream !== was.upstream && now.upstream === now.head) onPush(cur);
+      // a tag that was not there at the last look (the ones there when the page opened are old news)
+      if (was?.tags && now.tags) for (const tag of now.tags.filter((x) => !was.tags.includes(x)).slice(0, 3).reverse()) released(cur, tag);
       if (!was || was.dirty !== cur.dirty || was.branch !== cur.branch || was.ahead !== cur.ahead) onRepo(cur);
     }
     for (const root of [...repos.keys()]) if (!live.has(root)) repos.delete(root);
@@ -76,7 +80,19 @@ export function createGit({ onRepo, onCommit, onPush, onCi }) {
       const was = r.ci;
       Object.assign(r, { ci: state, ciName: last?.workflowName || '', ciUrl: last?.url || '' });
       if (was !== state) { onRepo(r); if (state === 'red' || (was === 'red' && state === 'green')) onCi(r, was); }
+      // a release published on GitHub (its tag may not be here yet): the newest one, once it is newer than the last seen
+      const rel = await run(GH, ['release', 'list', '--limit', '5', '--json', 'tagName,isDraft'], r.root, 15000);
+      let tag = ''; try { tag = JSON.parse(rel || '[]').find((x) => !x.isDraft)?.tagName || ''; } catch { /* not JSON */ }   // (a draft is not out yet)
+      if (r.ghRelease !== undefined && tag && tag !== r.ghRelease) released(r, tag);
+      if (rel != null) r.ghRelease = tag;
     }
+  }
+  // each tag once, whichever way it was seen first (the local tag, the GitHub release)
+  function released(r, tag) {
+    r.released ||= [];
+    if (r.released.includes(tag)) return;
+    r.released.push(tag); if (r.released.length > 20) r.released.shift();
+    onRelease(r, tag);
   }
   return {
     // one poll at a time; a second request while one runs is dropped

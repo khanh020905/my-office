@@ -39,6 +39,7 @@ export function setup() {
       rustle: (t) => { noise(t, 0.12, 0.04, 3200); noise(t + 0.1, 0.16, 0.03, 3800); },
       click: (t) => tone(1800, t, 0.03, 'square', 0.04),
       pock: (t) => { tone(1250, t, 0.045, 'triangle', 0.07, 760); noise(t, 0.02, 0.02, 2600); },   // a paddle on a pickleball
+      shutter: (t) => { noise(t, 0.04, 0.05, 2200); noise(t + 0.09, 0.05, 0.04, 1600); tone(2400, t, 0.03, 'square', 0.015); },   // a camera's click (the photo booth)
       coin: (t) => { tone(988, t, 0.09, 'square', 0.05); tone(1319, t + 0.08, 0.3, 'square', 0.05); },
       beep: (t) => { tone(1046, t, 0.09, 'square', 0.04); tone(1318, t + 0.12, 0.09, 'square', 0.04); },
       buzz: (t) => tone(120, t, 0.5, 'sawtooth', 0.03, 110),
@@ -56,7 +57,7 @@ export function setup() {
         line([...one.slice(0, 11), ['D', 1], ['C', 2]], line(one, t) + e);
       },
     };
-    const GAP = { pock: 0.25, mixue: 8, bell: 0.6, water: 1.5, clap: 1.5, ding: 1, key: 0.18, perm: 1, turn: 1.5, print: 1, deploy: 3, siren: 4, meow: 0.8, pop: 0.15, bloop: 0.5, brew: 1.5, rustle: 0.25, click: 0.08, coin: 0.4, beep: 0.5, buzz: 0.6, thud: 2, thunder: 5 };
+    const GAP = { pock: 0.25, shutter: 0.4, mixue: 8, bell: 0.6, water: 1.5, clap: 1.5, ding: 1, key: 0.18, perm: 1, turn: 1.5, print: 1, deploy: 3, siren: 4, meow: 0.8, pop: 0.15, bloop: 0.5, brew: 1.5, rustle: 0.25, click: 0.08, coin: 0.4, beep: 0.5, buzz: 0.6, thud: 2, thunder: 5 };
     return {
       get on() { return on; },
       set(v) { on = v; try { localStorage.setItem('office-sound', v ? 'on' : 'off'); } catch { /* storage blocked */ } if (v) unlock(); },

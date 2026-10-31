@@ -69,6 +69,7 @@ import * as lifeNap from './life/nap.js';
 import * as lifeQuota from './life/quota.js';
 import * as lifeAltar from './life/altar.js';
 import * as lifeTests from './life/tests.js';
+import * as lifePhotostrips from './life/photostrips.js';
 import * as lifePost from './life/post.js';
 import * as uiLite from './ui/lite.js';
 import * as worldRoomUpdate from './world/room-update.js';
@@ -177,6 +178,7 @@ const MODULES = [
   lifeQuota,
   lifeAltar,
   lifeTests,
+  lifePhotostrips,
   lifePost,
   uiLite,
   worldRoomUpdate,
