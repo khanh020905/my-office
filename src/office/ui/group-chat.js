@@ -131,6 +131,10 @@ export function chatLife(kind, v = {}) {
     case 'payday': chatSay(v.id || restingOne(), life('payday'), { key, react: ['💸', '😆', '❤️'], reacts: 5, answer: [{ key: 'paydayAsk', chance: 0.9 }, { key: 'paydayAsk', chance: 0.6 }] }); break;
     case 'atm': if (v.id) chatSay(v.id, life('atm'), { key, answer: [{ key: 'atmAsk', chance: 0.5 }] }); break;
     // lunch at the quán cơm across the street (people/comtrua.js); Fridays bún đậu mắm tôm
+    // lunch from home at the pantry's microwaves (people/comnha.js): the line, cá kho, a lid that popped
+    case 'micro': chatSay(v.id || restingOne(), life(v.monday ? 'microMon' : 'micro'), { key, react: ['😆', '😭'], reacts: 3, answer: [{ key: 'microAsk', chance: 0.8 }, { key: 'microAsk', chance: 0.4 }] }); break;
+    case 'microSmell': chatSay(v.id || restingOne(), life('microSmell'), { key, react: ['😭', '😆', '😷'], reacts: 4, answer: [{ key: 'smellAsk', chance: 0.95 }, { key: 'smellAsk', chance: 0.6 }] }); break;
+    case 'microPop': chatSay(v.id || restingOne(), life('microPop'), { key, react: ['😆', '😮'], reacts: 3, answer: [{ key: 'popAsk', chance: 0.9 }] }); break;
     case 'com': chatSay(v.id || restingOne(), life(v.friday ? 'comFriday' : 'com'), { key, react: ['😋', '👍'], reacts: 3, answer: [{ key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.9 }, { key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.6 }] }); break;
     // pickleball after work on a green-CI day (people/pickle.js): the question at five; the clip and everyone's share after
     case 'pickleAsk': chatSay(v.id || restingOne(), life('pickleAsk'), { key, react: ['🏓', '👍', '😆'], reacts: 4, answer: [{ key: 'pickleAsk', chance: 0.95 }, { key: 'pickleAsk', chance: 0.8 }, { key: 'pickleAsk', chance: 0.5 }] }); break;

@@ -21,6 +21,7 @@ import { updateProps } from '../interact/props.js';
 import { updateErrands } from '../people/errands.js';
 import { updateGatherings } from '../people/gatherings.js';
 import { updateOutings } from '../people/outings.js';
+import { updateMicro } from '../people/comnha.js';
 import { updateStaff } from '../people/staff.js';
 import { updateTeatime } from '../people/teatime.js';
 import { updateAccountant } from '../people/accountant.js';
@@ -150,6 +151,7 @@ export function loop(now = 0) {
   updateErrands(dt);
   updateGatherings(dt, state.sim);
   updateOutings();
+  updateMicro(dt);
   updateStaff(dt);
   updateTeatime();
   updateAccountant();

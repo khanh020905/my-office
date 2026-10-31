@@ -13,12 +13,35 @@ import { t as tr } from '../../i18n/index.js';
 let MEAL_GEO;
 let MEAL_M;
 const mealPool = [];
-export function showMeal(w) {
+const HOME_GEO = {};   // lunch from home (people/comnha.js), open on the table: per kind of box
+/** the lunch in front of someone seated: the takeaway box, or (kind: the box they brought from home, comnha.js) theirs */
+export function showMeal(w, kind = '') {
   const sp = w.spot; if (!sp) return;
-  let m = mealPool.find((x) => !x.visible);
-  if (!m) { m = new THREE.Mesh(MEAL_GEO, MEAL_M); m.castShadow = true; m.userData.dynamic = true; scene.add(m); mealPool.push(m); }
+  const geo = (kind && homeGeo(kind)) || MEAL_GEO;
+  let m = mealPool.find((x) => !x.visible && x.geometry === geo);
+  if (!m) { m = new THREE.Mesh(geo, MEAL_M); m.castShadow = true; m.userData.dynamic = true; scene.add(m); mealPool.push(m); }
   m.position.set(sp.x + Math.sin(sp.face) * 0.42, 0.772, sp.z + Math.cos(sp.face) * 0.42); m.rotation.y = sp.face; m.visible = true;
   w.mealBox = m;
+}
+// opened: the rice and what goes with it (thịt kho trứng, cá kho, rau muống xào), the lid set down beside it, the spoon
+// and fork from home, a bottle of water (bigger than life, as the desks' things are, to read from the usual camera)
+function homeGeo(kind) {
+  if (HOME_GEO[kind]) return HOME_GEO[kind];
+  const lid = { blue: '#2F7FD0', green: '#3FA35B', pink: '#E06B9A', glass: '#2E86C1', inox: '#C9CED6' }[kind] || '#2F7FD0';
+  const parts = kind === 'inox'
+    ? [[new THREE.CylinderGeometry(0.075, 0.072, 0.06, 16).translate(-0.05, 0.03, 0), '#D7DBE0'], [new THREE.CylinderGeometry(0.068, 0.068, 0.012, 16).translate(-0.05, 0.058, 0), '#F7F3E8'],
+      [new THREE.CylinderGeometry(0.072, 0.07, 0.05, 16).translate(0.1, 0.025, 0.02), '#D7DBE0'], [new THREE.CylinderGeometry(0.065, 0.065, 0.01, 16).translate(0.1, 0.048, 0.02), '#7A4A2A'],
+      [new THREE.SphereGeometry(0.02, 8, 6).scale(1, 0.6, 1).translate(0.12, 0.054, 0.01), '#F2C14E'], [new THREE.CylinderGeometry(0.075, 0.075, 0.012, 16).translate(-0.21, 0.006, 0.02), lid]]
+    : [[new THREE.BoxGeometry(0.21, 0.06, 0.15).translate(0, 0.03, 0), kind === 'glass' ? '#DCEFF3' : '#EEF1F2'], [new THREE.BoxGeometry(0.11, 0.02, 0.13).translate(-0.045, 0.052, 0), '#FBF8F1'],
+      ...(kind === 'green' ? [[new THREE.BoxGeometry(0.08, 0.016, 0.06).translate(0.05, 0.054, -0.03), '#3F7A2E'], [new THREE.BoxGeometry(0.07, 0.02, 0.05).translate(0.05, 0.056, 0.035), '#7A3E1E']]
+        : [[new THREE.BoxGeometry(0.08, 0.02, 0.12).translate(0.05, 0.05, 0), '#8B4A26'], [new THREE.SphereGeometry(0.022, 10, 8).scale(1, 0.8, 1).translate(0.045, 0.064, -0.03), '#F7EFD8'], [new THREE.SphereGeometry(0.022, 10, 8).scale(1, 0.8, 1).translate(0.055, 0.064, 0.03), '#E7B24A']]),
+      [new THREE.BoxGeometry(0.16, 0.014, 0.22).translate(-0.215, 0.007, 0.01), lid]];
+  HOME_GEO[kind] = shaded([...parts,
+    [new THREE.CylinderGeometry(0.005, 0.005, 0.19, 5).rotateZ(Math.PI / 2).rotateY(0.12).translate(0.02, 0.012, -0.12), '#B7BEC6'],   // spoon and fork, stainless
+    [new THREE.SphereGeometry(0.02, 8, 6).scale(1.3, 0.35, 1).translate(-0.085, 0.012, -0.11), '#B7BEC6'],
+    [new THREE.CylinderGeometry(0.032, 0.032, 0.19, 12).translate(0.2, 0.095, 0.08), '#BFE3F2'], [new THREE.CylinderGeometry(0.02, 0.02, 0.025, 10).translate(0.2, 0.2, 0.08), '#3F7CC4'],
+  ]);
+  return HOME_GEO[kind];
 }
 export function hideMeal(w) { if (w.mealBox) { w.mealBox.visible = false; w.mealBox = null; } w.meal = false; }
 export let COFFEE_Q;

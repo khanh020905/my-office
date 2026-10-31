@@ -121,6 +121,12 @@ Then open <http://localhost:4310>.
   lunar 1st and 15th (the real lunar calendar) the receptionist sets out five fruits on a footed dish, xôi gấc and
   yellow chrysanthemums, lights three sticks of incense and bows; the smoke rises for most of an hour (`?lunar=1` to see
   it any day).
+- **Lunch from home at the microwaves** (company floor): about a third of the office brings rice from home (more than half
+  on a Monday, nobody at the weekend), in a clipped plastic box, a glass one or a stainless tin, carried in an insulated
+  bag. From 11:45 they line up at the pantry's two microwaves, phone out: the door opens, the box goes in, the plate
+  turns in the light, two or three minutes, "tít tít tít" (with the sound on), the next one steps up. Cá kho or mắm leaves
+  smell lines over the corner and a grumble in the group chat; a lid left clipped shut pops. Then lunch at a pantry table
+  or at the desk. They don't fetch the GrabFood or go down to the quán cơm (`?comnha` to see it now).
 - **The midday nap**, 12:30–13:30: the blinds come down, the room dims a little, and whoever has nothing running naps
   at their desk, half leaning back under a blanket, half head down on the desk. An alarm at 13:30, and the blinds go up.
 - **The look of the place**:

@@ -10,6 +10,7 @@ import { officeNow, rand, replay } from '../core/env.js';
 import { later } from './errands.js';
 import { dn, hash, sessions, workers } from './workers.js';
 import { called, goDown, goUp, here, live, mainExit, outside, resume, street, walk } from './outings.js';
+import { homeLunch } from './comnha.js';
 import { chatLife } from '../ui/group-chat.js';
 import { queueUi } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
@@ -20,7 +21,8 @@ let L = null, last = null;   // today's lunch (last: the one before, for tests):
 let decided = '', lookAt = 0;
 // resting and free to go (as for the quán nhậu, people/nhau.js), and not had lunch yet today
 const free = (w, day = officeNow().toDateString()) => { const s = sessions.get(w.id); return !w.sub && !!w.root.parent && !w.leaving && !w.away && !w.homeBound && !w.chore && !w.after && !w.want && !w.outing && !w.nhau && !w.street
-  && !w.offstage && w.phase !== 'walk' && !w.liftHold && !w.liftWait && !w.liftRide && !w.inStall && !w.wcBusy && !w.queued && !w.onBreak && s?.status === 'rest' && !s.bg?.length && w.lunchDay !== day; };
+  && !w.offstage && w.phase !== 'walk' && !w.liftHold && !w.liftWait && !w.liftRide && !w.inStall && !w.wcBusy && !w.queued && !w.onBreak && s?.status === 'rest' && !s.bg?.length && w.lunchDay !== day
+  && !w.micro && !homeLunch(w); };   // (whoever brought lunch from home warms it here instead: people/comnha.js)
 const say = (w, key) => w.say('idle', tr(key));
 
 /** whether the office goes down to the quán for lunch today (then no GrabFood is ordered): Fridays, and about one other

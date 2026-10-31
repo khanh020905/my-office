@@ -230,4 +230,6 @@ export default {
       tea: 'Iced tea',
     },
   },
+  // the note taped to the pantry's microwave cabinet (world/props/microwave.js)
+  microwave: { note1: 'OPEN THE LID!', note2: 'Wipe it after use', note3: 'Go easy on fish & mắm 🙏' },
 };

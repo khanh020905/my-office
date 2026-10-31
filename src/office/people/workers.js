@@ -29,6 +29,8 @@ export const streetHooks = {};
 // the attendance terminal by the lift (people/hr.js): in(w, then) on the way in from the lift, out(w, then) on the way out,
 // newcomer(w) for a session's first walk in; each calls then() when done (straight away when there is nothing to do)
 export const clockHooks = {};
+// set by people/comnha.js: home(w, d, minute) says whether w brought lunch from home today ({ due, join }), else null
+export const lunchHooks = {};
 const viaClock = (kind, w, then) => (clockHooks[kind] ? clockHooks[kind](w, then) : then());
 export function hash(s) { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 export const colorOf = (s) => (s.desk >= 0 ? PALETTE[s.desk] : PALETTE[hash(s.name) % PALETTE.length]);
@@ -307,6 +309,8 @@ export function setup() {
       if (state.sim < (this.lifeAt || 0)) return false;
       this.lifeAt = state.sim + 4;
       const d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString(), off = hash(this.id) % 18;
+      const home = this.lunchDay !== day && lunchHooks.home?.(this, d, m);   // lunch from home: warmed at the microwave (people/comnha.js)
+      if (home) return home.due && home.join();
       const order = state.lunchOrder;   // the team's lunch on its way (outings.js): wait for it, up to 12:15
       if (m >= 690 + off && m < 780 && this.lunchDay !== day && !(order?.day === day && !order.here && m < 735)) {
         this.lunchDay = day; this.meal = true;
@@ -420,6 +424,7 @@ export function setup() {
       if (PRO && !this.sub && !this.want && state.sim - (this.wcAt ?? -1e9) > 900 && Math.random() < 0.4 && this.visitWc()) return;
       const nap = () => {
         this.station = 'desk'; this.restAt = Infinity;
+        if (this.mealBox) hideMeal(this);   // (lunch eaten at the desk: the box put away)
         const bg = sessions.get(this.id)?.bg;
         if (bg?.length) { this.anim = 'think'; this.say('bash', tr('people.bgWait', { desc: bg[0].desc })); return; }
         this.anim = 'sleep'; this.hush();

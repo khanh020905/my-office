@@ -341,4 +341,19 @@ export default {
     tally: { run: '{label} đang chạy… điểm kế tiếp là của nó 🏓', count: '✓ {n}/{of} test · {label}', pass: '✓ {n} test qua lưới · {label} · ăn điểm!', fail: '✗ {f} test hỏng · bóng vào lưới sau {n} cú · {label}' },
     where: { going: 'Đang ra sân pickleball', playing: 'Đang đánh pickleball', filming: 'Đang quay clip ở sân pickleball', back: 'Đánh pick xong, đang về' },
   },
+  // cơm nhà: lunch from home warmed at the pantry's microwaves (people/comnha.js)
+  micro: {
+    say: {
+      go: ['Đi hâm cơm cái 🍱', 'Ra pantry hâm cơm nè 🍱', 'Cơm nhà mang theo, hâm cái là ăn 🍱'],
+      start: ['2 phút thôi nha', 'Hâm 2 phút là ngon', 'Quay 2 phút rưỡi cho nóng'],
+      beep: ['Tít tít tít, xong rồi!', 'Xong rồi, nóng hổi 🔥'],
+      next: ['Tới em!', 'Lượt em nè!'],
+      hot: ['Nóng nóng nóng 🔥', 'Ra bàn ăn thôi 😋'],
+      desk: ['Về bàn vừa ăn vừa xem phim 😋', 'Ăn tại bàn cho nhanh'],
+      smell: ['Ai hâm cá kho vậy 😷', 'Mùi mắm… 😭', 'Ủa mùi gì vậy trời 😷'],
+      pop: ['Chết, quên mở nắp 😅', 'Bụp! Quên mở van rồi 😅'],
+      called: ['Có việc, để đó lát em lấy!', 'Ơ có việc, em chạy lên bàn trước!'],
+    },
+    where: { line: 'Đang xếp hàng hâm cơm ({n} người phía trước)', heat: 'Đang hâm cơm ở lò vi sóng', eat: 'Đang mang cơm hộp ra bàn' },
+  },
 };

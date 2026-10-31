@@ -30,6 +30,7 @@ import { atmNow, updatePayday } from './payday.js';
 import { pickleNow, updatePickle } from './pickle.js';
 import { photoNow, updatePhoto } from './photobooth.js';
 import { evNow, updateEvswap } from './evswap.js';
+import { homeLunch, microNow } from './comnha.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
@@ -243,7 +244,7 @@ function collect(R, S) {
   if (R.rider.state === 'gone' || state.sim - R.ordered > 240) { abort(R); return; }   // (stuck somewhere: lunch the usual way)
   if (R.rider.state !== 'waiting') return;
   R.since ||= state.sim;
-  const w = [...workers.values()].find(resting);
+  const w = [...workers.values()].find((x) => resting(x) && !homeLunch(x));   // (not someone who brought their own: people/comnha.js)
   if (!w) { if (state.sim - R.since > 150) abort(R); return; }   // nobody to fetch it: lunch the usual way
   begin(R, w); R.stage = 'go';
   sfx.play('pop');   // (the phone)
@@ -476,7 +477,7 @@ function stepTrip(T, S) {
 export function whereabouts(w) {
   const R = w?.outing, T = (k, v) => tr(`people.where.${k}`, v);
   if (!w) return null;
-  if (!R) return w.away ? { ic: 'home', text: T('home') } : null;
+  if (!R) return w.micro ? microNow(w) : w.away ? { ic: 'home', text: T('home') } : null;   // (at the microwave: people/comnha.js)
   // (at the till: what they are buying there; on the way down late at night: the noodles)
   if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;

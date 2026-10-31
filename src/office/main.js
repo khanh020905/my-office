@@ -41,6 +41,7 @@ import * as worldPropsShredder from './world/props/shredder.js';
 import * as worldPropsCups from './world/props/cups.js';
 import * as worldPropsDevServers from './world/props/dev-servers.js';
 import * as worldPropsSwitches from './world/props/switches.js';
+import * as worldPropsMicrowave from './world/props/microwave.js';
 import * as interactRings from './interact/rings.js';
 import * as peopleNavigation from './people/navigation.js';
 import * as peopleBreaks from './people/breaks.js';
@@ -51,6 +52,7 @@ import * as peopleDirector from './people/director.js';
 import * as peopleErrands from './people/errands.js';
 import * as peopleGatherings from './people/gatherings.js';
 import * as peopleOutings from './people/outings.js';
+import * as peopleComnha from './people/comnha.js';
 import * as peopleStaff from './people/staff.js';
 import * as peopleTeatime from './people/teatime.js';
 import * as peopleAccountant from './people/accountant.js';
@@ -150,6 +152,7 @@ const MODULES = [
   worldPropsCups,
   worldPropsDevServers,
   worldPropsSwitches,
+  worldPropsMicrowave,
   interactRings,
   peopleNavigation,
   peopleBreaks,
@@ -160,6 +163,7 @@ const MODULES = [
   peopleErrands,
   peopleGatherings,
   peopleOutings,
+  peopleComnha,
   peopleStaff,
   peopleTeatime,
   peopleAccountant,

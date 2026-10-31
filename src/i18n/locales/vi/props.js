@@ -7,6 +7,7 @@ export default {
   board: { name: 'Bảng kế hoạch', hint: 'Việc agent đang làm và việc của bạn' },
   lift: { name: 'Thang máy', hint: 'Bấm gọi thang · ai vào, ai ra hôm nay' },
   door: { name: 'Cửa ra vào', hint: 'Ai vào, ai ra hôm nay' },
+  microwave: { name: 'Lò vi sóng', hint: 'Giờ trưa hàng dài người hâm cơm nhà. Bấm để mở hoặc đóng cửa lò' },
   coffee: { namePro: 'Phòng ăn', name: 'Góc cà phê', hint: 'Pha một ly (sẽ có người ra lấy), xem ai đang nghỉ' },
   meeting: { name: 'Phòng họp', hint: 'Trợ lý (subagent) đang họp' },
   printer: { name: 'Máy in', hint: 'In một trang (sẽ có người ra lấy), xem các lượt vừa xong việc' },
