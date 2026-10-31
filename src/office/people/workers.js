@@ -1,7 +1,7 @@
 // Workers: one character per session or subagent, what they do and where they walk.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat } from './chibi-rig.js';
+import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat, wearLanyard } from './chibi-rig.js';
 import { state } from '../core/state.js';
 import { PRO, SEASON, V2, el, fmtAgo, nowMs, officeNow, rand, randInt, reduceMotion, replay, short, tint, wrapAngle } from '../core/env.js';
 import { ACT, ANIM_AT, bubbleText, verb } from '../ui/event-text.js';
@@ -221,7 +221,10 @@ export function setup() {
       root.traverse((o) => { o.userData.worker = this; });
       if (parent) parent.add(root);
       if (this.dressed) wearOuter(P, true, this.cfg);
+      if (this.lanyard) wearLanyard(P, true, this.lanyard);
     }
+    // a card on a lanyard round the neck (o: { color, tex }; null: none)
+    wearCard(o) { this.lanyard = o || null; wearLanyard(this.P, !!o, o || {}); }
     // coat and backpack on (arriving, going home) or off (at the desk)
     dress(on) { this.dressed = on; wearOuter(this.P, on, this.cfg); }
     // at the desk on arrival: hang the coat on the chair, put the bag down
@@ -281,7 +284,7 @@ export function setup() {
         return;
       }
       if (this.inStall || this.wcBusy) { this.wcTick(); return; }
-      if (this.carry && this.anim !== 'coffee' && this.phase !== 'walk') this.carry = null;   // (the drink finished, or work)
+      if (this.carry && !this.keepBox && this.anim !== 'coffee' && this.phase !== 'walk') this.carry = null;   // (the drink finished, or work; a box carried back in (people/farewell.js) is put down at the desk)
       if (this.queued && this.want) leaveCoffee(this);
       const s = sessions.get(this.id);
       if (this.anim === 'sleep' && !this.sub && (this.want || (s && (s.status !== 'rest' || s.bg?.length)))) { this.anim = 'wake'; this.wakeUntil = state.sim + (reduceMotion ? 0.3 : 1.6); this.hush(); return; }

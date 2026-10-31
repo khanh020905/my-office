@@ -356,4 +356,21 @@ export default {
     },
     where: { line: 'Đang xếp hàng hâm cơm ({n} người phía trước)', heat: 'Đang hâm cơm ở lò vi sóng', eat: 'Đang mang cơm hộp ra bàn' },
   },
+  // the farewell for a project gone quiet, and its return (people/farewell.js)
+  farewell: {
+    card: 'Chúc em thành công!',
+    badge: 'NHÂN VIÊN',
+    empty: 'BÀN TRỐNG',
+    open: 'Hôm nay mình chia tay {name} nha cả nhà 🥲 ký thiệp rồi ăn bánh nè',
+    pack: ['Dọn đồ thôi… 🥲', 'Hôm nay ngày cuối rồi 🥲', 'Cái cây này em mang về nha'],
+    wish: ['Chúc em thành công', 'Nhớ ghé chơi nha', 'Đi đâu cũng nhớ team nha', 'Giữ liên lạc nha 🥲', 'Có job ngon nhớ rủ anh em', 'Thượng lộ bình an', 'Mãi đỉnh nha', 'Nhớ em lắm đó'],
+    photo: ['Một, hai, ba… cười nào! 📸', 'Nhìn vô đây cả nhà, 1 2 3 cười! 📸'],
+    badgeBack: ['Em gửi lại chị thẻ nhân viên nha 🥲', 'Thẻ nhân viên em để lại đây ạ'],
+    badgeGot: ['Chị nhận rồi. Giữ liên lạc nha em!', 'Ok em, có gì nhắn chị nha'],
+    thanks: ['Cảm ơn mọi người nhiều lắm, em sẽ nhớ cả nhà 🥲', 'Cảm ơn cả nhà đã chỉ em bao nhiêu thứ 🙏'],
+    bye: ['Em về nha mọi người 👋', 'Tạm biệt cả nhà 🥲'],
+    toast: 'Tiệc chia tay {name} ở phòng họp 🥲',
+    tease: ['Ủa quay lại hả 😆', 'Ơ, về rồi hả 😆', 'Nhớ team quá nên về đúng không 🤣'],
+    backSay: ['Em về lại công ty cũ nè 😆', 'Lại gặp nhau rồi 😆'],
+  },
 };

@@ -34,6 +34,7 @@ import { createStranded } from './stranded.mjs';
 import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
+import { createTenure, FAREWELL_DAYS, FAREWELL_DEFAULT } from './tenure.mjs';
 import { cacheClock, cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
 import { createOtel } from './otel.mjs';
 import { managedEnvs, otelOwner } from './otel-setup.mjs';
@@ -263,6 +264,14 @@ const git = createGit({
   onRelease: (r, tag) => gitEvent(r, 'release', clip(redact(oneLine(tag)), 40)),   // (four of them off to the photo booth: people/photobooth.js)
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
+
+/* ---------- each project's working life (server/tenure.mjs): the farewell after a long quiet, the return ---------- */
+// (a folder's project as the page names it: its repository's folder, else its own)
+const projectOf = async (cwd) => base((cwd && (await git.rootOf(cwd).catch(() => ''))) || cwd);
+const farewellDays = () => { const d = prefs.get('farewellDays'); return d === 0 || FAREWELL_DAYS.includes(d) ? d : FAREWELL_DEFAULT; };
+const liveProjects = () => new Set([...sessions.values()].map((s) => (s.cwd && git.repoOf(s.cwd)?.name) || base(s.cwd)).filter(Boolean));
+const tenureOut = () => ({ ok: true, days: farewellDays(), choices: FAREWELL_DAYS, projects: tenure.list(farewellDays(), liveProjects()) });
+const tenure = createTenure({ dataDir: DATA_DIR, claudeDir: CLAUDE_DIR, nameOf: projectOf, onChange: () => broadcast({ k: 'tenure', ...tenureOut() }) });
 setInterval(() => { if (watching()) pollGit(); }, 20_000).unref();
 setInterval(() => { if (watching()) git.pollCi(); }, 120_000).unref();
 
@@ -950,6 +959,7 @@ async function onHook(p) {
   s.lastEventAt = now;
   { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
+  if (ev !== 'SessionEnd') projectOf(s.cwd || p.cwd).then((name) => tenure.touch(name, { at: now, turn: ev === 'Stop' })).catch(() => {});   // (its project's working life: server/tenure.mjs)
   if (typeof p.permission_mode === 'string') s.mode = p.permission_mode;   // (one that skips permission prompts holds notes from elsewhere: server/steer.mjs)
   const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id;   // (a run from the office: its card tells it)
   const bgTask = run?.mode === 'bg' ? run : null;   // (a background session: its card's steps and its answer come from here)
@@ -2464,6 +2474,20 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/tenure') {   // this computer only: { op: 'config', days } (Settings → More), { op: 'farewell', name } (the page held it)
+    if (!authorized(req, url) || !sameOriginOf(req) || !isLoopback(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      if (b?.op === 'config') {
+        const d = Number(b.days);
+        if (d !== 0 && !FAREWELL_DAYS.includes(d)) { json(res, 400, { ok: false }); return; }
+        prefs.set('farewellDays', d);
+        broadcast({ k: 'tenure', ...tenureOut() }); json(res, 200, tenureOut()); return;
+      }
+      if (b?.op === 'farewell') { const name = String(b.name || '').slice(0, 200); json(res, 200, { ok: tenure.markFarewell(name, farewellDays(), liveProjects().has(name)) }); return; }
+      json(res, 400, { ok: false });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/loop') {   // a stuck session's card: { op: 'stop' | 'hint', id, text }; Settings (this computer only): { op: 'config', on, n, min }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -2517,6 +2541,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
+  if (url.pathname === '/api/tenure') { json(res, 200, tenureOut()); return; }
   if (url.pathname === '/api/cache') { json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') }); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }

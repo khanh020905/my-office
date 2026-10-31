@@ -58,6 +58,7 @@ function gather(kind, what = '', o = {}) {
     const e = lead.errand({ gathering: g, spot: allocate('brief', lead), look: [MEET.x, MEET.z], type: T, anim: 'idle', wait: 0.4, hold: 0.3, at: () => null });
     e.until = g.end;
   }
+  if (o.guest) { const spot = allocate('meeting', o.guest); if ('by' in spot) spot.by = o.guest; const e = o.guest.errand({ gathering: g, spot, look: [MEET.x, MEET.z], type: T, anim: 'idle', wait: 0.2, hold: 0.3, at: () => null }); e.until = g.end; }   // (whom it is for: people/farewell.js)
   if (o.host) { const e = o.host.errand({ gathering: g, spot: allocate('brief', o.host), look: [MEET.x, MEET.z], type: T, anim: 'idle', wait: 0.2, hold: 0.3, at: () => null }); e.until = g.end; }
   const host = o.host || lead || who[0];
   const here = (w) => w.chore?.gathering === g;
@@ -96,6 +97,8 @@ export function dingBell() { bellRing = 0.7; sfx.play('bell'); }
 // a new trophy (from life/trophies.js): a cake on the meeting table
 // the month's birthdays (people/hr.js): a long party round the cake, run by `host`
 export function birthday(o) { return !replay.on && !gathering && gather('party', '', o); }
+// a farewell (people/farewell.js): the same, with the one leaving at the table too (o.guest)
+export function farewellParty(o) { return !replay.on && !gathering && gather('party', '', o); }
 export const gatheringNow = () => gathering;
 export function celebrate(what) {
   if (replay.on || gathering) return;

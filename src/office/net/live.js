@@ -26,6 +26,9 @@ const projOf = (s) => s?.git?.repo || String(s?.dir || '').split('/').filter(Boo
 // screens do; a room fills its first pod before the second
 const SEAT_ORDER = [0, 3, 1, 2, 4, 7, 5, 6];
 const AREAS_KEY = 'office-areas';
+/** the area a project last had on this device (people/farewell.js), or -1 */
+export const areaOf = (proj) => { const u = homes[proj]?.[0]; return u != null && u < UNITS.length ? u : -1; };
+export { projOf };
 let homes = {};   // project -> [area, …] it had, latest first (localStorage)
 try { homes = JSON.parse(localStorage.getItem(AREAS_KEY) || '{}') || {}; } catch { /* storage blocked */ }
 function remember(proj, u) {
