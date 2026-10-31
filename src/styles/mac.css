@@ -109,3 +109,20 @@
   .ide-parts li { grid-template-columns: minmax(0, 1fr) 4.2rem; }
   .ide-parts .ide-bar { display: none; }
 }
+
+/* "Việc bỏ quên": worktrees and checkouts still holding work (ui/stranded.js); the actions on a line of their own, so
+   three buttons fit a phone */
+.st-row { grid-template-columns: minmax(0, 1fr) auto; }
+.st-row--work { border-left: 3px solid var(--amber); }
+.st-facts { margin-top: 3px; font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.st-facts--work { color: var(--ink); }
+.st-badge--muted { background: var(--card-3); color: var(--muted); }
+.st-acts { grid-column: 1 / -1; display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.st-acts .st-del { margin-left: auto; }
+.st-form { grid-column: 1 / -1; display: grid; gap: 8px; margin-top: 8px; padding-top: 10px; border-top: 1px solid var(--line); }
+.st-form p { margin: 0; font-size: .76rem; overflow-wrap: anywhere; }
+.st-form .st-ignored { color: var(--muted); font-size: .7rem; }
+.st-ask { width: 100%; box-sizing: border-box; resize: vertical; min-height: 5.5em; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line-2); background: var(--card-2); color: var(--ink); font: inherit; font-size: .78rem; line-height: 1.45; }
+.st-ask:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.st-form-btns { display: flex; justify-content: flex-end; gap: 6px; flex-wrap: wrap; }
+.st-note { font-size: .7rem; }

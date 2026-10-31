@@ -273,6 +273,12 @@ Then open <http://localhost:4310>.
   most) with one button to close every idle Claude session, and suggests the rest: stop a forgotten dev server, quit a
   heavy app, clear caches. Idle sessions can also be closed on a timer (off by default). Every action is checked first
   and logged.
+- **Forgotten work** (in the Mac panel): every git worktree and main checkout of the repositories your sessions worked
+  in (Claude Code's `.claude/worktrees` too) that still holds files not committed, commits not pushed or a stash, with
+  its branch, size and when it last changed. **Open** it in your editor or terminal, **Give it to Claude** (a new
+  conversation in that folder, the words ready to change), or **Delete** a worktree with nothing left in it, after a
+  confirmation: never the main checkout, never one with work in it or a session open, and git (no `--force`) checks
+  again right before.
 - **Each session** has a context bar and a waste bin that fills up with context. It also shows its cost at API prices:
   with a subscription, this is not your bill.
 - **The cache clock**: a cup of coffee on each resting desk whose steam fades as the session's prompt cache cools, gone
