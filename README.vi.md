@@ -137,6 +137,8 @@ Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại c
 
 **Chạy việc từ điện thoại thành phiên nền** (cửa sổ Điện thoại, dưới "Giao việc cho Claude từ điện thoại"; mặc định tắt): mỗi việc chạy thành một phiên nền của Claude Code (`claude --bg`, bản 2.1.257 trở lên) thay cho `claude -p`. Thẻ việc vẫn hiện từng bước, nút Dừng và câu trả lời (lấy từ hook của chính phiên đó); lệnh cần duyệt hay câu Claude hỏi sẽ chờ trên điện thoại và trong văn phòng tới khi bạn trả lời (không còn 45 giây), và thẻ ghi cách làm tiếp trên Mac (`claude attach <mã>`). Phiên vẫn sửa thẳng thư mục làm việc như trước (không tạo worktree riêng, không tự push). Claude Code chưa có phiên nền, hoặc thư mục Claude Code chưa được tin (mở Terminal ở đó, gõ `claude` một lần rồi đồng ý), thì việc chạy kiểu cũ và nhóm chat báo lý do.
 
+**Chen lời giữa chừng**: bấm 💬 Chen lời trên thẻ việc đang chạy, hoặc dùng "Gửi tới" nhắn cho một cuộc trò chuyện đang làm dở (văn phòng hỏi lại trước), lời nhắn ("sửa luôn test", "sai file rồi, dừng") vào thẳng phiên đó qua hộp thư của nó (nhắn tin giữa các phiên của Claude Code, bản 2.1.224 trở lên): Claude đọc ngay sau bước đang làm. Claude Code đưa lời nhắn như tin từ một phiên khác, nên nó không bao giờ được tính là bạn đã duyệt lệnh nào. Phiên nào chưa nhận được (Claude Code bản cũ, phiên bỏ qua mọi lệnh duyệt, cài đặt giữ hay chặn tin từ phiên khác) thì nhóm chat báo, và lời nhắn được gửi như tin thường khi phiên đó xong.
+
 ## An toàn
 
 - Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường. Hook ngắt vòng lặp chạy đồng bộ nhưng chờ tối đa 0,3 giây và không in gì khi văn phòng tắt hay chậm, nên không bao giờ chặn Claude Code vì văn phòng.

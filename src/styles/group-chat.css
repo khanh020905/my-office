@@ -384,6 +384,9 @@
 .zc-loop-form[hidden] { display: none; }
 .zc-loop-in { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--zc-line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--zc-ink); background: #fff; }
 .zc-loop-in:focus { outline: 2px solid var(--zc-blue); outline-offset: -1px; }
+.zc .zc-work-btn.is-steer { background: #E5F1FF; color: var(--zc-blue); margin-left: auto; }
+.zc .zc-work-btn.is-steer + .is-stop { margin-left: 0; }
+.zc.is-steer .zc-reply-q { border-left-color: #F2A100; }
 
 /* one conversation on its own screen (over the group's messages) */
 .zc-conv { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--zc-ground); }

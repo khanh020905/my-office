@@ -43,7 +43,7 @@ if [ "$1" = --bg ]; then
   for f in "$BG"/*.json; do [ -f "$f" ] && grep -q "\"sessionId\":\"$sid\"" "$f" && id=$(basename "$f" .json); done   # (carried on: the same one)
   row "$id" "$sid" working ',"pid":1,"status":"busy"'
   (
-    post() { curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Job: $id" --data-binary "$2" "$OFFICE$1"; }
+    post() { curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Job: $id" -H "X-Office-Inbox: $FAKE_INBOX" --data-binary "$2" "$OFFICE$1"; }
     ev() { post /event "{\"session_id\":\"$sid\",\"cwd\":\"$PWD\",\"hook_event_name\":\"$1\"$2}"; }
     post /hook/bind "{\"session_id\":\"$sid\",\"cwd\":\"$PWD\",\"hook_event_name\":\"SessionStart\",\"source\":\"startup\"}"
     ev SessionStart ',"source":"startup"'; ev UserPromptSubmit ",\"prompt\":\"$prompt\""
@@ -69,6 +69,9 @@ fi
 # `claude -p …` (a task given from the office, server/tasks.mjs): its stream, a new session and its last words
 case " $* " in *" -p "*)
   printf '%s\n' "$*" >> "$HOME/.fake-claude.log"   # (what it was asked to resume, for the tests to read)
+  # its SessionStart hook from the office's --settings: which task it is, and its inbox (FAKE_INBOX, a socket the test listens on)
+  bind=$(printf '%s' "$*" | grep -o "http://127.0.0.1:[0-9]*/hook/bind?task=[0-9a-z]*" | head -1)
+  [ -n "$bind" ] && [ -n "$FAKE_INBOX" ] && curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Inbox: $FAKE_INBOX" --data-binary '{"session_id":"e2e-task-1","hook_event_name":"SessionStart"}' "$bind"
   echo '{"type":"system","subtype":"init","session_id":"e2e-task-1"}'
   echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/e2e/README.md"}}]}}'
   sleep 1

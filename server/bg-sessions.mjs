@@ -44,13 +44,13 @@ export const HOLD_S = 24 * 3600;
 /** The settings each background session the office starts gets (`--settings`). Claude Code keeps them with the session
     and uses them again whenever it wakes it, so they say nothing about one task: it edits the working copy as `claude -p`
     does (no worktree of its own, nothing committed or pushed by itself); it tells the office which session it is when it
-    starts (/hook/bind, with its short id); approvals and Claude's questions go to the office and wait until answered
+    starts (/hook/bind, with its short id and its inbox, server/steer.mjs); approvals and Claude's questions go to the office and wait until answered
     (`?long=1`; the office answers at once, with nothing, for a session that isn't a phone's work now). */
 export function bgSettings({ port, win = false, send = '' }) {
   const url = (route) => `http://127.0.0.1:${port}${route}`;
   // (curl where the shell has it; the small node script on Windows, which reads the job's folder itself)
   const bind = win ? `${send} ${url('/hook/bind')} --async --job`
-    : `curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Job: \${CLAUDE_JOB_DIR##*/}" --data-binary @- ${url('/hook/bind')} || true`;
+    : `curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Job: \${CLAUDE_JOB_DIR##*/}" -H "X-Office-Inbox: \$CLAUDE_CODE_MESSAGING_SOCKET" --data-binary @- ${url('/hook/bind')} || true`;
   const wait = (route) => (win ? `${send} ${url(route)} --wait ${HOLD_S}`
     : `curl -s --max-time ${HOLD_S} -H 'Content-Type: application/json' --data-binary @- '${url(route)}' || true`);
   return JSON.stringify({
@@ -61,6 +61,14 @@ export function bgSettings({ port, win = false, send = '' }) {
       PreToolUse: [{ matcher: 'AskUserQuestion|ExitPlanMode', hooks: [{ type: 'command', command: wait('/hook/question?long=1'), timeout: HOLD_S + 10 }] }],
     },
   });
+}
+/** The settings a `claude -p` run the office starts gets: only its SessionStart hook, telling the office which task it is
+    and where its inbox is (a `-p` session writes no session file to find it in), so a note can reach it while it works. */
+export function printSettings({ port, task, win = false, send = '' }) {
+  const url = `http://127.0.0.1:${port}/hook/bind?task=${encodeURIComponent(task)}`;
+  const command = win ? `${send} ${url} --async --job`
+    : `curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Inbox: \$CLAUDE_CODE_MESSAGING_SOCKET" --data-binary @- '${url}' || true`;
+  return JSON.stringify({ hooks: { SessionStart: [{ hooks: [{ type: 'command', command, timeout: 5 }] }] } });
 }
 
 /** Running Claude Code for these: { probe(bin) -> { ok, version }, run(bin, args, { cwd, env, timeout }), list(bin, env),

@@ -86,8 +86,9 @@ test('a task as a background session: started, told which it is, its answer from
   assert.deepEqual(args.slice(0, 1), ['--bg']);
   assert.deepEqual(args.slice(-2), ['--', '-p tidy the docs']);   // (its words after --: never read as flags)
   assert.ok(args.includes('--settings') && args.includes('--append-system-prompt'));
-  tasks.bind('7c5dcf5d', 'sess-1');
+  tasks.bind({ job: '7c5dcf5d', sid: 'sess-1', inbox: '/tmp/cc-socks/1.sock' });
   assert.equal(tasks.of('sess-1')?.hooked, true);
+  assert.equal(tasks.of('sess-1')?.inbox, '/tmp/cc-socks/1.sock');   // (where a note reaches it: server/steer.mjs)
   assert.equal(tasks.settle(r.task.id, { result: 'All tidy.' }), true);
   assert.equal(done[0].result, 'All tidy.');
   assert.deepEqual(tasks.list(), []);

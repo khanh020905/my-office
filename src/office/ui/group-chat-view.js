@@ -27,6 +27,7 @@ import { t as tr, locale } from '../../i18n/index.js';
 
 let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, quickEl, attachEl, convEl;
 let replyTo = null, readTo = null, stickTab = 'sticker';   // the message you answer; the last one read when the window shut; the panel's tab
+let steerTo = null;   // a run at work you cut in on (its card's 💬): { task, name }
 const RUN_MS = 3 * 60e3, GAP_MS = 20 * 60e3;   // one run of bubbles: the same person within 3 minutes; a time line after 20 quiet minutes
 const seeVotes = new Set();   // polls whose voters are listed
 const p2 = (n) => String(n).padStart(2, '0');
@@ -223,6 +224,7 @@ function workCard(m) {
       if (!w.risky) acts.append(btn(tr('chat.card.allow'), 'is-ok', () => call('/api/perm', { id: w.perm, choice: 'allow' })));
       acts.append(btn(tr('chat.card.deny'), 'is-no', () => call('/api/perm', { id: w.perm, choice: 'deny' })));
     }
+    if (w.task) { const st = el('button', 'zc-work-btn is-steer', tr('chat.steer.btn')); st.type = 'button'; st.addEventListener('click', (e) => { e.stopPropagation(); setSteer({ task: w.task, name: m.name }); }); acts.append(st); }   // (a note while it works: what you write next)
     if (w.task) acts.append(btn(tr('chat.card.stop'), 'is-stop', () => call('/api/tasks/stop', { id: w.task })));
     if (acts.children.length) box.append(acts);
     if (state === 'wait' && w.perm && w.risky) box.append(el('small', 'zc-work-none', tr('chat.card.risky')));
@@ -369,10 +371,11 @@ onChat((what, m) => {
 /* ---------- the input: text, a reply, @ someone, stickers and emoji, a poll, a photo; send once something is typed ---------- */
 function syncBar() { bar.classList.toggle('has-text', !!input.value.trim()); root.classList.toggle('has-text', !!input.value.trim()); }
 function setReply(m) {
+  if (m && steerTo) setSteer(null);
   replyTo = m;
   const s = m?.tag === 'claude' && sessions.get(m.from);   // (an answer from Claude: what you write back goes to it)
   if (s?.sid) setTarget({ id: s.id, sid: s.sid, name: dn(s), folder: folderOf(s) });
-  replyEl.hidden = !m;
+  replyEl.hidden = !m && !steerTo;
   if (m) {
     const t = m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
     replyEl.querySelector('b').textContent = tr('chat.replyTo', { name: m.from === 'me' ? tr('chat.you') : m.name });
@@ -382,6 +385,7 @@ function setReply(m) {
 }
 function send() {
   const v = input.value; input.value = ''; syncBar(); mentionEl.hidden = true; input.style.height = '';
+  if (steerTo && v.trim()) { const to = steerTo; setSteer(null); steerSend(to, v.trim()); return; }
   if (target && (v.trim() || attach.length)) { sendTo(v.trim() || tr('chat.to.photoOnly')); setReply(null); return; }
   if (v.trim()) chatSend(v, { replyTo: replyTo?.id });
   setReply(null);
@@ -576,6 +580,33 @@ async function openPick() {
   }
   pickEl.replaceChildren(...items);
 }
+/* ---------- "Chen lời giữa chừng": a note for a conversation while it works ("sửa luôn test", "sai file rồi, dừng"), from its
+   card's 💬 or when "To" finds it busy; Claude reads it between two steps, or it goes once it is done (server: POST
+   /api/tasks/steer, server/steer.mjs) ---------- */
+function setSteer(x) {
+  steerTo = x; if (x) replyTo = null;
+  replyEl.hidden = !x && !replyTo;
+  root.classList.toggle('is-steer', !!x);
+  if (!x) { drawTarget(); return; }   // (its placeholder back)
+  replyEl.querySelector('b').textContent = tr('chat.steer.bar', { name: x.name });
+  replyEl.querySelector('.zc-reply-t').textContent = tr('chat.steer.hint');
+  input.placeholder = tr('chat.steer.placeholder'); input.focus();
+}
+async function steerSend(to, text) {
+  const r = await fetch(`/api/tasks/steer${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ task: to.task, sid: to.sid, dir: to.dir, text }) }).then((x) => x.json()).catch(() => null);
+  if (r?.ok) return;   // (what happened is said in the group: in now, or kept for when it is done)
+  toast(r?.code === 'notAllowed' ? tr('chat.to.notAllowed') : r?.message || tr('drawer.unreachable'), 7000);
+  if (!input.value) { input.value = text; syncBar(); }   // (nothing lost: back in the input)
+}
+// "To" a conversation at work: in now, mid-way, or kept in the input for later
+function askSteer(to, text) {
+  const ask = el('div', 'zc-ask zc-steer-ask'), yes = el('button', 'zc-ask-yes', tr('chat.steer.yes')), no = el('button', 'zc-ask-no', tr('chat.steer.no'));
+  yes.type = no.type = 'button';
+  yes.addEventListener('click', () => { ask.remove(); steerSend({ sid: to.sid, dir: to.dir }, text); });
+  no.addEventListener('click', () => { ask.remove(); if (!input.value) { input.value = text; syncBar(); } });
+  ask.append(el('span', null, tr('chat.steer.ask', { name: to.name })), no, yes);
+  body.append(ask); body.scrollTop = body.scrollHeight;
+}
 async function sendTo(text) {
   const to = target, images = attach.slice(), body = to.dir ? { dir: to.dir, text, images, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, images, chat: true };
   attach = []; drawAttach();
@@ -587,6 +618,7 @@ async function sendTo(text) {
     notifyNudge();
     return;
   }
+  if ((r?.code === 'busy' || r?.code === 'macBusy') && !to.fresh) { askSteer(to, text); return; }   // (at work: cut in?)
   toast(r?.code === 'notAllowed' ? tr('chat.to.notAllowed') : r?.message || tr('drawer.unreachable'), 7000);
   if (!input.value) { input.value = text; syncBar(); }   // (nothing lost: back in the input)
 }
@@ -718,7 +750,7 @@ function build() {
   moreEl = el('div', 'zc-more'); moreEl.hidden = true;
   // answering a message: "Trả lời <tên>" over the input, with what it says and an ✕
   replyEl = el('div', 'zc-reply'); replyEl.hidden = true;
-  const replyX = el('button', 'zc-ib zc-reply-x'); replyX.type = 'button'; replyX.title = tr('chat.cancel'); replyX.append(icon('x')); replyX.addEventListener('click', () => setReply(null));
+  const replyX = el('button', 'zc-ib zc-reply-x'); replyX.type = 'button'; replyX.title = tr('chat.cancel'); replyX.append(icon('x')); replyX.addEventListener('click', () => { setReply(null); if (steerTo) setSteer(null); });
   const replyText = el('span', 'zc-reply-q'); replyText.append(el('b'), el('span', 'zc-reply-t'));
   replyEl.append(icon('reply'), replyText, replyX);
   // a computer's toolbar over the input: stickers, a photo of the office, a file, a card, a poll, @, more
@@ -731,7 +763,7 @@ function build() {
   input = el('textarea', 'zc-in'); input.rows = 1; input.maxLength = 600;
   input.placeholder = tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
   input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; });
-  input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } if (e.key === 'Escape') { if (replyTo) setReply(null); else toggle(false); } });
+  input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } if (e.key === 'Escape') { if (steerTo) setSteer(null); else if (replyTo) setReply(null); else toggle(false); } });
   // the phone's 🎤: speak into the input (the browser's speech recognition, in the office's language)
   let stopMic = null;
   const micBtn = ib('mic', tr('chat.task.mic'), () => { if (stopMic) { stopMic(); stopMic = null; } else stopMic = dictate(micBtn, input, () => { syncBar(); input.dispatchEvent(new Event('input')); }); }, 'zc-mo zc-when-empty zc-mic');

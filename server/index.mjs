@@ -22,7 +22,8 @@ import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
-import { createBg, bgSettings } from './bg-sessions.mjs';
+import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
+import { steerable, inboundFrom, isSocket, deliver } from './steer.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createClaudeVersion } from './claude-version.mjs';
@@ -529,13 +530,14 @@ const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pin
 const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs became (their leaving isn't announced: their result is); your task, quoted in the answer
 // Phone work as Claude Code background sessions (server/bg-sessions.mjs), when switched on on the Mac and this Claude Code
 // has them: their settings call the office back the way the hooks do (curl; the small node script on Windows)
-const bgRun = createBg(), WIN = process.platform === 'win32', fwd = (p) => p.replace(/\\/g, '/');
+const bgRun = createBg(), WIN = process.platform === 'win32', fwd = (p) => p.replace(/\\/g, '/'), SEND = `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'send.mjs'))}"`;
 const bgOn = () => !!prefs.get('phoneTasksBg');
 const bgOut = () => { const k = bgRun.known(findClaude()); return { on: bgOn(), ok: k ? k.ok : null, version: k?.version || null }; };
 const tasks = createTasks({
   dataDir: DATA_DIR, claude: () => findClaude(),
   env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
-  bg: { ...bgRun, want: bgOn, settings: () => bgSettings({ port: PORT, win: WIN, send: `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'send.mjs'))}"` }) },
+  bg: { ...bgRun, want: bgOn, settings: () => bgSettings({ port: PORT, win: WIN, send: SEND }) },
+  printSettings: (t) => printSettings({ port: PORT, task: t.id, win: WIN, send: SEND }),   // (a `-p` run tells where its inbox is: server/steer.mjs)
   onStep: (t, x) => cardStep(t.id, stepOf(x.name, x.input)),
   onBg: (t, what, detail) => onBgTask(t, what, detail),
   onDone: (t) => {
@@ -555,6 +557,7 @@ const tasks = createTasks({
     else chat.system(`📋 ${folder}: ${clip(oneLine(text), 300)}`);
     pushOut({ title: `💬 ${t.from?.name || folder}`, body: clip(oneLine(text), 180), tag: `task-${t.id}`, url: '/?chat' });
     if (who && urls.length) (async () => { for (const u of urls) { const photo = await shoot(u).catch(() => null); if (photo) chat.say(who, '', { photo, now: true }); } })();
+    if (t.from?.orig && steerLater.has(t.from.orig)) setTimeout(() => sendLater(t.from.orig), 1500);   // (a note that couldn't get in: now, as a message)
   },
 });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
@@ -685,6 +688,89 @@ function burnOut(range) {
     projects: r.projects.map((p) => ({ ...p, dir: tilde(p.cwd), cwd: undefined })), setup: otelOwner({ settings, managed: managedEnvs() }).state, plan };
 }
 
+/* Giving work to a conversation or a project ("Gửi tới", 📋 Giao việc), from the chat, a phone, or a note kept for when
+   a conversation is done: [status, reply]. who: 'mac', 'phone <ip>' or 'queued', for the log. */
+async function giveWork(b, who) {
+  // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
+  // conversation there, or the one you started there); one way for both the chat's "Gửi tới" and 📋 Giao việc
+  const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
+  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, "Giao Claude làm nốt")
+  if (!s && !pdir) return [400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }];
+  const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
+  if (!text) return [400, { ok: false, code: 'empty' }];
+  const name = s ? s.title || s.name : path.basename(pdir), key = s ? s.sid : `dir:${pdir}`, th = threads.get(key);
+  if (th?.running) return [409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }];
+  let from;
+  if (s) {   // the conversation itself: open in the editor and resting, it is closed there first; at work there: not now
+    const open = s.pid && !s.parked;
+    if (open && (s.status !== 'rest' || s.busy || [...pending.values()].some((p) => p.sess === s.id))) return [409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name }) }];
+    // (a background session resting: stopped, its conversation kept, then carried on; with background sessions on,
+    // server/tasks.mjs does that itself and wakes it in the background again)
+    if (open && s.jobId) { if (!bgOn() && !(await stopBgSession(s))) return [409, { ok: false, code: 'macOpen', message: tr('server.move.failed') }]; }
+    else if (open) { const pk = await parkForPhone(s); if (!pk.ok) return [409, { ok: false, code: 'macOpen', message: pk.message }]; }
+    from = { sid: s.sid, fork: false, name, id: s.id, orig: key, chat: true, acct: acctOf(s) || '' };
+  } else {   // a project: a new conversation, or the one you started there (for 6 hours; ＋ asks for a new one)
+    const on = th?.sid && !b.fresh && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;
+    const live = on && bySid(on);   // (that one opened on the Mac since, `claude attach`, and at work there: it waits)
+    if (live?.pid && (live.status !== 'rest' || live.busy)) return [409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name: live.title || live.name }) }];
+    from = { sid: on, fork: false, name, orig: key, chat: true };
+  }
+  chat.say('me', `@${name} ${text}`, { now: true, long: true });
+  const mine = chat.state.msgs.at(-1);
+  for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
+  const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK, stopAfter: s?.entry === 'claude-vscode' });   // (one from your editor goes back to it alone)
+  if (r.ok) {
+    threads.set(key, { sid: from.sid, at: Date.now(), running: true });
+    if (s) s.viaOffice = r.task.id;
+    const card = chat.workCard(s ? s.id : 'claude', { state: 'work', steps: [], n: 0, at: Date.now(), task: r.task.id });   // (task: its Stop button)
+    if (card) cards.set(r.task.id, { id: card.id, steps: [], n: 0, at: Date.now(), timer: 0 });
+    taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
+  } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${who} ${s ? `${s.sid}${from.acct ? ` on ${from.acct}` : ''}` : from.sid ? `carry ${from.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+  return [r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) }];
+}
+
+/* ---------- "Chen lời giữa chừng" (server/steer.mjs): a note into a conversation while it works ----------
+   POST /api/tasks/steer { task | sid | dir, text }: a run the office started (its card), a conversation (its session id),
+   or the one the office carries on in a project. Into its inbox now when it can take one (Claude reads it between two
+   steps); otherwise kept, one per conversation (what you add joins it), and sent as an ordinary message once it is done. */
+const steerLater = new Map();   // threads' key (a session id, or 'dir:' a project) -> { body, text, name, at }
+async function steerTo(b, who) {
+  const text = String(b?.text || '').trim().slice(0, 2000);
+  if (!text) return [400, { ok: false, code: 'empty' }];
+  const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !b?.sid && knownDirs.find((d) => d === want);
+  let t = b?.task ? tasks.get(String(b.task)) : b?.sid ? tasks.of(String(b.sid)) : pdir ? tasks.byKey(`dir:${pdir}`) : null;
+  const key = t?.from?.orig || (b?.sid ? String(b.sid) : pdir ? `dir:${pdir}` : null);
+  if (!t && key) t = tasks.byKey(key);
+  const s = (t?.sid && bySid(t.sid)) || (b?.sid && bySid(String(b.sid))) || (key?.startsWith('dir:') && threads.get(key)?.sid && bySid(threads.get(key).sid)) || null;
+  const name = t?.from?.name || (s && (s.title || s.name)) || (pdir && path.basename(pdir)) || 'Claude';
+  if (!t && !(s?.pid && (s.status !== 'rest' || s.busy))) return [409, { ok: false, code: 'notBusy', message: tr('chat.steer.notBusy', { name }) }];
+  const inbox = t?.inbox || s?.inbox || null, acct = s && acctOf(s);
+  const can = steerable({ inbox, mode: s?.mode || '', inbound: inboundFrom({ configDir: t?.env?.CLAUDE_CONFIG_DIR || (acct ? dirOfSlug(acct) : CLAUDE_DIR), cwd: s?.cwd || t?.dir }), isSocket });
+  chat.say('me', `💬 @${name} ${text}`, { now: true, long: true });
+  const now = can.ok && await deliver(inbox, tr('server.steer.note', { text }));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} note ${who} ${t ? `task ${t.id}` : s?.sid || key} ${now ? 'delivered' : `kept (${can.ok ? 'failed' : can.why})`} ${clip(oneLine(text), 100)}\n`).catch(() => {});
+  if (now) {
+    if (t) cardStep(t.id, `💬 ${clip(redact(oneLine(text)), 70)}`);
+    chat.system(tr('chat.steer.sent', { name }));
+    return [200, { ok: true, how: 'now' }];
+  }
+  const why = can.ok ? 'failed' : can.why, k = key || s?.sid;
+  if (!k) return [409, { ok: false, code: 'notBusy', message: tr('chat.steer.notBusy', { name }) }];
+  const was = steerLater.get(k);
+  steerLater.set(k, { body: k.startsWith('dir:') ? { dir: k.slice(4) } : { sid: k }, text: clip(was ? `${was.text}\n${text}` : text, 4000), name, at: Date.now() });
+  for (const [x, v] of steerLater) if (steerLater.size > 8 || Date.now() - v.at > 6 * 3600e3) steerLater.delete(x);   // (a few, for a few hours)
+  chat.system(tr('chat.steer.later', { name, why: tr(`chat.steer.why.${why}`) }));
+  return [200, { ok: true, how: 'later', why }];
+}
+// a kept note, sent as an ordinary message now that its conversation is done (not if it is busy again: then said so)
+async function sendLater(key) {
+  const x = steerLater.get(key); if (!x) return;
+  steerLater.delete(key);
+  const [code, out] = await giveWork({ ...x.body, text: x.text }, 'queued').catch(() => [500, {}]);
+  if (code !== 200) chat.system(tr('chat.steer.notSent', { name: x.name, why: out?.message || tr('drawer.unreachable') }));
+}
+
 /* ---------- the project folders sessions have worked in: where "Giao việc" may start a new conversation (a phone
    picks one of these, never a path of its own); the last 30, kept in data/projects.json ---------- */
 const DIRS_FILE = path.join(DATA_DIR, 'projects.json');
@@ -737,6 +823,7 @@ async function doScan() {
     if (s.name !== name || s.cwd !== j.cwd || s.link !== link) { s.name = name; s.cwd = j.cwd || ''; s.link = link; changed = true; noteDir(s.cwd); }
     s.pid = j.pid; s.fromFile = true; s.busy = j.status === 'busy'; s.entry = j.entrypoint || '';
     s.jobId = j.kind === 'bg' && /^[0-9a-f]{6,16}$/.test(j.jobId || '') ? j.jobId : null;   // (a background session: `claude stop` / `attach` take this)
+    s.inbox = typeof j.messagingSocketPath === 'string' && j.messagingSocketPath ? j.messagingSocketPath : null;   // (where a note reaches it while it works: server/steer.mjs)
     // Claude's own session file says busy: trust it even if we missed the hook (e.g. the server restarted mid-turn).
     if (s.busy && s.status === 'rest') { s.status = 'work'; if (!s.taskStart) s.taskStart = j.statusUpdatedAt || Date.now(); s.lastEventAt = Math.max(s.lastEventAt, Date.now()); changed = true; }
     if (changed) broadcast({ k: 'sess', s: pub(s) });
@@ -858,6 +945,7 @@ async function onHook(p) {
   s.lastEventAt = now;
   { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
+  if (typeof p.permission_mode === 'string') s.mode = p.permission_mode;   // (one that skips permission prompts holds notes from elsewhere: server/steer.mjs)
   const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id;   // (a run from the office: its card tells it)
   const bgTask = run?.mode === 'bg' ? run : null;   // (a background session: its card's steps and its answer come from here)
   const agent = p.agent_id || null;
@@ -947,6 +1035,7 @@ async function onHook(p) {
     }
     case 'Stop':
       setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
+      if (steerLater.has(sid) && !tasks.of(sid)) setTimeout(() => sendLater(sid), 2000);   // (a note that couldn't get in while it worked: now; a run's own: when it ends)
       s.inTool = false;
       s.status = 'rest'; s.doneAt = now;
       if (!s.cacheExact) s.cache = cacheGuess(now, s.live?.ctx ?? s.usage?.ctx, ttlGuess());   // (no prompt_cache from the status line: the documented lifetime from now)
@@ -2037,9 +2126,9 @@ const server = http.createServer((req, res) => {
     readJson(req, 4_000_000).then((p) => onQuestion(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
-  if (req.method === 'POST' && url.pathname === '/hook/bind') {   // a background session the office started, saying which it is (server/bg-sessions.mjs)
+  if (req.method === 'POST' && url.pathname === '/hook/bind') {   // a session the office started, saying which it is and where its inbox is (server/bg-sessions.mjs)
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    readJson(req, 200_000).then((p) => { tasks.bind(String(req.headers['x-office-job'] || ''), String(p?.session_id || '')); res.writeHead(200).end('{}'); }).catch(() => { try { res.writeHead(200).end('{}'); } catch { /* gone */ } });
+    readJson(req, 200_000).then((p) => { tasks.bind({ job: String(req.headers['x-office-job'] || ''), task: url.searchParams.get('task') || '', sid: String(p?.session_id || ''), inbox: String(req.headers['x-office-inbox'] || '') }); res.writeHead(200).end('{}'); }).catch(() => { try { res.writeHead(200).end('{}'); } catch { /* gone */ } });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/hook/status') {
@@ -2065,7 +2154,7 @@ const server = http.createServer((req, res) => {
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2208,45 +2297,10 @@ const server = http.createServer((req, res) => {
         json(res, 200, tasksOut(true)); return;
       }
       if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
-      if (url.pathname !== '/api/tasks') { json(res, 404, { ok: false }); return; }
+      if (url.pathname !== '/api/tasks' && url.pathname !== '/api/tasks/steer') { json(res, 404, { ok: false }); return; }
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
-      // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
-      // conversation there, or the one you started there); one way for both the chat's "Gửi tới" and 📋 Giao việc
-      const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, "Giao Claude làm nốt")
-      if (!s && !pdir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
-      const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
-      if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
-      const name = s ? s.title || s.name : path.basename(pdir), key = s ? s.sid : `dir:${pdir}`, th = threads.get(key);
-      if (th?.running) { json(res, 409, { ok: false, code: 'busy', message: tr('chat.task.threadBusy', { name }) }); return; }
-      let from;
-      if (s) {   // the conversation itself: open in the editor and resting, it is closed there first; at work there: not now
-        const open = s.pid && !s.parked;
-        if (open && (s.status !== 'rest' || s.busy || [...pending.values()].some((p) => p.sess === s.id))) { json(res, 409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name }) }); return; }
-        // (a background session resting: stopped, its conversation kept, then carried on; with background sessions on,
-        // server/tasks.mjs does that itself and wakes it in the background again)
-        if (open && s.jobId) { if (!bgOn() && !(await stopBgSession(s))) { json(res, 409, { ok: false, code: 'macOpen', message: tr('server.move.failed') }); return; } }
-        else if (open) { const pk = await parkForPhone(s); if (!pk.ok) { json(res, 409, { ok: false, code: 'macOpen', message: pk.message }); return; } }
-        from = { sid: s.sid, fork: false, name, id: s.id, orig: key, chat: true, acct: acctOf(s) || '' };
-      } else {   // a project: a new conversation, or the one you started there (for 6 hours; ＋ asks for a new one)
-        const on = th?.sid && !b.fresh && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;
-        const live = on && bySid(on);   // (that one opened on the Mac since, `claude attach`, and at work there: it waits)
-        if (live?.pid && (live.status !== 'rest' || live.busy)) { json(res, 409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name: live.title || live.name }) }); return; }
-        from = { sid: on, fork: false, name, orig: key, chat: true };
-      }
-      chat.say('me', `@${name} ${text}`, { now: true, long: true });
-      const mine = chat.state.msgs.at(-1);
-      for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
-      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK, stopAfter: s?.entry === 'claude-vscode' });   // (one from your editor goes back to it alone)
-      if (r.ok) {
-        threads.set(key, { sid: from.sid, at: Date.now(), running: true });
-        if (s) s.viaOffice = r.task.id;
-        const card = chat.workCard(s ? s.id : 'claude', { state: 'work', steps: [], n: 0, at: Date.now(), task: r.task.id });   // (task: its Stop button)
-        if (card) cards.set(r.task.id, { id: card.id, steps: [], n: 0, at: Date.now(), timer: 0 });
-        taskQuote.set(r.task.id, mine ? { id: mine.id, name: tr('chat.boss'), text: clip(text, 90) } : null);
-      } else chat.system(tr('chat.task.notStarted', { why: tr(`chat.task.why.${r.code}`) }));
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} message ${mac ? 'mac' : `phone ${clientIp(req)}`} ${s ? `${s.sid}${from.acct ? ` on ${from.acct}` : ''}` : from.sid ? `carry ${from.sid}` : `new in ${pdir}`} ${r.ok ? 'started' : r.code} ${clip(oneLine(text), 100)}\n`).catch(() => {});
-      json(res, r.ok ? 200 : 409, r.ok ? { ok: true, task: r.task } : { ok: false, code: r.code, message: tr(`chat.task.why.${r.code}`) });
+      const [code, out] = await (url.pathname === '/api/tasks/steer' ? steerTo : giveWork)(b, mac ? 'mac' : `phone ${clientIp(req)}`);
+      json(res, code, out);
     });
     return;
   }
