@@ -130,6 +130,8 @@ export function chatLife(kind, v = {}) {
     // payday (people/payday.js): the salary is in; someone off to the ATM
     case 'payday': chatSay(v.id || restingOne(), life('payday'), { key, react: ['💸', '😆', '❤️'], reacts: 5, answer: [{ key: 'paydayAsk', chance: 0.9 }, { key: 'paydayAsk', chance: 0.6 }] }); break;
     case 'atm': if (v.id) chatSay(v.id, life('atm'), { key, answer: [{ key: 'atmAsk', chance: 0.5 }] }); break;
+    // lunch at the quán cơm across the street (people/comtrua.js); Fridays bún đậu mắm tôm
+    case 'com': chatSay(v.id || restingOne(), life(v.friday ? 'comFriday' : 'com'), { key, react: ['😋', '👍'], reacts: 3, answer: [{ key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.9 }, { key: v.friday ? 'bunDauAsk' : 'comAsk', chance: 0.6 }] }); break;
   }
 }
 

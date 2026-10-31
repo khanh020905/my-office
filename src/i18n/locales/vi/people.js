@@ -282,4 +282,21 @@ export default {
     },
     where: { going: 'Đang xuống cây ATM rút tiền', line: 'Đang xếp hàng ở cây ATM ({n} người phía trước)', using: 'Đang rút tiền ở cây ATM', back: 'Rút tiền xong, đang về' },
   },
+  // lunch at the quán cơm bình dân across the street (people/comtrua.js, world/backdrops/eat-com.js)
+  com: {
+    hello: ['Ăn gì con? Có thịt kho trứng, cá kho nè', 'Vô đây con, hôm nay có canh chua cá'],
+    helloBd: ['Mấy mẹt con? Đậu mới chiên nóng nè', 'Bún đậu đầy đủ nha con?'],
+    bill: '{n} phần {total} nha con!',
+    say: {
+      go: ['Xuống quán cơm cô Ba ăn trưa nha 🍚', 'Đi ăn cơm thôi, đói quá 🍚'],
+      goBd: ['Thứ Sáu, đi bún đậu mắm tôm thôi 🤤', 'Bún đậu mắm tôm nào anh em 🤤'],
+      sit: ['Cô ơi cho con đĩa cơm thịt kho trứng 🍚', 'Cho con cơm cá kho với canh chua nha cô 🍲'],
+      sitBd: ['Cô ơi một mẹt đầy đủ nha 🤤', 'Thêm chả cốm với mắm tôm nha cô!'],
+      pay: ['Cô ơi tính tiền! 🙋', 'Cô ơi tính tiền cả bàn nha!'],
+      thanks: ['Ngon quá cô ơi, mai con lại xuống 😋', 'No căng bụng, lên ngủ trưa thôi 😴'],
+      work: ['Có việc, em lên trước nha! 🏃', 'Ơ có việc, mọi người ăn tiếp nha!'],
+      boss: ['Sếp xuống ăn chung luôn ạ! 🍚', 'Sếp ngồi đây nè 😄'],
+    },
+    where: { going: 'Đang xuống quán cơm bình dân', goingBd: 'Đang đi ăn bún đậu mắm tôm', eating: 'Đang ăn cơm ở quán cô Ba', eatingBd: 'Đang ăn bún đậu mắm tôm', back: 'Ăn xong, đang về' },
+  },
 };

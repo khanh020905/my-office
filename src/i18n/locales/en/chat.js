@@ -186,6 +186,8 @@ export default {
     parcelGot: ['Got it, thanks 🥰', 'Coming down'],
     paydayAsk: ['Drinks tonight 🍻', 'Paid off my debts, all gone again 😭', 'Running to the ATM 🏃', 'Finally, this day 🥹', 'Three days and it’s gone 😆'],
     atmAsk: ['Grab me 500k too 😆', 'The line’s long, go early', 'That one runs out of cash a lot 😅'],
+    comAsk: ['I’m in 🙋', 'Wait for me, coming down', 'Order me a plate of braised fish 😋', 'Had a lunch box already, enjoy'],
+    bunDauAsk: ['I’m in 🙋', 'Get extra chả cốm 🤤', 'Mắm tôm needs lime and chili 🌶️', 'The full tray, please 😋'],
   },
   life: {
     morning: ['Good morning everyone ☀️', 'Morning! Have a good day everyone 🌤'],
@@ -210,6 +212,8 @@ export default {
     longchauHeadache: ['So many failures, my head hurts: off to Long Châu for some painkillers 😵', 'The whole room’s red 😭 getting a strip of Panadol at Long Châu first', 'Tests failing again and again, a real headache: popping to Long Châu 💊'],
     payday: ['Salary’s in, everyone 💸', 'Ting ting 📲 payday, everyone 💸', 'Salary’s in 💸 Anyone going to the ATM at lunch?'],
     atm: ['Going down to the Vietcombank ATM, anyone need anything? 💸', 'Off to the ATM, the line’s huge today 😅'],
+    com: ['The rice place downstairs for lunch, anyone? 35k a plate 🍚', 'Who’s coming to cô Ba’s for lunch? Braised fish today 🍚', 'Lunch time, the place across the street 🍚'],
+    comFriday: ['It’s Friday: bún đậu mắm tôm, anyone? 🤤', 'Friday means bún đậu mắm tôm! Who’s in? 🤤', 'The full bún đậu tray for lunch, everyone 🤤'],
     cleaner: ['Mopping now, walk slowly or you’ll slip 🧽'],
     altar: ['Full moon today, the offering’s done 🙏', 'First of the lunar month, good fortune to us all 🙏'],
     trophy: '🏆 We just reached “{name}”! Well done everyone 🎉',

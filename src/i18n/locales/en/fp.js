@@ -29,10 +29,15 @@ export default {
   banhmiDone: 'A warm, crunchy bánh mì, 20,000 đồng 🥖',
   tea: 'Sit down for an iced tea',
   teaDone: 'Iced tea, 5,000 đồng a glass 🧊',
-  // the ATM booth (world/backdrops/street-atm.js)
+  // the ATM booth (world/backdrops/street-atm.js) and the quán cơm (eat-com.js)
   atm: 'Take money out at the ATM ({n} in line)',
   atmDone: 'Beep! 2,000,000 đồng out 💸',
   atmWait: 'Behind {n} people… 2,000,000 đồng out at last 💸',
+  com: 'A plate of rice · {price}',
+  comBd: 'A tray of bún đậu · {price}',
+  comDone: 'Braised pork and egg, sour soup, free iced tea: 35,000 đồng 🍚',
+  comBdDone: 'A tray of bún đậu mắm tôm, the tofu hot and crisp: 45,000 đồng 🤤',
+  comJoin: 'You sit down to eat with {names} 🍚',
   bil: {
     you: 'You',
     busy: '{a} and {b} are playing, wait for the next frame',
