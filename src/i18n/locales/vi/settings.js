@@ -44,4 +44,6 @@ export default {
     note: 'Mỗi bàn đang nghỉ có một tách cà phê: hơi bốc mờ dần khi bộ nhớ đệm của phiên nguội đi, tắt hẳn khi đã nguội. Nhắn tiếp lúc còn ấm thì rẻ; nguội rồi thì lần nhắn sau phải đọc lại cả cuộc trò chuyện.',
     nudge: 'Báo điện thoại khi phiên đang chờ mình trả lời còn 5 phút là nguội',
   },
+  chat: 'Nhóm chat',
+  coachNote: 'Khi “Gửi tới” một cuộc trò chuyện, trợ lý nhắc trên ô nhập những chỗ Claude dễ hiểu sai. Xem ngay trên máy này, không gửi đi đâu; chỉ nút “✨ Viết lại cho rõ” mới nhờ Claude.',
 };

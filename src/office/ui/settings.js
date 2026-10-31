@@ -66,6 +66,7 @@ function setToggle(k, v) {
   if (k === 'autocam') { state.camAuto = v; try { localStorage.setItem('office-autocam', v ? 'on' : 'off'); } catch { /* storage blocked */ } }
   if (k === 'perm') { state.permOn = v; try { localStorage.setItem('office-perm', v ? 'on' : 'off'); } catch { /* storage blocked */ } reportPresence(); }
   if (k === 'stream') setStreamer(v);
+  if (k === 'coach') { try { localStorage.setItem('office-coach', v ? 'on' : 'off'); } catch { /* storage blocked */ } }   // (the chat's prompt helper reads it as you type)
   if (k === 'zones') { state.zonesOn = v; try { localStorage.setItem('office-zones', v ? 'on' : 'off'); } catch { /* storage blocked */ } }
   if (k === 'season') {   // decorations are built when the page loads
     try { localStorage.setItem('office-season', v ? 'on' : 'off'); } catch { /* storage blocked */ }
@@ -74,8 +75,8 @@ function setToggle(k, v) {
   syncToggles();
 }
 export function syncToggles() {
-  let seasonOn = true; try { seasonOn = localStorage.getItem('office-season') !== 'off'; } catch { /* storage blocked */ }
-  const val = { sound: sfx.on, autocam: state.camAuto, perm: state.permOn, stream: state.streamer, zones: state.zonesOn, season: seasonOn };
+  let seasonOn = true, coachOn = true; try { seasonOn = localStorage.getItem('office-season') !== 'off'; coachOn = localStorage.getItem('office-coach') !== 'off'; } catch { /* storage blocked */ }
+  const val = { sound: sfx.on, autocam: state.camAuto, perm: state.permOn, stream: state.streamer, zones: state.zonesOn, season: seasonOn, coach: coachOn };
   labels.domElement.classList.toggle('show-zones', state.zonesOn);
   for (const b of document.querySelectorAll('[data-tgl]')) b.setAttribute('aria-checked', String(!!val[b.dataset.tgl]));
 }

@@ -118,6 +118,9 @@ export default async function SettingsPanel() {
             <button id="btn-bell" className="tb-btn" type="button" aria-pressed="false" hidden><span data-icon="bell"></span><span className="lbl">{t('ui.topBar.bell')}</span><i className="badge" id="bell-dot" hidden></i></button>
           </div>
           </div>
+          <h3>{t('settings.chat')}</h3>
+          <div className="pop-toggles">{toggle('coach', true)}</div>
+          <p className="pop-note">{t('settings.coachNote')}</p>
           <h3>{t('settings.behaviour')}</h3>
           <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}</div>
           <div className="pop-acts"><button id="btn-tips" className="tb-btn" type="button"><span data-icon="sparkle"></span><span className="lbl">{t('tips.again')}</span></button></div>

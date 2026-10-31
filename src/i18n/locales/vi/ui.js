@@ -63,6 +63,7 @@ export default {
       stream: 'Chế độ quay màn hình (ẩn lệnh, đường dẫn)',
       zones: 'Luôn hiện tên khu vực (mặc định: chỉ khi rê chuột)',
       season: 'Trang trí theo mùa (Halloween, Noel, Tết)',
+      coach: 'Trợ lý soạn prompt: gợi ý khi nhắn cho Claude',
     },
     nightLabel: 'Ban đêm',
     nightTitle: 'Ban đêm / ban ngày',
