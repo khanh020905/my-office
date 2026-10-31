@@ -9,6 +9,7 @@ import { chatMoved } from './group-chat.js';
 import { TOKEN } from '../net/live.js';
 import { DEMO, demoMac } from '../demo/demo.js';
 import { icon } from './icons.js';
+import { strandedSection, strandedHolding } from './stranded.js';
 import { t as tr, num } from '../../i18n/index.js';
 
 export let macSnap = null;
@@ -24,13 +25,13 @@ export const pollMac = () => { if (document.visibilityState === 'visible') loadM
 // button that no longer exists (the next reading draws it)
 let pressing = false;
 export async function loadMac() {
-  if (DEMO) { macSnap = demoMac(); renderMacButton(); syncDevBoxes(macSnap); if (!drM.hidden && !pressing) renderMac(); return; }
+  if (DEMO) { macSnap = demoMac(); renderMacButton(); syncDevBoxes(macSnap); if (!drM.hidden && !pressing && !strandedHolding()) renderMac(); return; }
   try {
     const q = new URLSearchParams(TOKEN ? { k: TOKEN } : {}); if (!drM.hidden) q.set('open', '1');   // (open: fresh memory footprints)
     const r = await fetch(`/api/sys${String(q) ? `?${q}` : ''}`);
     macSnap = await r.json();
     renderMacButton(); syncDevBoxes(macSnap);
-    if (!drM.hidden && !pressing) renderMac();
+    if (!drM.hidden && !pressing && !strandedHolding()) renderMac();   // (nor while a form is open in "Việc bỏ quên")
   } catch { /* server busy; next poll */ }
 }
 function level(snap) { return snap.mem.pressure === 'critical' ? 'critical' : snap.tight ? 'warn' : 'normal'; }
@@ -641,6 +642,7 @@ export function renderMac() {
     dl.append(li);
   }
   devSec.append(dl); frag.append(devSec);
+  frag.append(strandedSection());   // work left in the repositories' worktrees (stranded.js)
 
   const kSec = el('section', 'sec'); kSec.id = 'mac-disk'; const kh = el('h3', null, tr('mac.disk.title'));
   kh.append(el('small', null, s.cleanupsAt ? tr('mac.disk.measuredAt', { time: hhmm(s.cleanupsAt) }) : tr('mac.disk.measuring'))); kSec.append(kh);

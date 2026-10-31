@@ -26,6 +26,7 @@ import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createClaudeVersion } from './claude-version.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
+import { createStranded } from './stranded.mjs';
 import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
@@ -1870,6 +1871,27 @@ async function openWindow(s) {
   return new Promise((resolve) => execFile('open', args, { timeout: 8000 }, (err) => resolve(err ? { ok: false, message: tr('server.open.failed') } : { ok: true, app: path.basename(app, '.app') })));
 }
 
+/* ---------- "Việc bỏ quên": work left in the worktrees of the repositories sessions have worked in (server/stranded.mjs),
+   for the Mac panel; open one, give Claude the rest of it, or remove a worktree with nothing left in it ---------- */
+const within = (child, dir) => !!child && (child === dir || child.startsWith(dir + path.sep));
+const stranded = createStranded({
+  dirs: () => [...[...sessions.values()].map((s) => s.cwd), ...knownDirs],
+  // (a session open in it, or work given from the chat running there: never removed from under them)
+  inUse: (dir) => [...sessions.values()].some((s) => s.pid && within(s.cwd, dir)) || tasks.list().some((t) => within(t.dir, dir)),
+});
+// "Open": the window of a session working in that folder; else the app the latest session runs in (an editor opens the
+// folder, a terminal a window there); else the Finder (the file manager elsewhere)
+async function openFolder(dir) {
+  const open = [...sessions.values()].filter((s) => s.pid).sort((a, b) => (b.lastEventAt || 0) - (a.lastEventAt || 0));
+  const here = open.find((s) => within(s.cwd, dir));
+  if (here && process.platform === 'darwin') { const r = await openWindow(here); if (r.ok) return r; }
+  const done = (cmd, args, app) => new Promise((resolve) => execFile(cmd, args, { timeout: 8000 }, (err) => resolve(err ? { ok: false, message: tr('server.open.failed') } : { ok: true, app })));
+  if (process.platform === 'win32') return done('explorer.exe', [dir], 'Explorer');
+  if (process.platform !== 'darwin') return done('xdg-open', [dir], '');
+  const app = open[0] && await hostApp(open[0].pid);
+  return app ? done('open', ['-a', app, dir], path.basename(app, '.app')) : done('open', [dir], 'Finder');
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
   if (req.method === 'POST' && url.pathname === '/event') {
@@ -2057,7 +2079,7 @@ const server = http.createServer((req, res) => {
       // who it goes to: a conversation the office knows (carried on itself, the very one), or a project folder (a new
       // conversation there, or the one you started there); one way for both the chat's "Gửi tới" and 📋 Giao việc
       const s = b?.sid && [...sessions.values()].find((x) => x.sid === String(b.sid) && x.cwd);
-      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && knownDirs.find((d) => d === want);
+      const want = String(b?.dir || '').replace(/^~(?=$|\/)/, os.homedir()), pdir = !s && (knownDirs.find((d) => d === want) || stranded.dirOf(want));   // (or a worktree the Mac panel listed, "Giao Claude làm nốt")
       if (!s && !pdir) { json(res, 400, { ok: false, code: 'noDir', message: tr('chat.task.noDir') }); return; }
       const text = String(b?.text || '').trim().slice(0, 4000), images = (Array.isArray(b?.images) ? b.images : []).slice(0, 4).map(String);
       if (!text) { json(res, 400, { ok: false, code: 'empty' }); return; }
@@ -2173,6 +2195,23 @@ const server = http.createServer((req, res) => {
       const r = await openWindow(s);
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} open ${s?.name || '?'} -> ${r.ok ? r.app : r.message}\n`).catch(() => {});
       json(res, 200, r);
+    });
+    return;
+  }
+  if (req.method === 'POST' && (url.pathname === '/api/stranded/open' || url.pathname === '/api/stranded/remove')) {   // (this computer only, from this page)
+    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.openOnMac') }); return; }
+    readJson(req).then(async (b) => {
+      const w = stranded.entry(b?.id);
+      if (url.pathname === '/api/stranded/open') {
+        const r = w ? await openFolder(w.path) : { ok: false, message: tr('mac.stranded.gone') };
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} open folder ${w?.path || '?'} -> ${r.ok ? r.app || 'ok' : r.message}\n`).catch(() => {});
+        json(res, 200, r); return;
+      }
+      const r = await stranded.remove(b?.id);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} remove worktree ${r.w?.path || '?'} -> ${r.ok ? 'removed' : `${r.code}${r.why ? ` ${r.why}` : ''}`}\n`).catch(() => {});
+      const at = r.w ? tilde(r.w.path) : '';
+      json(res, 200, r.ok ? { ok: true, message: tr(r.w.branch ? 'mac.stranded.removed' : 'mac.stranded.removedDetached', { dir: at, branch: r.w.branch }) }
+        : { ok: false, code: r.code, message: tr(`mac.stranded.refused.${r.code}`, { why: r.why || '' }) });
     });
     return;
   }
@@ -2344,6 +2383,10 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/replay') {
     const from = Number(url.searchParams.get('from')) || 0, to = Number(url.searchParams.get('to')) || Date.now();
     replayRange(String(url.searchParams.get('day') || ''), from, to).then((r) => json(res, 200, r)).catch(() => json(res, 200, { items: [], truncated: false }));
+    return;
+  }
+  if (url.pathname === '/api/stranded') {   // the Mac panel's "Việc bỏ quên" (local: whether opening and removing are offered here)
+    stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
   if (url.pathname === '/api/sys') {
