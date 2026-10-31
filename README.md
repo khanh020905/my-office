@@ -198,6 +198,13 @@ Then open <http://localhost:4310>.
     there: four frames, four silly poses with the props, the flash; the strip goes into the group chat and they come back
     up still wearing the props and pin it on the whiteboard, the version under it: the six newest stay, a release history.
     At the weekend they are back nearly two hours later. In first person, E at the door for a strip of your own;
+  - half the scooters in the row outside the office are electric (the smooth shape of Vietnam's 2026 e-scooters, an LED
+    headlight across the apron, a hub motor, no exhaust), each with a five-bar battery gauge that follows this
+    computer's battery (`pmset` on macOS, `/sys` on Linux; hidden where there is none, as on Windows), filling bar by
+    bar while it charges. Under 20%, the owner of the emptiest one rides it to the battery-swap cabinet on a park's
+    corner (V-Green's kind: lockers with their status lights, the screen and the QR code), takes out the empty pack,
+    scans, puts it in, takes a charged 1.5 kWh one (two or three minutes, 9.000đ) and rides back with it full. In Hà
+    Nội, the sign of the low emission zone inside Ring Road 1 (from 1 July 2026) stands at a corner near the office;
   - traffic lights have Vietnam's countdown boxes beside them, red or green digits counting down the light. On a hot
     sunny day (33 °C+, from the real weather) scooters wait at a red light back in a street tree's shade instead of at
     the stop line;
@@ -470,6 +477,7 @@ request.
 | The Long Châu pharmacy | drawn and modelled in code (`shop-longchau.js`): no artwork of the chain's | the names (Long Châu, FPT Retail) are their owner's trademarks, not affiliated |
 | The Điện Máy Xanh shop | drawn and modelled in code (`shop-dmx.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Vietcombank ATM booth | drawn and modelled in code (`street-atm.js`): no artwork of the bank's | the name is its owner's trademark, not affiliated |
+| The V-Green battery-swap cabinet | drawn and modelled in code (`street-ev.js`): no artwork of the company's | the name is its owner's trademark, not affiliated |
 | Weather | [Open-Meteo](https://open-meteo.com) | |
 
 ## Licence

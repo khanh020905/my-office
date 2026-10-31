@@ -64,6 +64,8 @@ export async function memory() {
   const r = await read(), total = os.totalmem(), used = total - os.freemem(), left = 1 - used / total;
   return { total, used, compressed: 0, swapTotal: r.pageTotal, swapUsed: r.pageUsed, pressure: left < 0.08 ? 'critical' : left < 0.18 ? 'warn' : 'normal' };
 }
+// the battery: not read on Windows (the e-scooters' gauges in the street are hidden there)
+export async function battery() { return null; }
 export async function disk() {
   try { const s = await fsp.statfs(`${process.env.SystemDrive || 'C:'}\\`); const total = s.blocks * s.bsize, free = s.bavail * s.bsize; return { total, free, used: total - free }; }
   catch { return { total: 0, free: 0, used: 0 }; }

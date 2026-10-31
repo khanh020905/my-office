@@ -83,6 +83,20 @@ export async function memory() {
     pressure: { 1: 'normal', 2: 'warn', 4: 'critical' }[Number(pressure.trim())] || 'normal',
   };
 }
+// the battery (the e-scooters' gauges in the street, src/office/world/backdrops/street-ev.js): `pmset -g batt`, read at
+// most once a minute; null on a Mac without one
+/** "Now drawing from 'AC Power'\n -InternalBattery-0 (id=…)\t80%; charging; 0:42 remaining present: true" → { pct, charging, ac } */
+export function parsePmset(out) {
+  const m = /(\d{1,3})%;\s*([\w ]+?);/.exec(String(out || ''));
+  if (!m) return null;
+  return { pct: Math.min(100, Number(m[1])), charging: /^(charging|finishing charge)$/i.test(m[2].trim()), ac: /AC Power/.test(out) };
+}
+let batt = { at: 0, v: null };
+export async function battery() {
+  if (Date.now() - batt.at < 60_000) return batt.v;
+  batt = { at: Date.now(), v: parsePmset(await sh('pmset', ['-g', 'batt'], 4000).catch(() => '')) };
+  return batt.v;
+}
 export async function disk() {
   const out = await sh('df', ['-k', '/System/Volumes/Data']);
   const f = out.trim().split('\n').pop().split(/\s+/);

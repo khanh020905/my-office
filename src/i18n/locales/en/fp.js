@@ -38,6 +38,9 @@ export default {
   comDone: 'Braised pork and egg, sour soup, free iced tea: 35,000 đồng 🍚',
   comBdDone: 'A tray of bún đậu mắm tôm, the tofu hot and crisp: 45,000 đồng 🤤',
   comJoin: 'You sit down to eat with {names} 🍚',
+  // the battery-swap cabinet on the corner (world/backdrops/street-ev.js)
+  evswap: 'E-scooter battery swap · {price} a swap',
+  evswapDone: 'Beep! A locker opens: a full 1.5 kWh pack, 9,000 đồng. {n} of the scooters outside the office are electric ⚡',
   // the photo booth across the street (world/backdrops/street-photo.js)
   photo: 'Korean photo booth · 4 frames {price}',
   photoDone: 'Click! A four-frame strip of you, 70,000 đồng 📸',

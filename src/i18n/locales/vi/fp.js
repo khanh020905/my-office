@@ -38,6 +38,9 @@ export default {
   comDone: 'Cơm thịt kho trứng, canh chua, trà đá miễn phí: 35.000đ 🍚',
   comBdDone: 'Một mẹt bún đậu mắm tôm, đậu nóng giòn: 45.000đ 🤤',
   comJoin: 'Ngồi ăn chung bàn với {names} 🍚',
+  // the battery-swap cabinet on the corner (world/backdrops/street-ev.js)
+  evswap: 'Tủ đổi pin xe máy điện · {price}/lần',
+  evswapDone: 'Tít! Tủ mở: pin 1,5 kWh đầy 100%, 9.000đ. Hàng xe trước văn phòng có {n} chiếc điện ⚡',
   // the photo booth across the street (world/backdrops/street-photo.js)
   photo: 'Chụp ảnh Hàn Quốc · 4 khung {price}',
   photoDone: 'Tách! Một dải 4 khung của bạn, 70.000đ 📸',

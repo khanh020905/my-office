@@ -301,6 +301,17 @@ export default {
     },
     where: { going: 'Đang xuống quán cơm bình dân', goingBd: 'Đang đi ăn bún đậu mắm tôm', eating: 'Đang ăn cơm ở quán cô Ba', eatingBd: 'Đang ăn bún đậu mắm tôm', back: 'Ăn xong, đang về' },
   },
+  // a battery swap for an e-scooter (people/evswap.js, world/backdrops/street-ev.js)
+  ev: {
+    say: {
+      go: ['Xe còn {pct}% pin, đi đổi pin 🔋', 'Ra tủ đổi pin cái ⚡'],
+      scan: ['Tít! Quét QR, 9.000đ', 'Quét mã mở tủ nè 📱'],
+      wait: ['Tủ đang kiểm tra pin…', 'Chờ tủ nhả pin mới ⏳'],
+      full: ['Pin đầy 100% ⚡', 'Xong, 1,5 kWh mới tinh 🔋'],
+      work: ['Có việc, em chạy về liền! 🏃', 'Ơ có việc, về đã!'],
+    },
+    where: { going: 'Đang xuống lấy xe đi đổi pin', ride: 'Đang chạy xe điện ra trạm đổi pin', swap: 'Đang đổi pin ở tủ góc đường', back: 'Đổi pin xong, đang về' },
+  },
   // a release: a strip at the photo booth across the street (people/photobooth.js, world/backdrops/street-photo.js)
   photo: {
     say: {

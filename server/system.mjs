@@ -301,7 +301,7 @@ export async function sysSnapshot({ open = false } = {}) {
   return building;
 }
 async function buildSnapshot(open = true) {
-  const [P, mem, dsk, ports, files, est] = await Promise.all([processes(open ? 25_000 : 120_000), memory(), disk(), listeners(), claudeFiles(), established()]);
+  const [P, mem, dsk, ports, files, est, battery] = await Promise.all([processes(open ? 25_000 : 120_000), memory(), disk(), listeners(), claudeFiles(), established(), OS.battery?.().catch(() => null) ?? null]);
   const cores = os.cpus().length;
   const guard = protectedPids(P);
   noteOwners(P, files);
@@ -441,7 +441,7 @@ async function buildSnapshot(open = true) {
 
   return {
     at: now,
-    mem, disk: dsk, tight, diskTight,
+    mem, disk: dsk, tight, diskTight, battery,   // (battery: { pct, charging, ac } or null; the street's e-scooters show it)
     cpu: { cores, percent: Math.min(100, Math.round(totalCpu / cores)), load: os.loadavg()[0] },
     rules: { sessionIdle: SESSION_IDLE, devIdle: DEV_IDLE, pressure: mem.pressure },
     devServers, claude, apps: appList, orphans, tips, ide: editor, held, trend: trend.slice(),

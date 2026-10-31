@@ -138,6 +138,9 @@ export function chatLife(kind, v = {}) {
     case 'photoGo': chatSay(v.id || restingOne(), life('photoGo', { tag: v.tag }), { key: `${key}:${v.tag}`, react: ['📸', '🎉', '❤️'], reacts: 4, answer: [{ key: 'photoGo', chance: 0.9 }, { key: 'photoGo', chance: 0.5 }] }); break;
     case 'photoStrip': if (v.id) chatSay(v.id, life('photoStrip', { tag: v.tag }), { key: `${key}:${v.tag}`, photo: v.photo || null, react: ['😆', '❤️', '📸'], reacts: 5, answer: [{ key: 'photoStrip', chance: 0.9 }, { key: 'photoStrip', chance: 0.6 }] }); break;
     case 'photoQueue': if (v.id) chatSay(v.id, life('photoQueue'), { key, react: ['😭', '😆'], reacts: 3 }); break;
+    // an e-scooter under 20% (people/evswap.js): off to the battery-swap cabinet; back with a full one
+    case 'evLow': if (v.id) chatSay(v.id, life('evLow', { pct: v.pct }), { key, react: ['🔋', '⚡'], reacts: 2, answer: [{ key: 'evLow', chance: 0.6 }] }); break;
+    case 'evDone': if (v.id) chatSay(v.id, life('evDone'), { key, react: ['⚡', '👍'], reacts: 2, answer: [{ key: 'evDone', chance: 0.4 }] }); break;
     case 'pickleDone': if (v.id) chatSay(v.id, life('pickleDone', { share: v.share }), { key, photo: v.photo || null, react: ['🏓', '😆', '❤️'], reacts: 4, answer: [{ key: 'pickleDone', chance: 0.8 }, { key: 'pickleDone', chance: 0.5 }] }); break;
   }
 }
