@@ -356,5 +356,7 @@ export function setup() {
   clockHooks.in = clockIn; clockHooks.out = clockOut; clockHooks.newcomer = newcomer;
   document.fonts?.ready.then(() => { screenKey = plateKey = tabsKey = ''; });
 }
+// HR herself, for the other occasions she runs (people/farewell.js): null off the company floor or out of hours
+export const hrOnDuty = () => (hr && !hr.offstage && !hr.coming && !hr.leavingNow ? hr : null);
 // for tests (?debug)
 export const hrState = () => ({ log: log.size, party: !!party });

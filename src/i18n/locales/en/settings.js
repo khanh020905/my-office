@@ -40,6 +40,13 @@ export default {
     costAfter: 'Spending with no file edited for', mins: '{n} min',
     install: 'Run `node bin/cli.mjs install` once more so Claude Code checks with the office before each step.',
   },
+  // Settings → More: the farewell for a project quiet for a long while (people/farewell.js, server/tenure.mjs)
+  farewell: {
+    title: 'Farewells',
+    on: 'Say goodbye to projects gone quiet',
+    note: 'A project that really was at work (two days or more) and has had no session for a long while gets a last afternoon: its person packs the desk into a box, everyone signs a card, a small cake, a group photo, the badge handed back to HR. It is only a scene in the office: nothing about the project is touched. Open the project again and its person comes back to the old company.',
+    after: 'After no work for', days: { one: '{n} day', other: '{n} days' },
+  },
   // Settings → More: the prompt cache's clock (the cups on the desks)
   cache: {
     title: 'Prompt cache',

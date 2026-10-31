@@ -370,4 +370,21 @@ export default {
     },
     where: { line: 'In line at the microwave ({n} ahead)', heat: 'Warming lunch at the microwave', eat: 'Taking lunch to a table' },
   },
+  // the farewell for a project gone quiet, and its return (people/farewell.js)
+  farewell: {
+    card: 'Good luck!',
+    badge: 'STAFF',
+    empty: 'DESK FREE',
+    open: 'Farewell to {name} today, everyone 🥲 sign the card, then cake',
+    pack: ['Packing up… 🥲', 'Last day today 🥲', "I'm taking the little plant"],
+    wish: ['All the best', 'Come and visit', "Don't forget us", 'Keep in touch 🥲', 'Find us all jobs there', 'Safe travels', 'Stay awesome', "We'll miss you"],
+    photo: ['One, two, three… smile! 📸', 'Look here everyone, 1 2 3 smile! 📸'],
+    badgeBack: ['Here’s my badge back 🥲', 'Leaving my badge with you'],
+    badgeGot: ['Got it. Keep in touch!', 'Thanks, message me any time'],
+    thanks: ["Thank you all so much, I'll miss you 🥲", 'Thanks for everything you taught me 🙏'],
+    bye: ['Bye everyone 👋', 'Take care, all 🥲'],
+    toast: 'Farewell party for {name} in the meeting room 🥲',
+    tease: ['Oh, you’re back? 😆', 'Couldn’t stay away, huh 😆', 'Missed us that much? 🤣'],
+    backSay: ['Back at the old company 😆', 'Hello again 😆'],
+  },
 };

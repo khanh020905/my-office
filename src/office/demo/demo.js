@@ -14,6 +14,7 @@ import { onEvent } from '../life/incidents.js';
 import { onPerm, perms, renderPerms, reportPresence } from '../ui/permissions.js';
 import { renderPhone } from '../ui/topbar.js';
 import { summarize } from '../../shared/burn.js';
+import { setTenure } from '../people/farewell.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let DEMO;
@@ -261,6 +262,7 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); if (!drM.hidden) renderMac(); }
   else if (d.k === 'sysauto') { if (!quiet) { toast(d.message, 8000); loadMac(); } }   // (idle sessions closed on the drawer's timer)
   else if (d.k === 'trophies') setTrophies(d.t, quiet ? [] : d.earned || []);
+  else if (d.k === 'tenure') setTenure(d);   // (the projects' working lives: a farewell due, one back; people/farewell.js)
   else if (d.k === 'vi') relabel(d.from, d.to);
 }
 // a translation that arrived after its event: swap the words in bubbles, the feed and the session list

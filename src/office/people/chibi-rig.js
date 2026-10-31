@@ -604,6 +604,25 @@ export function wearOuter(P, on, o = {}) {
 }
 
 // A Santa hat for the Christmas weeks: a soft red cone that flops to one side, a white fur band and a pom-pom.
+// A lanyard round the neck with a card on it: the company's (people/farewell.js: handed back to HR on the last day) or
+// an intern's. Built on first use, then shown, hidden or recoloured. o: { color (the strap), tex (the card's face) }
+export function wearLanyard(P, on, o = {}) {
+  if (!on) { if (P.lanyard) P.lanyard.visible = false; return; }
+  if (!P.lanyard) {
+    const D = P.D, H = D.torso[D.torso.length - 1][1], zc = D.torso[3][0] * 0.82 + 0.024, g = new THREE.Group();
+    const strap = plainMat('#2F6FB5', { roughness: 0.8 });
+    const rod = (a, b) => { const d = new THREE.Vector3().subVectors(b, a), m = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.009, d.length(), 5), strap); m.position.copy(a).addScaledVector(d, 0.5); m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), d.normalize()); g.add(m); };
+    const top = H * 0.97, cy = H * 0.48;
+    for (const sx of [-1, 1]) rod(new THREE.Vector3(sx * 0.075, top, zc * 0.3), new THREE.Vector3(sx * 0.012, cy + 0.06, zc));
+    const card = new THREE.Mesh(new THREE.BoxGeometry(0.085, 0.11, 0.006), plainMat('#FFFFFF', { roughness: 0.5 })); card.position.set(0, cy, zc + 0.003); g.add(card);
+    const face = new THREE.Mesh(new THREE.PlaneGeometry(0.079, 0.103), new THREE.MeshBasicMaterial({ color: '#FFFFFF' })); face.position.set(0, cy, zc + 0.0065); g.add(face);
+    g.traverse((x) => { x.castShadow = false; });
+    P.spine.add(g); P.lanyard = g; P.lanyardStrap = strap; P.lanyardFace = face;
+  }
+  P.lanyard.visible = true; P.lanyardStrap.color.set(o.color || '#2F6FB5');
+  if (o.tex && P.lanyardFace.material.map !== o.tex) { P.lanyardFace.material.map = o.tex; P.lanyardFace.material.needsUpdate = true; }
+}
+
 export function wearHat(P) {
   if (P.hat) return;
   const R = P.D.R, red = plainMat('#C8283A', { roughness: 0.85 }), fur = plainMat('#F7F4EE', { roughness: 1 });

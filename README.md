@@ -127,6 +127,16 @@ Then open <http://localhost:4310>.
   turns in the light, two or three minutes, "tít tít tít" (with the sound on), the next one steps up. Cá kho or mắm leaves
   smell lines over the corner and a grumble in the group chat; a lid left clipped shut pops. Then lunch at a pantry table
   or at the desk. They don't fetch the GrabFood or go down to the quán cơm (`?comnha` to see it now).
+- **Farewells** (tiệc chia tay): a project that really was at work (on two days or more) and has had no session for 30
+  days (Settings → More: 14, 30, 60 or 90, or off) gets a last afternoon in office hours: its person comes in once more
+  with the company card on a lanyard and packs the desk into a cardboard box (the little plant, the mug, the photo frame)
+  while the area's carpet shows; everyone free gathers at the meeting table for HR's small cake and a big card each one
+  signs ("Chúc em thành công", "Nhớ ghé chơi nha"); "Một, hai, ba… cười nào!" and the group photo goes in the group
+  chat; the card is handed back to HR; then out by the lift with the box, the carpet rolls itself up and the desk gets a
+  "Bàn trống" card. Open the project again and its person comes back to the old company: teased in the chat ("Ủa quay
+  lại hả 😆"), the box unpacked, the carpet out again. Only a scene: nothing about the project is touched; the office
+  keeps each project's working life in `data/tenure.json` (on its first run it reads, once, only the dates and folders
+  of Claude Code's transcripts).
 - **The midday nap**, 12:30–13:30: the blinds come down, the room dims a little, and whoever has nothing running naps
   at their desk, half leaning back under a blanket, half head down on the desk. An alarm at 13:30, and the blinds go up.
 - **The look of the place**:
