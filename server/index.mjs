@@ -23,6 +23,7 @@ import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
+import { createClaudeVersion } from './claude-version.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
@@ -542,6 +543,7 @@ const tasks = createTasks({
 });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
    from the office needs while nobody has the office open; none while an office page is looked at ---------- */
+const claudeVersion = createClaudeVersion({ dataDir: DATA_DIR });   // (Claude Code's version on this computer, server/claude-version.mjs)
 const push = createPush({ dataDir: DATA_DIR, log: (l) => fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${l}\n`).catch(() => {}) });
 const QUICK_FILE = path.join(DATA_DIR, 'quick.json');   // the chat's quick commands, once you change them (shared by the Mac and the phones)
 const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg).catch(() => {}); };
@@ -2121,6 +2123,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
+  if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: someone goes to Thế Giới Di Động, outings.js)
   if (url.pathname === '/api/push') { json(res, 200, { ok: true, key: push.publicKey, count: push.count(), on: push.has(String(url.searchParams.get('endpoint') || '')) }); return; }
   if (url.pathname === '/api/image') {   // (sandboxed and never sniffed: an SVG can't run anything opened on its own)
     const file = images.get(String(url.searchParams.get('id') || '')), type = file && IMG_EXT[path.extname(file).slice(1).toLowerCase()];

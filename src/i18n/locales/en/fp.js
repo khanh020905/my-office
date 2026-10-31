@@ -20,7 +20,7 @@ export default {
   sitDone: 'Watching the street. W A S D to get up',
   items: {
     peachTea: 'a peach tea', noodle: 'a cup of noodles', sausage: 'a grilled sausage', bananaMilk: 'a Korean banana milk', ramyeon: 'machine-cooked ramyeon', tok: 'tokbokki with fish cake',
-    coffee: 'a coffee', onigiri: 'an onigiri', bun: 'a bánh bao', water: 'a bottle of water', cone: 'a soft-serve cone', bubbleTea: 'a bubble milk tea', phinSuaDa: 'an iced milk coffee (phin sữa đá)', freezeTraXanh: 'a matcha freeze', chicken: 'fried chicken', milk: 'fresh milk',
+    coffee: 'a coffee', onigiri: 'an onigiri', bun: 'a bánh bao', water: 'a bottle of water', cone: 'a soft-serve cone', bubbleTea: 'a bubble milk tea', phinSuaDa: 'an iced milk coffee (phin sữa đá)', freezeTraXanh: 'a matcha freeze', phoneCase: 'a phone case', charger: 'a fast charging cable', chicken: 'fried chicken', milk: 'fresh milk',
     veg: 'fresh greens', eggs: 'eggs', meat: 'pork',
   },
   banhmi: 'Buy a bánh mì',
