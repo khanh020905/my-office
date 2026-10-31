@@ -12,6 +12,8 @@ export default {
     lan: 'Đã mở cho mạng wifi: điện thoại vào bằng mã QR hoặc mã PIN (my-office pin). Chỉ dùng ở mạng tin cậy.',
     local: 'Chỉ {mac} này xem được. Muốn xem trên điện thoại: my-office install --service --lan',
     next: 'Mở http://localhost:{port} rồi gõ một câu trong Claude Code để thấy nhân vật đi vào.',
+    otel: 'Từ giờ Claude Code tự gửi số liệu dùng về văn phòng (chỉ trong máy này, không gửi nội dung prompt): mở phiên mới là xem được cái gì đang ăn gói. Đã thêm vào {file}',
+    otelTheirs: 'Bạn đã gửi telemetry của Claude Code đi chỗ khác ({where}) nên văn phòng không đụng vào. Muốn xem thêm "Cái gì đang ăn gói", hãy thêm văn phòng làm exporter thứ hai trong OpenTelemetry Collector của bạn:',
   },
   uninstall: {
     editors: 'Đã bỏ cổng đổi tài khoản của văn phòng khỏi cài đặt trình soạn thảo',
@@ -19,6 +21,7 @@ export default {
     removed: 'Đã gỡ {n} mục của My Office khỏi {file}',
     none: 'Không có hook nào của My Office.',
     service: 'Đã gỡ dịch vụ chạy nền.',
+    otelKept: 'Giữ nguyên các cài đặt telemetry này vì bạn đã sửa sau khi cài: {keys}',
   },
   doctor: {
     title: 'Kiểm tra My Office',
@@ -45,12 +48,17 @@ export default {
     serviceUp: 'Dịch vụ chạy nền đang chạy (tự bật khi đăng nhập)',
     serviceDown: 'Đã cài dịch vụ chạy nền nhưng nó chưa chạy. Thử: {restart}',
     noService: 'Chưa cài dịch vụ chạy nền: server chỉ chạy khi bạn mở. Cài: my-office install --service',
+    otel: 'Claude Code đang gửi số liệu dùng về văn phòng ("Cái gì đang ăn gói")',
+    otelTheirs: 'Telemetry của Claude Code đang gửi tới chỗ của bạn ({where}): thêm văn phòng làm exporter thứ hai để xem cái gì đang ăn gói (my-office install chỉ cách)',
+    noOtel: 'Claude Code chưa gửi số liệu dùng về văn phòng nên "Cái gì đang ăn gói" còn trống. Chạy: my-office install',
+    otelAt: 'Đã nhận số liệu dùng {ago}',
+    otelSilent: 'Chưa nhận được số liệu dùng nào: mở một phiên Claude Code mới (phiên đang mở vẫn giữ cài đặt cũ) rồi nhắn một câu.',
   },
   pin: {
     changed: 'Đã đổi mã PIN. Mọi điện thoại đang vào phải nhập mã mới.',
     show: 'Mã PIN: {pin}',
   },
-  usage: 'Dùng: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] | uninstall | doctor | pin [--new]] [--settings <đường dẫn>]',
+  usage: 'Dùng: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] | uninstall | doctor | pin [--new]] [--settings <đường dẫn>]',
   status: { context: 'ngữ cảnh {pct}', fiveHour: '5 giờ {pct}', week: '7 ngày {pct}' },
   error: 'Lỗi: {message}',
 };

@@ -13,6 +13,7 @@ import { TOKEN, freeDesk, removeSession, setConn, upsertSession } from '../net/l
 import { onEvent } from '../life/incidents.js';
 import { onPerm, perms, renderPerms, reportPresence } from '../ui/permissions.js';
 import { renderPhone } from '../ui/topbar.js';
+import { summarize } from '../../shared/burn.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let DEMO;
@@ -136,6 +137,34 @@ export function demoMac() {
     held: 15.2 * GBb, rules: { sessionIdle: 2700, devIdle: 7200, pressure: 'warn' }, auto: demoAuto,
     trend: Array.from({ length: 31 }, (_, i) => ({ t: Date.now() - (30 - i) * 60e3, used: (11.4 + Math.sin(i / 4) * 0.5 + i * 0.04) * GBb, total: 16 * GBb, swap: (2.2 + i * 0.03) * GBb })),
     tips, cleanups: [{ id: 'claude-tmp', title: M('tmpTitle'), detail: M('tmpCleanup'), size: 8.4 * GBb }, { id: 'next-cache', title: M('nextTitle'), detail: M('nextDetail'), size: 0.7 * GBb }, { id: 'npm-cache', title: M('npmTitle'), detail: M('npmDetail'), size: 0.3 * GBb }], cleanupsAt: Date.now() };
+}
+// What eats the plan in the demo (ui/burn.js): a week of made-up sums for the fictional projects, summed as the server
+// sums its own (src/shared/burn.js), on a plan whose week is 46 % used.
+export function demoBurn(range = 'today') {
+  const at = Date.now(), dayOf = (i) => new Date(at - i * 864e5).toLocaleDateString('sv-SE');
+  const S = [['shop-api', 4.2, 'claude-opus-5-5', ['github', 'pdf', 'Explore']], ['landing-page', 2.1, 'claude-sonnet-5', ['', 'frontend-design', '']],
+    ['data-pipeline', 1.6, 'claude-opus-5-5', ['linear', '', 'Plan']], ['mobile-app', 0.9, 'claude-sonnet-5', ['', '', 'Explore']], ['docs-site', 0.35, 'claude-haiku-4-5', ['', '', '']]];
+  const sess = {}, days = [];
+  for (let i = 6; i >= 0; i--) {
+    const s = {}, k = 0.55 + ((i * 37) % 10) / 12;   // (each day a little different, the same on every visit)
+    for (const [j, [name, usd, model, [mcp, skill, agent]]] of S.entries()) {
+      const sid = `demo-${name}-${i}`, u = usd * k * (i ? 1 : 0.8), m = {};
+      sess[sid] = { m: true, cwd: `~/projects/${name}`, l: at - i * 864e5 - j * 600e3 };
+      // a share of the session's cost under one attribution (model, source, agent, skill, plugin, MCP server)
+      const put = (share, src, a = '', sk = '', mc = '') => {
+        const key = [model, src, a, sk, sk === 'pdf' ? 'document-skills' : '', mc].join('\t'), v = u * share, was = m[key] || [0, 0, 0, 0, 0, 0];
+        m[key] = [was[0] + v, ...[1200, 900, 42000, 3000].map((t, x) => was[x + 1] + Math.round(t * v)), 0];
+      };
+      put(0.42, 'main'); put(0.06, 'auxiliary');
+      put(0.24, 'main', '', '', mcp); put(0.12, 'main', '', skill); put(0.16, agent ? 'subagent' : 'main', agent);
+      s[sid] = { m, e: {}, req: Math.round(u * 9), err: 0, pr: Math.round(u * 2) + 1 };
+    }
+    days.push([dayOf(i), { s }]);
+  }
+  const n = range === '7d' ? 7 : 1, r = summarize(days.slice(7 - n), sess, { at }), week = summarize(days, sess, { at }).total.usd;
+  const named = r.sessions.map((x) => ({ ...x, name: x.project, dir: x.cwd, open: x.sid.endsWith('-0') }));
+  return { ok: true, range: n === 7 ? '7d' : 'today', days: days.slice(7 - n).map(([d]) => d), ...r, sessions: named, rest: { n: 0, usd: 0, share: 0 }, setup: 'ours',
+    lastMetricsAt: at - 20e3, lastLogsAt: at - 4e3, plan: { pct: 46, resetsAt: at + 3 * 864e5, perUsd: 46 / week, name: 'Max' } };
 }
 // Replies in the demo conversation: what Claude usually writes (lists, code, tables), so the reader can be judged.
 // Claude's to-do lists, by project (the second project has none).

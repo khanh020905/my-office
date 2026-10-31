@@ -9,6 +9,7 @@ import { execFileSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createPrefs } from '../server/prefs.mjs';
 import { serviceFor } from './service.mjs';
+import { addOtel, collectorSnippet, managedEnvs, otelOwner, removeOtel } from '../server/otel-setup.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = os.homedir();
@@ -82,7 +83,12 @@ async function install() {
     cfg.statusLine = { type: 'command', command: STATUS_CMD, ...(cfg.statusLine?.padding != null ? { padding: cfg.statusLine.padding } : {}) };
     added++;
   }
-  if (added) { await writeSettings(cfg); ok(tr('cli.install.added', { n: added, file: SETTINGS })); } else ok(tr('cli.install.already'));
+  // "What eats the plan": Claude Code's own telemetry, to this office only, unless you already send it somewhere
+  let otel = { added: 0, theirs: null };
+  if (!args.includes('--no-otel')) otel = addOtel(cfg, PORT, { names: !args.includes('--no-otel-names'), shell: process.env, managed: managedEnvs(), file: SETTINGS });
+  if (added || otel.added) { await writeSettings(cfg); if (added) ok(tr('cli.install.added', { n: added, file: SETTINGS })); } else ok(tr('cli.install.already'));
+  if (otel.added) ok(tr('cli.install.otel', { file: SETTINGS }));
+  if (otel.theirs) { warn(tr('cli.install.otelTheirs', { where: otel.theirs.join('; ') })); console.log(`\n${collectorSnippet(PORT).replace(/^/gm, '    ')}\n`); }
   if (args.includes('--service') && !opt('--settings')) {
     await fsp.mkdir(path.join(ROOT, 'data'), { recursive: true });
     ensureBuild();
@@ -105,7 +111,9 @@ async function uninstall() {
     if (prev?.command) cfg.statusLine = prev; else delete cfg.statusLine;
     await fsp.rm(STATUS_PREV, { force: true }); removed++;
   }
-  if (removed) { await writeSettings(cfg); ok(tr('cli.uninstall.removed', { n: removed, file: SETTINGS })); } else ok(tr('cli.uninstall.none'));
+  const otel = removeOtel(cfg);   // (only the keys install added, still as it wrote them)
+  if (otel.kept.length) warn(tr('cli.uninstall.otelKept', { keys: otel.kept.join(', ') }));
+  if (removed || otel.removed) { await writeSettings(cfg); ok(tr('cli.uninstall.removed', { n: removed + otel.removed, file: SETTINGS })); } else ok(tr('cli.uninstall.none'));
   // The login service is machine-wide: only touch it when working on the real settings (not a --settings copy).
   if (!opt('--settings') && (await service().uninstall())) ok(tr('cli.uninstall.service'));
   if (!opt('--settings') && unwrapEditors()) ok(tr('cli.uninstall.editors'));
@@ -144,9 +152,15 @@ async function doctor() {
   const loop = (cfg.hooks?.PreToolUse || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')));
   loop ? ok(tr('cli.doctor.loop')) : warn(tr('cli.doctor.noLoop'));
   oursStatus(cfg.statusLine) ? ok(tr('cli.doctor.status')) : warn(tr('cli.doctor.noStatus'));
+  const own = otelOwner({ settings: cfg, file: SETTINGS, shell: process.env, managed: managedEnvs() });
+  if (own.state === 'ours') ok(tr('cli.doctor.otel'));
+  else if (own.state === 'theirs') warn(tr('cli.doctor.otelTheirs', { where: own.where.join('; ') }));
+  else warn(tr('cli.doctor.noOtel'));
   if (info) {
     if (!info.lastEventAt) warn(tr('cli.doctor.noEvents'));
     else ok(tr('cli.doctor.lastEvent', { ago: minutesAgo(info.lastEventAt), n: info.sessions }));
+    const otelAt = Math.max(info.otel?.lastMetricsAt || 0, info.otel?.lastLogsAt || 0);
+    if (own.state !== 'none') otelAt ? ok(tr('cli.doctor.otelAt', { ago: minutesAgo(otelAt) })) : warn(tr('cli.doctor.otelSilent'));
     if (oursStatus(cfg.statusLine)) {
       if (info.limitsAt) ok(tr('cli.doctor.limits', { ago: minutesAgo(info.limitsAt) }));
       else if (info.statusAt) warn(tr('cli.doctor.noLimits'));
