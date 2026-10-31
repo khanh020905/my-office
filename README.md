@@ -335,6 +335,12 @@ Then open <http://localhost:4310>.
   the Mac (`claude attach <id>`). It edits your working copy as before (no worktree of its own, nothing pushed by
   itself). A Claude Code without them, or a folder Claude Code doesn't trust yet (type `claude` there once in a
   terminal), runs it the old way and the chat says why.
+- **Cut in while it works** ("Chen lời"): 💬 on a working card, or writing with "To" to a conversation that is busy (it
+  asks first), puts your note ("fix the tests too", "wrong file, stop") into that session now, through its inbox socket
+  (Claude Code's cross-session messaging, 2.1.224 or newer): Claude reads it right after the step it is on. Claude Code
+  hands it over as a message from another session, so it never counts as your approval. A session that can't take one
+  (an older Claude Code, one skipping every approval, settings that hold or refuse such messages) is said so in the chat,
+  and the note goes as an ordinary message once it is done.
 - On a phone the office lays itself out like an app, upright or held sideways: a compact top bar (plan, Mac, settings),
   the office filling the screen, and a tab bar (Office · Sessions · Activity · Approve · Chat, with counts) whose tabs
   open each panel as a full-screen sheet. A waiting approval floats just above the tabs with thumb-sized buttons.

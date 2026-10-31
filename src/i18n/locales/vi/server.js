@@ -85,6 +85,7 @@ export default {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',
   },
+  steer: { note: '[Người dùng chen lời qua My Office (từ điện thoại) trong lúc bạn đang làm]\n{text}' },
   push: {
     permTitle: '⚠️ {name} cần bạn duyệt (trong 45 giây)',
     testTitle: '🔔 My Office',

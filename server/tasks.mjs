@@ -19,10 +19,11 @@ const WATCH_MS = 8000;   // how often background sessions are looked at while on
 /** claude() -> { file } | null; env() -> the environment to run with; onStart(task), onStep(task, { name, input }) (a tool
     it uses, as it goes), onDone(task) for the office. bg: { want(), settings(), probe, list, stop, run } (createBg with
     the office's switch and settings) or null; onBg(task, what, detail): 'started' | 'fallback' (why) | a phase it moved to
-    ('work' | 'wait', what it waits for). */
-export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onBg, bg = null, max = 3, perHour = 12, watchMs = WATCH_MS }) {
+    ('work' | 'wait', what it waits for). printSettings(task): the `--settings` a `-p` run gets (the office told which
+    session it is and where its inbox is: server/steer.mjs), or nothing. */
+export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onBg, bg = null, printSettings = null, max = 3, perHour = 12, watchMs = WATCH_MS }) {
   const running = new Map(), recent = [];   // id -> task; when the last ones started (the hourly cap)
-  const binds = new Map();   // a background session's short id -> its session id, told before its task knew the short id
+  const binds = new Map();   // a background session's short id -> { sid, inbox }, told before its task knew the short id
   const imgDir = path.join(dataDir, 'task-images');
   const pub = (t) => ({ id: t.id, dir: t.dir, text: t.text.slice(0, 200), at: t.at, from: t.from || null, sid: t.sid || null, mode: t.mode, job: t.job || null });
   /** { dir, text, images: [data URLs], from: { sid, name, fork } | null } -> { ok, task } or { ok: false, code } */
@@ -57,7 +58,8 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
   function runPrint(t) {
     const { from, system } = t;
     // (from.fork false: carry on that very conversation, one this office started for you, instead of a branch of it)
-    const args = ['-p', t.prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : []), ...(system ? ['--append-system-prompt', system] : [])];   // (system: a word from the office, outside the conversation)
+    const set = printSettings?.(t);
+    const args = ['-p', t.prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : []), ...(system ? ['--append-system-prompt', system] : []), ...(set ? ['--settings', set] : [])];   // (system: a word from the office, outside the conversation)
     let proc;
     try { proc = spawn(t.bin.file, args, { cwd: t.dir, env: t.env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }
     catch { return false; }
@@ -104,7 +106,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
     const got = r.code === 0 && parseBackgrounded(r.out);
     if (!got) { fall(bgRefusal(`${r.out}\n${r.err}`)); return; }
     t.job = got.id; t.copy = got.copy;
-    const told = binds.get(t.job); if (told) { t.sid = told.sid; t.hooked = true; binds.delete(t.job); }
+    const told = binds.get(t.job); if (told) { t.sid = told.sid; t.inbox = told.inbox || t.inbox; t.hooked = true; binds.delete(t.job); }
     onBg?.(t, 'started');
     if (t.stopped) { await bg.stop(t.bin.file, t.job, t.env).catch(() => false); end(t); return; }
     watch();
@@ -141,12 +143,14 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
     if (t.mode === 'bg' && t.job && t.stopAfter && !t.stopped) bg.stop(t.bin.file, t.job, t.env).catch(() => false);
     onDone?.(t);
   }
-  /** A background session told the office which it is (its SessionStart hook): its short id and session id. */
-  function bind(job, sid) {
-    if (!job || !sid) return;
-    const t = [...running.values()].find((x) => x.job === job);
-    if (t) { t.sid = sid; t.hooked = true; return; }   // (hooked: the office's settings are in that session, its long-waiting hooks too)
-    binds.set(job, { sid, at: Date.now() });   // (its task learns its short id a moment later)
+  /** A session the office started told it which it is (its SessionStart hook): a background one by its short id, a `-p`
+      run by its task's id; its session id, and its inbox (where a note can reach it while it works). */
+  function bind({ job = '', task = '', sid = '', inbox = '' } = {}) {
+    if (!sid || (!job && !task)) return;
+    const t = task ? running.get(task) : [...running.values()].find((x) => x.job === job);
+    if (t) { t.sid ||= sid; if (inbox) t.inbox = inbox; if (job) t.hooked = true; return; }   // (hooked: the office's settings are in that session, its long-waiting hooks too)
+    if (!job) return;
+    binds.set(job, { sid, inbox, at: Date.now() });   // (its task learns its short id a moment later)
     for (const [k, v] of binds) if (binds.size > 20 || Date.now() - v.at > 120e3) binds.delete(k);
   }
   /** Its turn is over (the session's Stop / StopFailure hook): what it said, or what went wrong. */
@@ -166,5 +170,8 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
   }
   return { start, stop, bind, settle, list: () => [...running.values()].map(pub),
     /** the running task a session is (or carries on), as it is kept: null when none */
-    of: (sid) => (sid && [...running.values()].find((t) => t.sid === sid || t.from?.sid === sid)) || null };
+    of: (sid) => (sid && [...running.values()].find((t) => t.sid === sid || t.from?.sid === sid)) || null,
+    /** a running task by its id, or by the conversation it carries on in the office's chat (from.orig) */
+    get: (id) => running.get(id) || null,
+    byKey: (key) => (key && [...running.values()].find((t) => t.from?.orig === key)) || null };
 }
