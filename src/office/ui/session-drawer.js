@@ -12,6 +12,7 @@ import { TOKEN } from '../net/live.js';
 import { unseenDone } from '../life/your-turn.js';
 import { DEMO, demoLog } from '../demo/demo.js';
 import { acctActions } from './session-account.js';
+import { drawDrawerCache } from './cache-words.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 /* ---------- session drawer ---------- */
@@ -43,6 +44,7 @@ export function renderSessionHead() {
   $('ds-dot').style.background = colorOf(s);
   $('ds-name').textContent = dn(s);
   $('ds-dir').textContent = s.origin ? `${s.dir} · ${s.origin}` : s.dir;
+  drawDrawerCache();   // (its prompt cache: warm for how long, or cold)
   const st = $('ds-status'); st.textContent = STATUS_LABEL[s.status]; st.dataset.status = s.status;
   $('ds-read').textContent = s.counts?.read ?? 0; $('ds-edit').textContent = s.counts?.edit ?? 0; $('ds-cmd').textContent = s.counts?.cmd ?? 0;
   $('ds-time').textContent = s.taskStart && s.status !== 'rest' ? fmtClock((nowMs() - s.taskStart) / 1000) : '–';

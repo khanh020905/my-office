@@ -40,4 +40,10 @@ export default {
     costAfter: 'Spending with no file edited for', mins: '{n} min',
     install: 'Run `node bin/cli.mjs install` once more so Claude Code checks with the office before each step.',
   },
+  // Settings → More: the prompt cache's clock (the cups on the desks)
+  cache: {
+    title: 'Prompt cache',
+    note: 'A cup of coffee on each resting desk: its steam fades as the session\'s prompt cache cools, gone once it is cold. Writing to the session while it is warm is cheap; once cold, the next message reads the whole conversation again.',
+    nudge: 'Tell my phone when a session waiting for my answer is 5 minutes from going cold',
+  },
 };

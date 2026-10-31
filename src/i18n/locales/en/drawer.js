@@ -1,6 +1,8 @@
 // The session drawer (ui/session-drawer.js): the conversation, steps, subagents and the session's actions.
 export default {
   tokens: '{used} / {max} tokens · {model}',
+  // the prompt cache's clock (src/shared/cache-clock.js), under the session's folder
+  cache: { warm: { one: 'Prompt cache still warm for ~{n} minute', other: 'Prompt cache still warm for ~{n} minutes' }, cold: 'Prompt cache gone cold: the next message re-reads ~{tokens} tokens', coldNoSize: 'Prompt cache gone cold', guessed: '(estimated)', title: 'While the cache is warm, writing to this session again is cheap. Once cold, the next message reads the whole conversation again.' },
   priceNote: 'Equivalent list API price (from the price table in azorkai/claude-code-office). On a Pro/Max plan this is not what you pay.',
   tabSubs: 'Subagents',
   tabSubsN: 'Subagents ({n})',

@@ -275,6 +275,14 @@ Then open <http://localhost:4310>.
   and logged.
 - **Each session** has a context bar and a waste bin that fills up with context. It also shows its cost at API prices:
   with a subscription, this is not your bill.
+- **The cache clock**: a cup of coffee on each resting desk whose steam fades as the session's prompt cache cools, gone
+  once it is cold. While it is warm, writing to the session again is cheap; once cold, the next message reads the whole
+  conversation again. The session's drawer says "Prompt cache still warm for ~23 minutes" or "gone cold: the next
+  message re-reads ~180k tokens", and so does the chat's **To** ("warm ~23 min · cheap to continue"), so you can answer
+  before it cools. It comes from the status line's `prompt_cache` (Claude Code 2.1.251 or later) and a resumed
+  session's `SessionStart`; without them it is a guess from the end of the last turn and the documented lifetime (an
+  hour on a subscription, five minutes on an API key), marked "(estimated)". Settings → More can tell your phone when
+  a session waiting for your answer is five minutes from going cold (off by default).
 
 ### Small things
 

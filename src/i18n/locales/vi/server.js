@@ -81,6 +81,10 @@ export default {
     resting: '{name} đang nghỉ rồi, không có gì để dừng.',
     gone: 'Phiên này đã đóng.',
   },
+  cache: {
+    nudgeTitle: '☕ {name} còn {n} phút là nguội',
+    nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',
+  },
   push: {
     permTitle: '⚠️ {name} cần bạn duyệt (trong 45 giây)',
     testTitle: '🔔 My Office',

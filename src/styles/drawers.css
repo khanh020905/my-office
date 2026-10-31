@@ -7,6 +7,9 @@
 .dr-title { min-width: 0; flex: 1; }
 .dr-title h2 { font-size: 1.15rem; font-weight: 700; margin: 0; line-height: 1.2; overflow-wrap: anywhere; }
 .dr-title p { margin: 3px 0 0; font: 500 .72rem/1.3 var(--mono); color: var(--muted); overflow-wrap: anywhere; }
+.dr-title .ds-cache { font-family: var(--font); color: #F2B544; cursor: help; }   /* the prompt cache's clock (ui/cache-words.js) */
+.dr-title .ds-cache::before { content: "☕ "; }
+.dr-title .ds-cache[data-state="cold"] { color: var(--muted); }
 .dr-dot { width: 12px; height: 12px; border-radius: 50%; flex: none; box-shadow: 0 0 0 4px rgba(255, 255, 255, .05); }
 .icon-btn { all: unset; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 9px; color: var(--muted); cursor: pointer; flex: none; }
 .icon-btn:hover { background: var(--card-2); color: var(--ink); }

@@ -85,6 +85,11 @@ export default {
     resting: '{name} is already resting: nothing to stop.',
     gone: 'This session has closed.',
   },
+  // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
+  cache: {
+    nudgeTitle: { one: '☕ {name} goes cold in {n} minute', other: '☕ {name} goes cold in {n} minutes' },
+    nudgeBody: 'It is waiting for your answer. Reply now and it carries on cheaply; once cold, the next message re-reads ~{tokens}k tokens.',
+  },
   push: {
     permTitle: '⚠️ {name} needs your approval (within 45 s)',
     testTitle: '🔔 My Office',

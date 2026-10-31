@@ -7,6 +7,7 @@ import { updateCat } from './cat.js';
 import { updateVac } from './vacuum.js';
 import { updateBins } from './bins.js';
 import { updateShredder } from './shredder.js';
+import { updateCups } from './cups.js';
 import { updateDevBoxes } from './dev-servers.js';
 import { fishFeed } from '../../interact/props.js';
 
@@ -39,4 +40,5 @@ export function updateExtras(dt, t) {
   updateVac(dt, t);
   updateBins(dt, t);
   updateShredder(dt);
+  updateCups(t);
 }

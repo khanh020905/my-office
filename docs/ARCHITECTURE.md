@@ -143,15 +143,16 @@ engine switches to demo mode and talks to no API.
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
 | `ui/activity.js` | 301 | The activity column and the session list. |
+| `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
 | `ui/chat-avatars.js` | 72 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 123 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
-| `ui/group-chat-view.js` | 768 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
+| `ui/group-chat-view.js` | 778 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
 | `ui/group-chat.js` | 176 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
-| `ui/lite.js` | 47 | List mode: the sessions as cards, no 3D. |
+| `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
 | `ui/look-switch.js` | 19 | Switching the character look. |
 | `ui/mac-drawer.js` | 673 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
@@ -160,7 +161,7 @@ engine switches to demo mode and talks to no API.
 | `ui/photo.js` | 138 | Photo mode: the office alone over the whole window, the camera free (any angle, closer or further, pan with the right button), then a PNG at the screen's size, Full HD or 4K. |
 | `ui/portraits.js` | 62 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
-| `ui/session-drawer.js` | 382 | The session drawer: chat, steps, subagents. |
+| `ui/session-drawer.js` | 384 | The session drawer: chat, steps, subagents. |
 | `ui/settings.js` | 122 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |
 | `ui/task-sheet.js` | 98 | "Giao việc": giving Claude work from the group chat (server/tasks.mjs runs it on the Mac). |
@@ -220,6 +221,7 @@ engine switches to demo mode and talks to no API.
 | `world/props/billiards.js` | 124 | The pool table (company floor), on the lounge's right side between the sofa and the arcade: a 7-foot table (green cloth with its spots, cushions, walnut rails inlaid with pearl diamonds, six leather pockets, turned legs), a rug under it, chalk on the rail, and a round cue stand by the arcade. |
 | `world/props/bins.js` | 41 | Context waste bins beside each desk. |
 | `world/props/cat.js` | 103 | The office cat. |
+| `world/props/cups.js` | 103 | A cup of coffee on each resting desk ("Đồng hồ bộ nhớ đệm"): its steam fades as the session's prompt cache cools (src/shared/cache-clock.js) and is gone once the cache is cold, when writing to the session again means it reads the whole conversation back. |
 | `world/props/dev-servers.js` | 85 | Mini servers for each running dev server, and forgotten ones. |
 | `world/props/game-tv.js` | 94 | The lounge TV (company floor): a 55" TV on a low walnut media unit against the back wall, facing the sofa, with a games console standing beside it, two controllers lying on top, a soundbar, a plant, and a glow on the wall behind it that takes the colour of the picture. |
 | `world/props/karaoke.js` | 109 | The karaoke box (company floor), where the front phone booth was, like the coin-op booths in Vietnamese malls: a soundproof cabin on a dark base, black frame, purple acoustic felt at the back and on the side toward the phone booth, glass toward the room so you can watch the singers, a lit KARAOKE band over the glass and over the door, an LED strip round the roof and the base. |
@@ -231,7 +233,7 @@ engine switches to demo mode and talks to no API.
 | `world/props/trinkets.js` | 69 | Desk trinkets and the seeded random used by props. |
 | `world/props/tv-games.js` | 951 | Video games on the lounge TV (world/props/game-tv.js; people/gaming.js plays them): football, a split-screen racer and a rooftop fighter, drawn as pixel art on a small 2D canvas and played by two players: people resting in the office, a computer player (game.ai) or you in first person. |
 | `world/props/tv.js` | 59 | The TV with live machine stats. |
-| `world/props/update.js` | 42 | Per-frame updates for the props. |
+| `world/props/update.js` | 44 | Per-frame updates for the props. |
 | `world/props/vacuum.js` | 33 | The robot vacuum. |
 | `world/room-update.js` | 176 | Room lights, particles, the rocket, the clock and day / night. |
 | `world/screens.js` | 100 | What each desk's screens show: the editor while it edits, a terminal for commands, a browser for the web, code with the match highlighted while it reads or searches, a chat while it thinks, a permission dialog while it waits for you, a screensaver while it naps. |

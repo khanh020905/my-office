@@ -89,6 +89,10 @@ export default {
   memberYou: 'Trưởng nhóm',
   giveWork: 'App ↗',
   to: {
+    cacheWarm: 'còn ấm ~{n} phút · nhắn tiếp rẻ',
+    cacheCold: 'đã nguội · nhắn tiếp sẽ đọc lại ~{tokens} token',
+    cacheColdNoSize: 'đã nguội · nhắn tiếp sẽ đọc lại từ đầu',
+    cacheWarmShort: '☕ còn ấm {n} phút', cacheColdShort: '☕ nguội · đọc lại ~{tokens}',
     newTitle: '＋ Mở phiên mới trong dự án',
     photoOnly: 'Xem ảnh này giúp em',
     newPill: 'Mới',

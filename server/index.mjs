@@ -29,6 +29,7 @@ import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
+import { cacheClock, cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
 import { pickLang, createT } from '../src/i18n/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -276,6 +277,7 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
   dayFirst: s.dayFirst || null,
   stuck: s.stuck || null,
+  cache: cacheOut(s),
   git: gitOf(s),
   usage: s.usage?.model ? { cost: Math.round(s.usage.cost * 100) / 100, ...liveCtx(s), model: s.usage.model, out: s.usage.out } : null });
 function gitOf(s) { const r = s.cwd && git.repoOf(s.cwd); return r ? { repo: r.name, branch: r.branch, dirty: r.dirty, ahead: r.ahead, ci: r.ci, ciName: r.ciName, ciUrl: r.ciUrl, born: r.born || null } : null; }
@@ -608,7 +610,7 @@ async function parkForPhone(s) {
 }
 const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
-  sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status })) });
+  sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status, cache: cacheOut(s) })) });
 
 /* ---------- the project folders sessions have worked in: where "Giao việc" may start a new conversation (a phone
    picks one of these, never a path of its own); the last 30, kept in data/projects.json ---------- */
@@ -791,9 +793,11 @@ async function onHook(p) {
   const mk = (type, label = '', extra = {}) => ({ id: ++seq, ts: now, sess: s.id, name: s.name, type, label, ...extra });
 
   switch (ev) {
-    case 'SessionStart':
+    case 'SessionStart': {
       e = mk('start', p.source || '');
+      const c = cacheFromResume(p, ttlGuess(), now); if (c) { s.cache = c; s.cacheExact = false; }   // (resumed: cold or not, from Claude Code; the status line takes over after its first answer)
       break;
+    }
     case 'SessionEnd':
       e = mk('end', p.reason || '');
       if (!s.fromFile) setTimeout(() => dropSession(s.key, s), 1500);
@@ -868,6 +872,8 @@ async function onHook(p) {
       setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
       s.inTool = false;
       s.status = 'rest'; s.doneAt = now;
+      if (!s.cacheExact) s.cache = cacheGuess(now, s.live?.ctx ?? s.usage?.ctx, ttlGuess());   // (no prompt_cache from the status line: the documented lifetime from now)
+      s.askedYou = /\?\W{0,4}$/.test(String(p.last_assistant_message || '').trim().slice(-400));   // (it ended its turn asking you something: the nudge below)
       trackBackground(s, p);
       s.lastReply = clip(redact(oneLine(typeof p.last_assistant_message === 'string' ? p.last_assistant_message : await lastReplyOf(s))), 240);
       e = mk('stop', clip(s.lastReply, 90));
@@ -1300,8 +1306,35 @@ function onStatus(p) {
     const cw = p.context_window || {}, size = numOr(cw.context_window_size), pctUsed = numOr(cw.used_percentage);
     s.live = { at: statusAt, ctxMax: size, ctx: size && pctUsed != null ? Math.round((size * pctUsed) / 100) : null, cost: numOr(p.cost?.total_cost_usd) };
     onLoop(s, loops.onStatus(p.session_id, p.cost, s.status !== 'rest'));
+    const c = p.prompt_cache && cacheFromStatus(p.prompt_cache, s.live.ctx);
+    if (c) {
+      const was = s.cache; s.cache = c; s.cacheExact = true;
+      // (at work the session's events carry it; resting, only a change worth redrawing: it went cold, or a new clock)
+      if (s.status !== 'work' && (!was || (was.until > 0) !== (c.until > 0) || Math.abs(was.until - c.until) > 60e3 || was.tokens !== c.tokens)) broadcast({ k: 'sess', s: pub(s) });
+    }
   }
 }
+
+/* ---------- the prompt cache's clock ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js) ----------
+   Per session: until when its cache stays warm and what the next message re-reads once it is cold, from the status
+   line (prompt_cache), a resumed session's SessionStart, or, with neither, guessed from the end of its last turn and the
+   documented lifetime: an hour on a subscription (the plan's limits are known), five minutes otherwise. Optionally (off
+   unless you turn it on: Settings → More) a phone is told when a session waiting for your answer is about to go cold. */
+const ttlGuess = () => (planLimits?.windows?.length ? '1h' : '5m');
+const cacheOut = (s) => (s.cache ? { until: s.cache.until, ttl: s.cache.ttl, tokens: s.cache.tokens, guessed: !!s.cache.guessed } : null);
+const NUDGE_MS = 5 * 60e3;
+setInterval(() => {
+  if (!prefs.get('cacheNudge') || !push.count()) return;
+  const now = Date.now();
+  for (const s of sessions.values()) {
+    const k = cacheClock(s.cache, now);
+    // waiting for you: a question it ended its turn with, or one it holds open (a question, an approval)
+    const waits = s.status === 'wait' || (s.status === 'rest' && s.askedYou);
+    if (k.state !== 'warm' || k.left > NUDGE_MS || !waits || s.nudged === s.cache.until) continue;
+    s.nudged = s.cache.until;
+    pushOut({ title: tr('server.cache.nudgeTitle', { name: s.title || s.name, n: Math.max(1, Math.round(k.left / 60e3)) }), body: tr('server.cache.nudgeBody', { tokens: num(Math.round(k.tokens / 1000)) }), tag: `cache-${s.id}`, url: '/?chat' });
+  }
+}, 30_000).unref();
 
 /* ---------- plan usage read from Anthropic, the way the IDE's Usage panel does (allowed by the user, 27/10/2026) ----------
    Claude Code's own login is read from the macOS Keychain each time (never stored, logged or sent anywhere else), then
@@ -2193,6 +2226,15 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/cache') {   // the "about to go cold" notification: { nudge } (this computer only)
+    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      prefs.set('cacheNudge', b?.nudge ? true : undefined);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} cache nudge ${b?.nudge ? 'on' : 'off'}\n`).catch(() => {});
+      json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/prefs') {
     const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
@@ -2224,6 +2266,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
+  if (url.pathname === '/api/cache') { json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') }); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
   if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: someone goes to Thế Giới Di Động, outings.js)
