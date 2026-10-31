@@ -128,6 +128,8 @@ export default {
     tea: { go: ['Ra {shop} làm ly trà sữa đây 🧋', 'Đi {shop} chút, ai uống gì không 🧋'], got: ['Trà sữa đây, làm tiếp thôi 🧋', 'Có ly {shop} rồi, về thôi 🧋'] },
     checkin: { go: ['Ra {shop} check-in chút 📸', 'Đi {shop} sống ảo đây 📸'], got: ['Chụp xong rồi, đẹp lắm 📸', 'Xếp hàng mệt nghỉ, mà đáng 🧋'] },
     headache: { go: ['Nhức đầu quá, ra {shop} mua thuốc 😵', 'Đi {shop} mua vỉ thuốc đau đầu 💊'], got: ['Mua thuốc rồi, uống xong làm tiếp 💊', 'Dược sĩ dặn nghỉ ngơi xíu 😅'] },
+    cong: { go: ['Ra Cộng làm ly cốt dừa đây 🥥', 'Đi Cộng chút, ai uống gì không ☕'], got: ['Cốt dừa cà phê đây, mát lạnh 🥥', 'Có ly Cộng rồi, về làm tiếp ☕'] },
+    congWeekend: { go: ['Cuối tuần phải có ly Cộng mới làm nổi ☕', 'Ra Cộng mua ly cốt dừa đã 🥥'], got: ['Cốt dừa cà phê, cuối tuần vậy là đủ 🥥', 'Có ly Cộng rồi, làm tiếp thôi ☕'] },
     go: {
       cup: ['Xuống {shop} mua chai nước chút 🥤', 'Ra {shop} mua ly trà đào 🥤', 'Qua {shop} xíu, ai mua gì không? 🛒'],
       noodle: ['Xuống {shop} làm ly mì cho ấm bụng 🍜', 'Đói rồi, ra {shop} úp ly mì đây 🍜'],

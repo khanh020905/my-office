@@ -85,13 +85,13 @@ function toOffice(now = false) {
 const vnd = (k) => `${(k * 1000).toLocaleString('vi-VN')}đ`;
 const itemName = (it) => tr(`fp.items.${it.id}`);
 function shopLabel(o) {
-  if (o.kind === 'seat') return tr('fp.sit');
+  if (o.kind === 'seat') return tr(o.label || 'fp.sit');   // (a shop's own words for its seat: Cộng's low stool)
   if (o.kind !== 'pay') return tr('fp.take', { item: itemName(o.item), price: vnd(o.item.price) });
   if (fp.basket.length) return tr('fp.pay', { n: fp.basket.length, total: vnd(fp.basket.reduce((a, it) => a + it.price, 0)) });
   return o.item ? tr('fp.order', { item: itemName(o.item), price: vnd(o.item.price) }) : tr('fp.payEmpty');
 }
 function shopAct(o) {
-  if (o.kind === 'seat') { fp.seat = o.seatAt; fp.pos.set(o.seatAt.x, o.seatAt.z); fp.yaw = o.seatAt.yaw; fp.pitch = -0.05; toast(tr('fp.sitDone')); return; }
+  if (o.kind === 'seat') { fp.seat = o.seatAt; fp.pos.set(o.seatAt.x, o.seatAt.z); fp.yaw = o.seatAt.yaw; fp.pitch = -0.05; toast(tr(o.done || 'fp.sitDone')); return; }
   if (o.kind !== 'pay' || (!fp.basket.length && o.item)) { fp.basket.push(o.item); toast(tr('fp.added', { item: itemName(o.item) })); sfx.play('pop'); return; }
   if (!fp.basket.length) { toast(tr('fp.emptyBasket')); return; }
   const total = fp.basket.reduce((a, it) => a + it.price, 0), last = fp.basket[fp.basket.length - 1];
