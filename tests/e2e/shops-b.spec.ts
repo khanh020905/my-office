@@ -3,8 +3,8 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { DATA_DIR } from '../../playwright.config';
 
-// The fronts too far off to walk into, painted (world/backdrops/shops.js, WALK_INS): no door, and you cannot get in.
-// SHOTS_DIR: where the pictures go.
+// Katinat on the street (world/backdrops/shop-katinat.js): walking in and buying; and the fronts too far off to walk
+// into, painted (shops.js, WALK_INS). SHOTS_DIR: where the pictures go.
 const SHOTS = process.env.SHOTS_DIR || path.join(DATA_DIR, '..');
 type Door = { key: string, x: number, z: number, face: number };
 type Front = Door & { room: boolean, far: boolean };
@@ -42,6 +42,40 @@ async function shot(page: Page, name: string) {
   await page.screenshot({ path: path.join(SHOTS, name) });
   await tag.evaluate((n) => (n as Element).remove());
 }
+async function walkIn(page: Page, at: (lx: number, lz: number) => Promise<void>, greeting: RegExp) {
+  await at(0, 1.6);
+  await page.keyboard.down('KeyW');
+  await expect.poll(() => page.evaluate(() => !!(window as unknown as Win).__office!.street!.shop.inside()), { timeout: 20_000 }).toBe(true);
+  await page.keyboard.up('KeyW');
+  await expect(page.locator('.shop-say', { hasText: greeting }).first()).toBeVisible({ timeout: 5_000 });
+}
+// at a spot by the counter: what it offers, taken, then paid there
+async function buy(page: Page, at: (lx: number, lz: number) => Promise<void>, x: number, what: RegExp, shop: RegExp) {
+  await at(x, -1.15);
+  await expect(page.locator('#fp-near')).toHaveText(what, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('#fp-near')).toHaveText(/1 item/i, { timeout: 5_000 });
+  await page.keyboard.press('KeyE');
+  await expect(page.locator('.toast').last()).toHaveText(shop, { timeout: 5_000 });
+}
+
+test('Katinat: the navy sign, the evening queue, a roasted oolong ordered at the counter and paid', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = watchErrors(page);
+  await onTheStreet(page, '18:30');
+  const at = atFront(page, { key: 'katinat' });
+  await at(0, 6.5); await page.waitForTimeout(2000);
+  await shot(page, 'katinat-front.png');
+  await at(0, 4.6); await page.waitForTimeout(800);
+  await shot(page, 'katinat-sign-close.png');
+  await walkIn(page, at, /Katinat/);
+  await at(1.0, -0.3); await page.waitForTimeout(800);
+  await shot(page, 'katinat-inside.png');
+  await at(-1.2, -0.95); await page.waitForTimeout(800);   // (the navy wall with the name, where the pictures are taken)
+  await shot(page, 'katinat-wall.png');
+  await buy(page, at, 0.9, /roasted oolong/i, /Katinat/);
+  expect(errors).toEqual([]);
+});
 
 test('the fronts too far off to walk into: painted, no door, and you cannot get in', async ({ page }) => {
   test.setTimeout(150_000);

@@ -133,6 +133,8 @@ export default {
     coffee: { go: ['Off to {shop} to wake up ☕', 'Popping to {shop}, anyone want anything? ☕'], got: ['A cold matcha freeze 🍵', 'Got my {shop}, back to it ☕'] },
     upgrade: { go: ['Claude Code is on {version}: off to {shop} to level up 📱', 'Time to level up 📱'], got: ['Levelled up, back to work 📱', 'Got a charging cable while I was there 🔌'] },
     treat: { go: ['Off to Mixue, ice cream for everyone 🍦', 'Getting Mixue for the whole team 🍦'], got: ['Ice cream’s here, come and get it 🍦', 'Mixue for everyone, eat it before it melts 🍦'] },
+    tea: { go: ['Off to {shop} for a milk tea 🧋', 'Popping to {shop}, want anything? 🧋'], got: ['Milk tea, back to work 🧋', 'Got my {shop}, heading back 🧋'] },
+    checkin: { go: ['Off to {shop} for the photo 📸', 'Going to {shop}, picture time 📸'], got: ['Got the shot 📸', 'That queue, but worth it 🧋'] },
     go: {
       cup: ['Popping down to {shop} for a drink 🥤', 'Off to {shop} for a peach tea 🥤', 'Running to {shop}, want anything? 🛒'],
       noodle: ['Getting cup noodles at {shop} 🍜', "Hungry, I'll make a cup of noodles at {shop} 🍜"],
