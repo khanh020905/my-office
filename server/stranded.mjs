@@ -19,7 +19,7 @@ function git(args, cwd, timeout = 5000) {
   return new Promise((resolve) => execFile('git', args, { cwd, timeout, maxBuffer: 8 << 20, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', LC_ALL: 'C' } },
     (err, out, errOut) => resolve(err ? { ok: false, out: String(out || ''), err: String(errOut || err.message || '') } : { ok: true, out: String(out) })));
 }
-const real = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
+const real = (p) => { try { return fs.realpathSync.native(p); } catch { return path.resolve(p); } };   // (native: Windows' long names, not RUNNER~1)
 export const idOf = (p) => crypto.createHash('sha1').update(p).digest('hex').slice(0, 12);
 // git writes paths with / on Windows too (D:/a/b): this computer's own form, so they compare with the session folders
 const ours = (list) => list.map((w) => ({ ...w, path: w.path && path.resolve(w.path) }));
@@ -112,7 +112,8 @@ export function createStranded({ dirs, inUse = () => false, home = os.homedir(),
   const byId = new Map();   // id -> the worktree as read (with its repository: { root, common, remotes, mainHead })
   const sizes = new Map();   // path -> { at, bytes } (du, at most every 15 minutes)
   let sizing = null;
-  const tilde = (p) => (p && inside(p, home) ? '~' + p.slice(home.length).split(path.sep).join('/') : p);   // (shown with /, on Windows too)
+  const homeReal = real(home);
+  const tilde = (p) => { const h = p && inside(p, home) ? home : p && inside(p, homeReal) ? homeReal : null; return h ? '~' + p.slice(h.length).split(path.sep).join('/') : p; };   // (shown with /, on Windows too)
 
   // every repository behind the folders: its common git directory, read from inside any of its worktrees
   async function repos() {

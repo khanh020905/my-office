@@ -69,7 +69,7 @@ test('the safety rule: only a clean, pushed, linked worktree nobody works in may
 /* ---------- real repositories: an "origin", a clone with worktrees in every state, and a repository with no remote ---------- */
 const G = (cwd, ...args) => execFileSync('git', ['-c', 'user.email=e2e@example.com', '-c', 'user.name=e2e', '-c', 'commit.gpgsign=false', '-c', 'core.hooksPath=/dev/null', ...args], { cwd, stdio: 'pipe' }).toString();
 function setup() {
-  const top = fs.realpathSync(fs.mkdtempSync(path.join(os.tmpdir(), 'office-stranded-')));
+  const top = fs.realpathSync.native(fs.mkdtempSync(path.join(os.tmpdir(), 'office-stranded-')));   // (native: Windows' long names, as git writes them, not RUNNER~1)
   const origin = path.join(top, 'origin.git'), repo = path.join(top, 'app'), wt = (n) => path.join(top, n);
   fs.mkdirSync(origin); G(origin, 'init', '-q', '--bare', '-b', 'main');
   G(top, 'clone', '-q', origin, repo);
