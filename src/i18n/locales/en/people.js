@@ -6,6 +6,8 @@ export default {
   // the small badge on a boss's name tag
   team: { one: '{n} subagent', other: '{n} subagents' },
   needsApproval: 'Needs approval',
+  stuck: 'stuck',
+  stuckSay: 'Going round in circles…',
   // a subagent arrives at its boss, then reports back
   subOnIt: 'On it: {task}',
   subThinking: 'Working out a plan',

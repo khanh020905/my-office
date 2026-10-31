@@ -65,6 +65,13 @@
 .wx-chips button[aria-pressed="true"] { color: var(--ink); border-color: var(--accent-line); background: var(--accent-soft); }
 .wx-chips button:focus-visible { outline: 2px solid var(--accent); }
 
+/* Settings → More: the stuck-loop breaker */
+.st-loop-row { display: grid; gap: 4px; margin-top: 8px; font-size: .72rem; color: var(--muted); }
+.st-loop-row .seg { margin: 0; padding: 3px; }
+.st-loop-row .seg button { height: 28px; font-size: .72rem; }
+.st-loop-row .seg button:disabled { opacity: .45; cursor: default; }
+.st-loop-install { color: var(--amber); }
+
 @media (max-width: 720px) {
   .pop-settings { top: 58px; left: 10px; right: 10px; width: auto; }
   .st-cards--4 { grid-template-columns: repeat(2, minmax(0, 1fr)); }

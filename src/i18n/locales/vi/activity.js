@@ -20,6 +20,7 @@ export default {
     justDone: 'Vừa xong việc',
     resting: 'Đang nghỉ · {time}',
     working: 'Đang làm',
+    stuck: { repeat: 'Kẹt: “{label}” lỗi mãi', compact: 'Kẹt: nén bộ nhớ liên tục', cost: 'Tiêu tiền mà chưa sửa gì' },
   },
   group: {
     wait: 'Cần bạn duyệt',

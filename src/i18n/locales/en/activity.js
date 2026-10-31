@@ -21,6 +21,7 @@ export default {
     justDone: 'Just finished',
     resting: 'Resting · {time}',
     working: 'Working',
+    stuck: { repeat: 'Stuck: “{label}” keeps failing', compact: 'Stuck: compacting again and again', cost: 'Spending with nothing edited' },
   },
   // the session list's groups
   group: {

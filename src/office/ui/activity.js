@@ -103,6 +103,7 @@ function ago(ts) {
 }
 export function doingOf(s) {
   if (s.status === 'wait') return { ic: 'alert', text: tr('activity.doing.wait') };
+  if (s.stuck && s.status !== 'rest') return { ic: 'alert', text: tr(`activity.doing.stuck.${s.stuck.kind}`, { label: s.stuck.label.length > 40 ? `${s.stuck.label.slice(0, 39)}…` : s.stuck.label }), stuck: true };
   const where = whereabouts(workers.get(s.id));   // out of the office: at the shop, on the way home…
   if (where) return where;
   if (s.status === 'rest' && s.bg?.length) return { ic: 'terminal', text: `${tr('activity.doing.bg', { desc: s.bg[0].desc })}${s.bg.length > 1 ? ` (+${s.bg.length - 1})` : ''}` };
@@ -175,7 +176,7 @@ function renderRail() {
     let r = railRows.get(s.id);
     if (!r) { r = railRow(s); railRows.set(s.id, r); }
     const color = colorOf(s), cur = String(s.id === state.selectedId);
-    r.b.dataset.status = s.status; r.b.dataset.done = unseenDone.has(s.id) ? '1' : ''; r.b.setAttribute('aria-current', cur); r.av.style.setProperty('--c', color);
+    r.b.dataset.status = s.status; r.b.dataset.stuck = s.stuck && s.status !== 'rest' ? '1' : ''; r.b.dataset.done = unseenDone.has(s.id) ? '1' : ''; r.b.setAttribute('aria-current', cur); r.av.style.setProperty('--c', color);
     { const k = agentOf(s); if (r.avTxt.firstChild?.dataset?.agent !== k) { r.avTxt.replaceChildren(agentMark(k)); r.av.title = AGENT_NAME[k]; } }
     const nk = dn(s) + '|' + (s.dir || '') + '|' + (s.origin || '') + (s.link ? '|rc' : '');
     if (r.nameKey !== nk) {

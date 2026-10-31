@@ -35,6 +35,10 @@ const PERM_CMD = hookCmd('/hook/permission', true);
 // Claude's questions (AskUserQuestion) and plans (ExitPlanMode) are answered through PreToolUse, the documented way.
 const ASK_CMD = hookCmd('/hook/question', true);
 const ASK_MATCHER = 'AskUserQuestion|ExitPlanMode';
+// Before each step, a quick word with the office (server/loops.mjs): a call that keeps failing the same way is blocked.
+// 0.3 s at most, and nothing printed when the office is down or slow: the call goes ahead as if there were no hook.
+const LOOP_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/loop --fast`
+  : `curl -s -m 0.3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}/hook/loop || true`;
 // The status line feeds the plan's 5-hour / 7-day usage; an existing status line keeps running through ours.
 const STATUS_SCRIPT = path.join(ROOT, 'hooks', 'status-line.mjs'), STATUS_PREV = path.join(ROOT, 'data', 'statusline-prev.json');
 const STATUS_CMD = WIN ? `"${fwd(process.execPath)}" "${fwd(STATUS_SCRIPT)}"` : `"${process.execPath}" "${STATUS_SCRIPT}"`;
@@ -72,6 +76,7 @@ async function install() {
   if (!args.includes('--no-approve') && !perm.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/permission')))) { perm.push({ hooks: [{ type: 'command', command: PERM_CMD, timeout: 55 }] }); added++; }
   const pre = (cfg.hooks.PreToolUse ||= []);
   if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
+  if (!args.includes('--no-loop-guard') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')))) { pre.push({ hooks: [{ type: 'command', command: LOOP_CMD, timeout: 2 }] }); added++; }
   if (!args.includes('--no-status') && !oursStatus(cfg.statusLine)) {
     if (cfg.statusLine?.command) { await fsp.mkdir(path.dirname(STATUS_PREV), { recursive: true }); await fsp.writeFile(STATUS_PREV, JSON.stringify(cfg.statusLine)); ok(tr('cli.install.statusKept')); }
     cfg.statusLine = { type: 'command', command: STATUS_CMD, ...(cfg.statusLine?.padding != null ? { padding: cfg.statusLine.padding } : {}) };
@@ -136,6 +141,8 @@ async function doctor() {
   perm ? ok(tr('cli.doctor.perm')) : warn(tr('cli.doctor.noPerm'));
   const ask = (cfg.hooks?.PreToolUse || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')));
   ask ? ok(tr('cli.doctor.ask')) : warn(tr('cli.doctor.noAsk'));
+  const loop = (cfg.hooks?.PreToolUse || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')));
+  loop ? ok(tr('cli.doctor.loop')) : warn(tr('cli.doctor.noLoop'));
   oursStatus(cfg.statusLine) ? ok(tr('cli.doctor.status')) : warn(tr('cli.doctor.noStatus'));
   if (info) {
     if (!info.lastEventAt) warn(tr('cli.doctor.noEvents'));

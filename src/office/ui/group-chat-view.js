@@ -17,6 +17,7 @@ import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { toast } from './activity.js';
+import { loopCard, loopPeek } from './stuck.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
@@ -127,6 +128,7 @@ function content(m) {
     const box = el('span', 'zc-photo'), img = el('img'); img.src = m.photo; img.alt = tr('chat.photo'); box.append(img, el('span', 'zc-ptime', fmtTime(m.at))); return box;
   }
   if (m.kind === 'work') return workCard(m);
+  if (m.kind === 'loop') return loopCard(m, redrawOne);   // (a session stuck in a loop: ui/stuck.js)
   if (bigEmoji(m.text)) return el('span', 'zc-bigemo', m.text);
   const t = el('span', 'zc-text');
   // @names in blue, the way the app shows a mention: the whole name of someone in the group (names have spaces), else one word
@@ -342,7 +344,7 @@ function peek(m) {
   if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn()) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
   if (m.kind === 'work') return;   // (a card at work: its answer is the news)
-  const txt = m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
+  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
   const box = el('span', 'zc-peek-t'); box.append(el('b', null, tr('chat.group')), el('span', null, `${m.name}: ${txt}`));
   p.replaceChildren(groupAvatar(44), box);
   p.hidden = false; p.classList.remove('is-out'); clearTimeout(peekTimer);

@@ -14,7 +14,7 @@
 const MAX = 300, PHOTOS = 6, KEYS = 600;
 export const REACTIONS = ['❤️', '👍', '😆', '😮', '😭', '😡'];
 const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant', claude: '__claude' };
-const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work']);   // (work: Claude at work on what you sent it, a live card)
+const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work', 'loop']);   // (work: Claude at work on what you sent it, a live card; loop: a session stuck in a loop, server/loops.mjs)
 const short = (s, n = 60) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const rand = (a, b) => a + Math.random() * (b - a);
 const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
@@ -92,6 +92,11 @@ export function createChatEngine(ctx) {
    *  'work' | 'wait' | 'done' | 'fail', steps (the latest lines), n (how many), at, end, ask (the approval it waits for) } */
   function workCard(from, work) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'work', text: '', work }); }
   function setWork(id, work) { const m = byId(id); if (!m || m.kind !== 'work') return; m.work = { ...m.work, ...work }; update(m); }
+  /** A session stuck in a loop (server/loops.mjs): what repeats, then what you did about it. loop: { kind 'repeat' |
+   *  'compact' | 'cost', label, n, blocked, usd, mins, state 'on' | 'stopping' | 'stopped' | 'over', hint 'sent' | 'got' |
+   *  'lost' | null, sess (its session), task (a run from the office) } */
+  function loopCard(from, loop) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'loop', text: '', loop }); }
+  function setLoop(id, loop) { const m = byId(id); if (!m || m.kind !== 'loop') return; m.loop = { ...m.loop, ...loop }; update(m); }
   /** Someone "typing" for as long as they work on what you asked them (Claude on a message sent to its conversation). */
   function working(from, on) { const p = who(from); if (!p) return; if (on) busy.set(p.key, p.name); else busy.delete(p.key); tick(); }
   /** A reaction ('me' for you); the same emoji again takes it back. */
@@ -214,5 +219,5 @@ export function createChatEngine(ctx) {
     for (const m of st.msgs) if (m.kind === 'remind' && !m.remind.done && m.remind.at <= ctx.now()) { m.remind.done = true; update(m); system(tr('chat.sys.remindNow', { title: m.remind.title })); }
   }
 
-  return { state: st, who, byId, say, system, send, working, workCard, setWork, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
+  return { state: st, who, byId, say, system, send, working, workCard, setWork, loopCard, setLoop, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
 }

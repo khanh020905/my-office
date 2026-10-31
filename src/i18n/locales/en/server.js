@@ -76,6 +76,15 @@ export default {
     full: 'The board already has {n} tasks. Remove some finished ones, then add more.',
     gone: 'This task is no longer on the board.',
   },
+  // a session going round in circles (server/loops.mjs): what Claude reads, and the notification's title
+  loop: {
+    deny: 'My Office blocked this call: it has already run {n} times and failed with the same error each time, so running it again unchanged will fail the same way. Try a different approach, or stop and ask the user.',
+    stopReason: 'Stopped from My Office by the user.',
+    hintFor: 'A hint from the user, sent from My Office: {hint}',
+    pushTitle: '⛔ {name} looks stuck',
+    resting: '{name} is already resting: nothing to stop.',
+    gone: 'This session has closed.',
+  },
   push: {
     permTitle: '⚠️ {name} needs your approval (within 45 s)',
     testTitle: '🔔 My Office',

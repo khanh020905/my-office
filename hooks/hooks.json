@@ -56,6 +56,15 @@
             "timeout": 55
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "curl -s -m 0.3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/loop || true",
+            "timeout": 2
+          }
+        ]
       }
     ],
     "PostToolUse": [
