@@ -3,9 +3,10 @@ import path from 'node:path';
 import { test, expect, type Page } from '@playwright/test';
 import { DATA_DIR } from '../../playwright.config';
 
-// Katinat and Phúc Long on the street (world/backdrops/shop-katinat.js, shop-phuclong.js): walking in and buying at
-// each; the fronts too far off to walk into, painted (shops.js, WALK_INS); and the afternoon trà sữa at Phúc Long
-// (people/outings.js). SHOTS_DIR: where the pictures go.
+// Katinat, Phúc Long and Long Châu on the street (world/backdrops/shop-katinat.js, shop-phuclong.js, shop-longchau.js):
+// walking in and buying at each; the fronts too far off to walk into, painted (shops.js, WALK_INS); and what sends
+// someone out to them (people/outings.js): the afternoon trà sữa at Phúc Long, and the work failing again and again
+// (something for the headache from Long Châu). SHOTS_DIR: where the pictures go.
 const SHOTS = process.env.SHOTS_DIR || path.join(DATA_DIR, '..');
 type Door = { key: string, x: number, z: number, face: number };
 type Front = Door & { room: boolean, far: boolean };
@@ -94,6 +95,22 @@ test('Phúc Long: the green sign and its crest, a peach tea at the counter', asy
   expect(errors).toEqual([]);
 });
 
+test('Long Châu: the blue sign, the pharmacists in white, a strip of Panadol from the counter', async ({ page }) => {
+  test.setTimeout(180_000);
+  const errors = watchErrors(page);
+  await onTheStreet(page, '10:00');
+  const at = atFront(page, { key: 'longchau' });
+  await at(0, 6.5); await page.waitForTimeout(2000);
+  await shot(page, 'longchau-front.png');
+  await at(0, 4.6); await page.waitForTimeout(800);
+  await shot(page, 'longchau-sign-close.png');
+  await walkIn(page, at, /Long Châu/);
+  await at(0.6, -0.3); await page.waitForTimeout(800);
+  await shot(page, 'longchau-inside.png');
+  await buy(page, at, 0.9, /Panadol/i, /Long Châu/);
+  expect(errors).toEqual([]);
+});
+
 test('the fronts too far off to walk into: painted, no door, and you cannot get in', async ({ page }) => {
   test.setTimeout(150_000);
   const errors = watchErrors(page);
@@ -124,6 +141,30 @@ async function resting(page: Page, time: string) {
   await page.waitForFunction(() => (window as unknown as Win).__office?.street, null, { timeout: 30_000 });
   await page.evaluate(() => { const o = (window as unknown as Win).__office!; o.pauseDemo(); for (const s of o.sessions.values()) o.upsert({ ...s, status: 'rest', bg: [], subs: [] }); o.speed(6); });
 }
+
+test('the work failing again and again: the office goes red, and someone resting goes down to Long Châu for the headache', async ({ page }) => {
+  test.setTimeout(560_000);
+  const errors = watchErrors(page);
+  await resting(page, '14:00');
+  await expect(page.locator('#incident')).toBeHidden({ timeout: 120_000 });   // (the demo's own incident at the start, over)
+  // as soon as nobody is out and two are napping at their desks: one session back at work fails three times in a row
+  // (incidents.js), in the same breath, so no other trip can start in between
+  await expect.poll(() => page.evaluate(() => {
+    const o = (window as unknown as Win).__office!;
+    if (o.outing || [...o.workers.values()].filter((w) => w.anim === 'sleep' && w.station === 'desk').length < 2) return false;
+    const all = [...o.sessions.values()], s = { ...(all.find((x) => o.workers.get(x.id)?.anim !== 'sleep') || all[0]), status: 'work' };
+    o.upsert(s);
+    for (let k = 0; k < 3; k++) o.emit({ k: 'ev', s, e: { type: 'fail', sess: s.id, text: 'npm test: 3 failed' } });
+    return true;
+  }), { timeout: 240_000, intervals: [1000] }).toBe(true);
+  await expect(page.locator('#incident')).toBeVisible({ timeout: 10_000 });
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.outing?.shop || ''), { timeout: 20_000 }).toBe('Long Châu');
+  const trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
+  expect(trip?.item).toBe('grocery');
+  // there, in through the door to the counter (it is the 6th front out: a room, not a painted one)
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.outing?.stage || ''), { timeout: 180_000, intervals: [1000] }).toMatch(/in|back/);
+  expect(errors).toEqual([]);
+});
 
 test('the afternoon trà sữa: someone resting goes to Phúc Long', async ({ page }) => {
   test.setTimeout(120_000);

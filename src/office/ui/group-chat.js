@@ -99,9 +99,9 @@ export function chatMoved(names, to) { if (!engine) return; for (const s of sess
 /* ---------- life in the office (called from the modules where it happens) ---------- */
 const life = (key, vars) => tr(`chat.life.${key}`, vars);
 const lastLife = new Map();
-/** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, tgdd, mixue, phuclong, katinat),
- *  altar, trophy, bye (v: id, name, shop, names, photo, why, every). The morning hello, the lunch poll and the
- *  reminders come by the clock, from the engine. */
+/** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, tgdd, mixue, phuclong,
+ *  katinat, longchau), altar, trophy, bye (v: id, name, shop, names, photo, why, every). The morning hello, the lunch
+ *  poll and the reminders come by the clock, from the engine. */
 export function chatLife(kind, v = {}) {
   const every = v.every ?? 20 * 60e3, now = Date.now(), lk = `${kind}:${v.id || ''}`;
   if (replay.on || (lastLife.get(lk) || 0) > now) return;
@@ -123,6 +123,7 @@ export function chatLife(kind, v = {}) {
     case 'mixue': if (v.id) chatSay(v.id, life(v.why === 'treat' ? 'mixueTreat' : 'mixueHot', { temp: v.temp }), { key, react: ['❤️', '😆'], reacts: 3, answer: [{ key: 'mixueAsk', chance: 0.9 }, { key: 'mixueAsk', chance: 0.5 }] }); break;
     case 'phuclong': if (v.id) chatSay(v.id, life('phuclongTea'), { key, react: ['❤️', '👍'], reacts: 2, answer: [{ key: 'phuclongAsk', chance: 0.8 }, { key: 'phuclongAsk', chance: 0.4 }] }); break;
     case 'katinat': if (v.id) chatSay(v.id, life(v.why === 'checkin' ? 'katinatCheckin' : 'katinatTea'), { key, react: ['❤️', '😆', '😮'], reacts: 4, answer: [{ key: 'katinatAsk', chance: 0.9 }, { key: 'katinatAsk', chance: 0.5 }] }); break;
+    case 'longchau': if (v.id) chatSay(v.id, life('longchauHeadache'), { key, react: ['😭', '❤️'], reacts: 3, answer: [{ key: 'longchauAsk', chance: 0.8 }] }); break;
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;
     case 'bye': if (v.id) chatSay(v.id, tr('chat.work.bye'), { key, answer: [{ key: 'bye', chance: 0.6 }] }); break;

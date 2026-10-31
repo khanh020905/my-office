@@ -182,6 +182,7 @@ export default {
     mixueAsk: ['A cone for me please 🍦', 'Bubble milk tea for me 🧋', 'A fresh lemonade for me 🍋', 'Strawberry Super Sundae please 😋', 'Peach tea for me 🍑'],
     phuclongAsk: ['A Phúc Long milk tea for me please 🧋', 'Peach tea, light ice 🍑', 'A black milk tea for me', 'Lychee jasmine tea please 🌸'],
     katinatAsk: ['A roasted oolong for me, take a picture 📸', 'Avocado with young coconut please 🥑🥥', 'Isn’t the queue huge? 😆', 'Roasted oolong with black pearls for me 🧋'],
+    longchauAsk: ['Get me a strip of Panadol too 😭', 'Grab some vitamin C fizz for everyone', 'Take something and rest a bit, I’ll keep fixing', 'Ask the pharmacist for one that won’t make you sleepy'],
     parcelGot: ['Got it, thanks 🥰', 'Coming down'],
   },
   life: {
@@ -204,6 +205,7 @@ export default {
     phuclongTea: ['Afternoon: off to Phúc Long for a milk tea, anyone? 🧋', 'Free for a bit: a Phúc Long peach tea to wake up 🍑', 'Done for now: Phúc Long, anyone ordering? 🧋'],
     katinatTea: ['Afternoon: off to Katinat for a roasted oolong, anyone? 🧋', 'Popping to Katinat, want anything? 🧋'],
     katinatCheckin: ['Weekend! Off to Katinat for the drink and the photo 📸', 'Going to Katinat, the queue will be half an hour 😆 anyone want anything', 'Katinat is packed tonight, I’m going for the picture 📸'],
+    longchauHeadache: ['So many failures, my head hurts: off to Long Châu for some painkillers 😵', 'The whole room’s red 😭 getting a strip of Panadol at Long Châu first', 'Tests failing again and again, a real headache: popping to Long Châu 💊'],
     cleaner: ['Mopping now, walk slowly or you’ll slip 🧽'],
     altar: ['Full moon today, the offering’s done 🙏', 'First of the lunar month, good fortune to us all 🙏'],
     trophy: '🏆 We just reached “{name}”! Well done everyone 🎉',

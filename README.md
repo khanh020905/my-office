@@ -392,6 +392,7 @@ request.
 | The Thế Giới Di Động shop | drawn and modelled in code (`shop-tgdd.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Katinat shop | drawn and modelled in code (`shop-katinat.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Phúc Long shop | drawn and modelled in code (`shop-phuclong.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
+| The Long Châu pharmacy | drawn and modelled in code (`shop-longchau.js`): no artwork of the chain's | the names (Long Châu, FPT Retail) are their owner's trademarks, not affiliated |
 | Weather | [Open-Meteo](https://open-meteo.com) | |
 
 ## Licence

@@ -8,11 +8,11 @@
 // ice cream at Ministop, an auntie with her shopping at WinMart+ after work. Real opening hours: the 24-hour chains stay
 // lit all night, WinMart+ and Bách Hóa Xanh roll their shutters down at closing time. The signs carry the chains' real
 // logos (public/assets/brands, from Wikimedia Commons: see the README there); the town's own eateries are painted fronts.
-// The cafés and the phone shop are whole modules of their own (shop-*.js: Highlands, Katinat, Phúc Long, Thế Giới Di
-// Động). Only the nearest chains (WALK_INS) are rooms; the further ones are their sign and a painted picture of the
-// inside, as the eateries are. All the printing (signs, posters, menus, the QR stand, those pictures) is one canvas; the
-// shops cost a handful of merged meshes, and their people are street-folk.js figures, stepped only when in view.
-// Rebuilt when the city changes.
+// The cafés, the phone shop and the pharmacy are whole modules of their own (shop-*.js: Highlands, Katinat, Phúc Long,
+// Thế Giới Di Động, Long Châu…). Only the nearest chains (WALK_INS) are rooms; the further ones are their sign and a
+// painted picture of the inside, as the eateries are. All the printing (signs, posters, menus, the QR stand, those
+// pictures) is one canvas; the shops cost a handful of merged meshes, and their people are street-folk.js figures,
+// stepped only when in view. Rebuilt when the city changes.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
 import { HQ, PRO, el, officeNow } from '../../core/env.js';
@@ -28,11 +28,12 @@ import { HIGHLANDS } from './shop-highlands.js';
 import { TGDD } from './shop-tgdd.js';
 import { KATINAT } from './shop-katinat.js';
 import { PHUCLONG } from './shop-phuclong.js';
+import { LONGCHAU } from './shop-longchau.js';
 import { figure, glassOver } from './shop-paint.js';
 // the shops made whole in a file of their own (their printing, fittings, front and people; and `paint`, how the front looks
 // when it is too far to walk into: paint(g, cx, cy, dark) the whole cell, its sign and the picture under it, or
 // paint(g, x, y, w, h, dark) only the picture, in the front's rect, under the sign its draw() makes): chain key -> that module
-const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD, katinat: KATINAT, phuclong: PHUCLONG };
+const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD, katinat: KATINAT, phuclong: PHUCLONG, longchau: LONGCHAU };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 export const SHOPS = 12, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
@@ -50,18 +51,19 @@ const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (l
    come first). Oct 2026: GS25, Circle K, 7-Eleven and Ministop in Ho Chi Minh City; Circle K, GS25 and WinMart+ in Hanoi;
    WinMart+ everywhere; Bách Hóa Xanh in the south; none of the foreign chains confirmed in Đà Nẵng; Mixue everywhere, 4–6
    to a kilometre in the big cities, so one near the office in each; Highlands Coffee and Thế Giới Di Động in every city
-   too. Phúc Long's own shops in Ho Chi Minh City, Hanoi, Đà Nẵng, Nha Trang, Đà Lạt, Cần Thơ and Hải Phòng (in Huế only
+   too. Long Châu in all 34 provinces, 2,700 of them: one near the office everywhere, often a second down the street.
+   Phúc Long's own shops in Ho Chi Minh City, Hanoi, Đà Nẵng, Nha Trang, Đà Lạt, Cần Thơ and Hải Phòng (in Huế only
    inside the mall). Katinat in Ho Chi Minh City (most of its ~93), Hanoi since 2022, Cần Thơ and Đà Lạt. 'rent': a
    shuttered front to let. */
 const SETS = {
-  hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'phuclong', 'katinat', 'winmart', 'seven', 'ministop', 'bhx'],
-  hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'phuclong', 'katinat', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
-  hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'phuclong', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan'],
-  dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'phuclong', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo', 'bunbo'],
-  nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'phuclong', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo'],
-  dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'phuclong', 'katinat', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
-  ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'phuclong', 'katinat', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
+  hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'longchau', 'phuclong', 'katinat', 'winmart', 'seven', 'ministop', 'bhx'],
+  hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
+  hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan', 'longchau'],
+  dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo', 'longchau'],
+  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo', 'longchau', 'bunbo'],
+  nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo', 'longchau'],
+  dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
+  ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
 };
 /* the chains: logo, the sign (face, stripes), the staff's shirt, opening hours (null: day and night), a window counter to
    sit at, and the three things you can take: from the fridges, from the chain's own corner (`side`), at the till (`hot`).
@@ -80,7 +82,7 @@ const CHAINS = {
   // (an ice cream and tea shop, not a store: its own printing, fittings and people, shop-mixue.js)
   mixue: { name: 'Mixue', parlour: true, face: '#E50914', stripes: ['#E50914'], accent: '#E50914', shirt: '#1E1E1E', hours: [9, 22], seats: true },
   highlands: { ...HIGHLANDS.chain, custom: 'highlands' }, tgdd: { ...TGDD.chain, custom: 'tgdd' },
-  katinat: { ...KATINAT.chain, custom: 'katinat' }, phuclong: { ...PHUCLONG.chain, custom: 'phuclong' },
+  katinat: { ...KATINAT.chain, custom: 'katinat' }, phuclong: { ...PHUCLONG.chain, custom: 'phuclong' }, longchau: { ...LONGCHAU.chain, custom: 'longchau' },
   bhx: { name: 'Bách Hóa Xanh', logo: 'bach-hoa-xanh.png', face: '#008C44', stripes: ['#FFE600', '#008C44'], accent: '#008C44', shirt: '#0B8A43', hours: [6.5, 21.5], seats: false,
     fridge: { id: 'eggs', price: 30, carry: 'grocery' }, side: { id: 'meat', price: 65, carry: 'grocery', unit: 'meat' }, hot: null },
 };
@@ -890,9 +892,11 @@ function propSet(G, n) {
     hlcup: mergeAll([colorize(new THREE.CylinderGeometry(0.04, 0.032, 0.12, 10).translate(0, 0.06, 0), '#F2F2F0'), colorize(new THREE.CylinderGeometry(0.042, 0.038, 0.035, 10).translate(0, 0.065, 0), '#9B1C21'), colorize(new THREE.SphereGeometry(0.04, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2).translate(0, 0.12, 0), '#F6F1E7')]),
     phone: mergeAll([boxAt(0.07, 0.14, 0.01, 0, 0.07, 0, '#1E1E1E'), colorize(new THREE.PlaneGeometry(0.06, 0.125).translate(0, 0.07, 0.0055), '#6E8FE8')]),
     mxcup: mergeAll([colorize(new THREE.CylinderGeometry(0.042, 0.033, 0.13, 10).translate(0, 0.065, 0), '#C9A27A'), colorize(new THREE.CylinderGeometry(0.044, 0.04, 0.04, 10).translate(0, 0.07, 0), '#E50914'), boxAt(0.008, 0.08, 0.008, 0.012, 0.16, 0, '#F2F2F2')]),
-    // Katinat's clear cup in its layers (black pearls, the roasted oolong, the cream), Phúc Long's with its green band
+    // Katinat's clear cup in its layers (black pearls, the roasted oolong, the cream), Phúc Long's with its green band, a
+    // pharmacy's little bag
     ktcup: mergeAll([colorize(new THREE.CylinderGeometry(0.036, 0.033, 0.03, 10).translate(0, 0.015, 0), '#2A1D16'), colorize(new THREE.CylinderGeometry(0.04, 0.036, 0.07, 10).translate(0, 0.065, 0), '#B98E66'), colorize(new THREE.CylinderGeometry(0.042, 0.04, 0.03, 10).translate(0, 0.115, 0), '#F3E7D3'), boxAt(0.008, 0.08, 0.008, 0.012, 0.16, 0, '#2B2F36')]),
     plcup: mergeAll([colorize(new THREE.CylinderGeometry(0.04, 0.032, 0.12, 10).translate(0, 0.06, 0), '#C79A6B'), colorize(new THREE.CylinderGeometry(0.042, 0.038, 0.04, 10).translate(0, 0.065, 0), '#006F3C'), boxAt(0.008, 0.08, 0.008, 0.012, 0.15, 0, '#1E1E1E')]),
+    medbag: mergeAll([boxAt(0.16, 0.18, 0.06, 0, -0.09, 0, '#F7F9FC'), boxAt(0.161, 0.04, 0.061, 0, -0.06, 0, '#1554D1')]),
     cone: mergeAll([colorize(new THREE.ConeGeometry(0.03, 0.1, 8).rotateX(Math.PI), '#D9A441'), colorize(new THREE.SphereGeometry(0.035, 8, 6).translate(0, 0.065, 0), '#FFF8EC')]),
     bag: mergeAll([boxAt(0.22, 0.24, 0.1, 0, -0.12, 0, '#F4F3EE'), colorize(new THREE.SphereGeometry(0.05, 6, 4).translate(0.04, 0.02, 0), '#3E8E3A')]),
     courier: mergeAll([parkedScooter('#2E9E4A'), boxAt(0.42, 0.42, 0.42, -0.45, 1.05, 0, '#00A651')]),
