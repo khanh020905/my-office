@@ -38,6 +38,7 @@ import * as worldPropsCat from './world/props/cat.js';
 import * as worldPropsVacuum from './world/props/vacuum.js';
 import * as worldPropsBins from './world/props/bins.js';
 import * as worldPropsShredder from './world/props/shredder.js';
+import * as worldPropsCups from './world/props/cups.js';
 import * as worldPropsDevServers from './world/props/dev-servers.js';
 import * as worldPropsSwitches from './world/props/switches.js';
 import * as interactRings from './interact/rings.js';
@@ -88,6 +89,7 @@ import * as uiTimelapse from './ui/timelapse.js';
 import * as uiGroupChat from './ui/group-chat.js';
 import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiStuck from './ui/stuck.js';
+import * as uiCacheWords from './ui/cache-words.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
 import * as netLive from './net/live.js';
@@ -143,6 +145,7 @@ const MODULES = [
   worldPropsVacuum,
   worldPropsBins,
   worldPropsShredder,
+  worldPropsCups,
   worldPropsDevServers,
   worldPropsSwitches,
   interactRings,
@@ -193,6 +196,7 @@ const MODULES = [
   uiGroupChat,
   uiGroupChatView,
   uiStuck,
+  uiCacheWords,
   uiTips,
   interactFirstPerson,
   netLive,

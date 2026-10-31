@@ -132,6 +132,12 @@ export default async function SettingsPanel() {
               <div className="seg">{LOOP_MIN.map((n) => <button key={n} type="button" data-loop-min={n} aria-pressed={n === 10 ? 'true' : 'false'}>{t('settings.loop.mins', { n })}</button>)}</div></div>
             <p className="pop-note st-loop-install" id="st-loop-install" hidden>{t('settings.loop.install')}</p>
           </div>
+          {/* the prompt cache's clock: the cups on the desks, and a phone told before a session waiting for you goes cold (src/office/ui/cache-words.js; hidden in the demo) */}
+          <div className="st-cache" id="st-cache" hidden>
+            <h3>{t('settings.cache.title')}</h3>
+            <p className="pop-note">{t('settings.cache.note')}</p>
+            <div className="pop-toggles"><button type="button" className="tgl" data-cache-nudge="" role="switch" aria-checked="false"><span>{t('settings.cache.nudge')}</span><i></i></button></div>
+          </div>
         </section>
       </div>
     </div>

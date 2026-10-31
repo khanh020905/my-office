@@ -18,6 +18,7 @@ import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { toast } from './activity.js';
 import { loopCard, loopPeek } from './stuck.js';
+import { cacheWords } from './cache-words.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
@@ -417,6 +418,7 @@ function drawTarget() {
   if (target) {
     const x = el('button', 'zc-ib zc-to-x'); x.type = 'button'; x.title = tr('chat.to.clear'); x.append(icon('x')); x.addEventListener('click', () => setTarget(null));
     toEl.append(el('small', 'zc-to-sub', tr(target.dir ? (target.fresh ? 'chat.to.subNew' : 'chat.to.subMine') : 'chat.to.sub', { folder: target.folder })), x);
+    if (target.id) { const c = el('small', 'zc-to-cache'); toEl.insertBefore(c, x); drawToCache(); }   // (its prompt cache: answer while it is warm)
   }
   const narrow = matchMedia('(max-width: 640px)').matches;   // (a phone: the short one; whom it goes to is on the "To" chip just above)
   input.placeholder = target ? tr(narrow ? 'chat.to.placeholderShort' : 'chat.to.placeholder', { name: target.name }) : tr(narrow ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
@@ -425,6 +427,13 @@ function drawTarget() {
   for (const b of root.querySelectorAll('.zc-photo-btn')) b.hidden = !state.isLocal && !target;   // (to Claude: a photo from this device; to the group: a photo of the office, the Mac's)
   drawQuick(); if (!target) { attach = []; drawAttach(); }
 }
+// the conversation's prompt cache under "To": warm for how long (cheap to carry on), or cold (it reads it all again)
+function drawToCache() {
+  const c = toEl?.querySelector('.zc-to-cache'); if (!c) return;
+  const w = cacheWords(sessions.get(target?.id)?.cache, matchMedia('(max-width: 640px)').matches ? 'chatShort' : 'chat');   // (a phone: the short one)
+  c.hidden = !w.text; c.dataset.state = w.state; if (c.textContent !== w.text) c.textContent = w.text;
+}
+setInterval(() => { if (root && !root.hidden) drawToCache(); }, 20_000);
 
 /* ---------- quick commands over the input (to a conversation or a project): a tap fills the input, ✎ changes them ----------
    Shared by the Mac and the phones (data/quick.json); the office's own until you change them. */
@@ -546,7 +555,8 @@ async function openPick() {
   if (!list.length) items.push(el('p', 'zc-to-note', r ? tr('chat.to.none') : tr('drawer.unreachable')));
   for (const s of list) {
     const folder = s.dir.split('/').slice(-2).join('/'), st = tr(s.status === 'rest' ? 'chat.memberRest' : s.status === 'wait' ? 'chat.memberWait' : 'chat.memberWork');
-    const o = opt(avatar(faceOf(s.id, s.name), 30), s.name, `📁 ${folder} · ${st}`, target?.sid === s.sid, () => { setTarget({ id: s.id, sid: s.sid, name: s.name, folder }); input.focus(); }, r && !r.allowed);
+    const cw = s.status === 'work' ? '' : cacheWords(s.cache, 'chat').text;   // (at work it is warm anyway)
+    const o = opt(avatar(faceOf(s.id, s.name), 30), s.name, `📁 ${folder} · ${st}${cw ? ` · ${cw}` : ''}`, target?.sid === s.sid, () => { setTarget({ id: s.id, sid: s.sid, name: s.name, folder }); input.focus(); }, r && !r.allowed);
     o.dataset.sid = s.sid;
     const see = el('span', 'zc-to-see', '📜'); see.title = tr('chat.conv.open');
     see.addEventListener('click', (e) => { e.stopPropagation(); pickEl.hidden = true; openConv({ id: s.id, sid: s.sid, name: s.name, folder }); });

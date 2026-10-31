@@ -6,4 +6,6 @@ export default {
   empty: 'No Claude Code sessions open yet.',
   subs: { one: '{n} subagent', other: '{n} subagents' },
   ctx: 'context {pct}%',
+  cacheWarm: '☕ warm {n} min',
+  cacheCold: '☕ cold',
 };

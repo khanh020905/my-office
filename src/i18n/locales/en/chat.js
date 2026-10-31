@@ -90,6 +90,11 @@ export default {
   memberYou: 'Group owner',
   giveWork: 'App ↗',
   to: {
+    // the conversation's prompt cache (src/shared/cache-clock.js): answer while it is warm
+    cacheWarm: 'warm ~{n} min · cheap to continue',
+    cacheCold: 'cold · continuing re-reads ~{tokens} tokens',
+    cacheColdNoSize: 'cold · continuing re-reads it all',
+    cacheWarmShort: '☕ warm {n} min', cacheColdShort: '☕ cold · re-reads ~{tokens}',
     newTitle: '＋ A new conversation in a project',
     photoOnly: 'Have a look at this',
     newPill: 'New',

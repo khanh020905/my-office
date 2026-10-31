@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Claude Code statusLine → My Office. Claude Code runs this on every status refresh with JSON on stdin (fields
 // documented at code.claude.com/docs/en/statusline). We forward the plan's 5-hour / 7-day usage, the exact context
-// window and the session cost to the office, then print a status line. If you had a status line before installing,
+// window, the session cost and its prompt cache's clock to the office, then print a status line. If you had a status line before installing,
 // that command still runs with the same input and its output is what you see. Idea from W17ant/Claude-Office (MIT).
 import fs from 'node:fs';
 import path from 'node:path';
@@ -18,8 +18,11 @@ const raw = Buffer.concat(chunks).toString('utf8');
 let d = {};
 try { d = JSON.parse(raw) || {}; } catch { /* print the default line anyway */ }
 
-// Only what the office uses; a stopped office costs nothing (400 ms cap, errors ignored).
-const body = JSON.stringify({ session_id: d.session_id, rate_limits: d.rate_limits, context_window: d.context_window, cost: d.cost });
+// Only what the office uses; a stopped office costs nothing (400 ms cap, errors ignored). Of the prompt cache, just its
+// clock (Claude Code 2.1.251+): warm, its lifetime, when it goes cold, what a cold start re-reads.
+const pc = d.prompt_cache && typeof d.prompt_cache === 'object' ? d.prompt_cache : null;
+const cache = pc && { warm: pc.warm, caching_observed: pc.caching_observed, ttl: pc.ttl, expires_at: pc.expires_at, recache_tokens_if_cold: pc.recache_tokens_if_cold };
+const body = JSON.stringify({ session_id: d.session_id, rate_limits: d.rate_limits, context_window: d.context_window, cost: d.cost, prompt_cache: cache || undefined });
 const forward = fetch(`http://127.0.0.1:${PORT}/hook/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(400) }).catch(() => {});
 
 let prev = null;

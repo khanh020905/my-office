@@ -39,4 +39,9 @@ export default {
     costAfter: 'Tiêu tiền mà chưa sửa file nào trong', mins: '{n} phút',
     install: 'Chạy lại `node bin/cli.mjs install` một lần để Claude Code hỏi văn phòng trước mỗi bước.',
   },
+  cache: {
+    title: 'Bộ nhớ đệm',
+    note: 'Mỗi bàn đang nghỉ có một tách cà phê: hơi bốc mờ dần khi bộ nhớ đệm của phiên nguội đi, tắt hẳn khi đã nguội. Nhắn tiếp lúc còn ấm thì rẻ; nguội rồi thì lần nhắn sau phải đọc lại cả cuộc trò chuyện.',
+    nudge: 'Báo điện thoại khi phiên đang chờ mình trả lời còn 5 phút là nguội',
+  },
 };
