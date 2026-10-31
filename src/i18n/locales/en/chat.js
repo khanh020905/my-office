@@ -184,6 +184,8 @@ export default {
     katinatAsk: ['A roasted oolong for me, take a picture 📸', 'Avocado with young coconut please 🥑🥥', 'Isn’t the queue huge? 😆', 'Roasted oolong with black pearls for me 🧋'],
     longchauAsk: ['Get me a strip of Panadol too 😭', 'Grab some vitamin C fizz for everyone', 'Take something and rest a bit, I’ll keep fixing', 'Ask the pharmacist for one that won’t make you sleepy'],
     parcelGot: ['Got it, thanks 🥰', 'Coming down'],
+    paydayAsk: ['Drinks tonight 🍻', 'Paid off my debts, all gone again 😭', 'Running to the ATM 🏃', 'Finally, this day 🥹', 'Three days and it’s gone 😆'],
+    atmAsk: ['Grab me 500k too 😆', 'The line’s long, go early', 'That one runs out of cash a lot 😅'],
   },
   life: {
     morning: ['Good morning everyone ☀️', 'Morning! Have a good day everyone 🌤'],
@@ -206,6 +208,8 @@ export default {
     katinatTea: ['Afternoon: off to Katinat for a roasted oolong, anyone? 🧋', 'Popping to Katinat, want anything? 🧋'],
     katinatCheckin: ['Weekend! Off to Katinat for the drink and the photo 📸', 'Going to Katinat, the queue will be half an hour 😆 anyone want anything', 'Katinat is packed tonight, I’m going for the picture 📸'],
     longchauHeadache: ['So many failures, my head hurts: off to Long Châu for some painkillers 😵', 'The whole room’s red 😭 getting a strip of Panadol at Long Châu first', 'Tests failing again and again, a real headache: popping to Long Châu 💊'],
+    payday: ['Salary’s in, everyone 💸', 'Ting ting 📲 payday, everyone 💸', 'Salary’s in 💸 Anyone going to the ATM at lunch?'],
+    atm: ['Going down to the Vietcombank ATM, anyone need anything? 💸', 'Off to the ATM, the line’s huge today 😅'],
     cleaner: ['Mopping now, walk slowly or you’ll slip 🧽'],
     altar: ['Full moon today, the offering’s done 🙏', 'First of the lunar month, good fortune to us all 🙏'],
     trophy: '🏆 We just reached “{name}”! Well done everyone 🎉',

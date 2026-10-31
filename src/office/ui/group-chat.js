@@ -127,6 +127,9 @@ export function chatLife(kind, v = {}) {
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;
     case 'bye': if (v.id) chatSay(v.id, tr('chat.work.bye'), { key, answer: [{ key: 'bye', chance: 0.6 }] }); break;
+    // payday (people/payday.js): the salary is in; someone off to the ATM
+    case 'payday': chatSay(v.id || restingOne(), life('payday'), { key, react: ['💸', '😆', '❤️'], reacts: 5, answer: [{ key: 'paydayAsk', chance: 0.9 }, { key: 'paydayAsk', chance: 0.6 }] }); break;
+    case 'atm': if (v.id) chatSay(v.id, life('atm'), { key, answer: [{ key: 'atmAsk', chance: 0.5 }] }); break;
   }
 }
 

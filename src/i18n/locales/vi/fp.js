@@ -29,6 +29,10 @@ export default {
   banhmiDone: 'Một ổ bánh mì thịt nóng giòn, 20 nghìn 🥖',
   tea: 'Ngồi làm cốc trà đá',
   teaDone: 'Trà đá mát lạnh, 5 nghìn một cốc 🧊',
+  // the ATM booth (world/backdrops/street-atm.js)
+  atm: 'Rút tiền ở cây ATM ({n} người đang xếp hàng)',
+  atmDone: 'Tít! Đã rút 2.000.000đ 💸',
+  atmWait: 'Xếp hàng sau {n} người… cuối cùng cũng rút được 2.000.000đ 💸',
   bil: {
     you: 'Bạn',
     busy: '{a} và {b} đang đánh, chờ ván sau nhé',

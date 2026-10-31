@@ -186,6 +186,8 @@ export default {
     katinatAsk: ['Cho em ly ô long nướng, nhớ chụp hình nha 📸', 'Em bơ già dừa non 🥑🥥', 'Đông lắm đó, xếp hàng lâu không? 😆', 'Ô long nướng huyền châu cho em với 🧋'],
     longchauAsk: ['Mua giùm em vỉ Panadol luôn 😭', 'Lấy thêm C sủi cho cả phòng đi', 'Uống thuốc rồi nghỉ xíu đi, để em fix tiếp', 'Hỏi dược sĩ thuốc nào không buồn ngủ nha'],
     parcelGot: ['Em lấy rồi ạ, cảm ơn chị 🥰', 'Dạ em xuống liền'],
+    paydayAsk: ['Tối nay đi nhậu thôi 🍻', 'Trả nợ xong là hết sạch 😭', 'Ra ATM liền 🏃', 'Cuối cùng cũng tới ngày này 🥹', 'Lương về ba ngày là hết 😆'],
+    atmAsk: ['Rút giùm em 500 nghìn với 😆', 'Hàng dài lắm đó, đi sớm đi', 'Cây đó hay hết tiền lắm nha 😅'],
   },
   // life in the office (the staff or a session, as it happens)
   life: {
@@ -209,6 +211,8 @@ export default {
     katinatTea: ['Chiều rồi, em ra Katinat làm ly ô long nướng, ai uống không? 🧋', 'Đi Katinat chút, ai gửi gì không 🧋'],
     katinatCheckin: ['Cuối tuần rồi, ra Katinat check-in sống ảo chút 📸', 'Em đi Katinat, xếp hàng chắc nửa tiếng 😆 ai uống gì không', 'Tối nay Katinat đông lắm, em đi giữ chỗ chụp hình nè 📸'],
     longchauHeadache: ['Lỗi hoài nhức đầu quá, em ra Long Châu mua thuốc đau đầu đây 😵', 'Đỏ cả phòng rồi 😭 ra Long Châu mua vỉ Panadol cái đã', 'Test fail liên tục, đau đầu thiệt sự, em chạy ra Long Châu chút 💊'],
+    payday: ['Lương về rồi anh em ơi 💸', 'Ting ting 📲 Lương về rồi anh em ơi 💸', 'Lương về rồi anh em ơi 💸 Trưa nay ai ra ATM không?'],
+    atm: ['Em xuống cây ATM Vietcombank rút tiền, ai cần gì không? 💸', 'Ra ATM rút tiền đây, hôm nay hàng dài quá trời 😅'],
     cleaner: ['Cô lau nhà nha, mọi người đi nhẹ thôi kẻo trượt nha con 🧽'],
     altar: ['Hôm nay rằm, chị cúng rồi nha cả nhà 🙏', 'Mùng một đầu tháng, chúc cả nhà làm ăn phát đạt 🙏'],
     trophy: '🏆 Cả nhà vừa đạt “{name}”! Giỏi quá đi 🎉',
