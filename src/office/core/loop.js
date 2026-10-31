@@ -33,6 +33,7 @@ import { updateGaming } from '../people/gaming.js';
 import { updateBilliards } from '../people/billiards.js';
 import { updateKaraoke } from '../people/karaoke.js';
 import { updateFarewell } from '../people/farewell.js';
+import { updateInterns } from '../people/interns.js';
 import { shadowStandIns } from '../people/chibi-rig.js';
 import { updateTips } from '../ui/tips.js';
 import { updatePlaces } from '../interact/place-chips.js';
@@ -164,6 +165,7 @@ export function loop(now = 0) {
   updateBilliards(dt);
   updateKaraoke(dt);
   updateFarewell();
+  updateInterns();
   updateBoard(state.sim);
   updatePlaces(now);
   updateTeam();

@@ -34,7 +34,7 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `bg-sessions.mjs` | Phone work as Claude Code background sessions: whether this Claude Code has them (`--help`), what `claude --bg` printed, a `claude agents --json` row as the card's state, and the settings each one gets (edits in place, `/hook/bind`, approvals and questions held until answered with `?long=1`). |
 | `steer.mjs` | "Chen lời giữa chừng": a note into a working session through its inbox socket (the line it takes, whether it can take one now: permission mode and `crossSessionInbound`), else kept for when it is done. |
 | `rewrite.mjs` | The chat's "✨ Viết lại cho rõ": a message for Claude rewritten as goal / context / done-when by `claude -p` on a small model, with no tools, one turn, no session saved and the hooks off; text only, one at a time, 20 an hour. The rest of the prompt helper is in the page (`src/shared/prompt-coach.js`). |
-| `tenure.mjs` | Each project's working life (`data/tenure.json`): first and last session, on how many days, how many turns; which are due a farewell (Settings → More), which came back. The first run reads, once, the dates and folders of Claude Code's transcripts (the projects already there). |
+| `tenure.mjs` | Each project's working life (`data/tenure.json`): first and last session, on how many days, how many turns; which are due a farewell (Settings → More), which came back, which are still interns and which are ready to be made permanent. The first run reads, once, the dates and folders of Claude Code's transcripts (the projects already there). |
 | `prefs.mjs` | The office's language (`data/prefs.json`, `OFFICE_LANG`) and the server's translator `tr()`. |
 
 `bin/cli.mjs` installs the hooks (curl on macOS and Linux, `hooks/send.mjs` on Windows) and, through `bin/service.mjs`, the
@@ -97,7 +97,7 @@ engine switches to demo mode and talks to no API.
 | --- | ---: | --- |
 | `audio/sfx.js` | 73 | Sounds, synthesized in the browser. |
 | `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
-| `core/loop.js` | 227 | The render loop and its frame budget. |
+| `core/loop.js` | 229 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo.js` | 324 | Demo mode: fictional projects and a fictional Mac. |
@@ -123,18 +123,19 @@ engine switches to demo mode and talks to no API.
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
 | `people/billiards.js` | 484 | Pool in the lounge (company floor; the table: world/props/billiards.js). |
 | `people/breaks.js` | 87 | Lunch and the afternoon coffee queue. |
-| `people/chibi-rig.js` | 874 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
+| `people/chibi-rig.js` | 879 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/comnha.js` | 195 | Cơm nhà: lunch brought from home, warmed at the pantry's two microwaves at noon (company floor; the corner: world/props/microwave.js; who brought some today, and what: src/shared/comnha.js). |
 | `people/comtrua.js` | 171 | Lunch at the quán cơm bình dân across the street (world/backdrops/eat-com.js). |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
 | `people/errands.js` | 283 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
 | `people/evswap.js` | 186 | A battery swap (world/backdrops/street-ev.js). |
-| `people/farewell.js` | 378 | The farewell (tiệc chia tay): a project the office remembers that has had no session for a month (Settings → More: 14, 30, 60 or 90 days, or never; server/tenure.mjs keeps each project's working life and says which are due) gets a last afternoon. |
+| `people/farewell.js` | 380 | The farewell (tiệc chia tay): a project the office remembers that has had no session for a month (Settings → More: 14, 30, 60 or 90 days, or never; server/tenure.mjs keeps each project's working life and says which are due) gets a last afternoon. |
 | `people/foosball.js` | 166 | Foosball in the lounge (the company floor): now and then two people who are resting play a game at the table (one asks, the other comes over), rods spinning, the ball rattling up and down the pitch, the goals counted out loud, the winner pleased with themselves. |
 | `people/gaming.js` | 277 | Video games on the lounge TV (company floor). |
 | `people/gatherings.js` | 155 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
 | `people/guard.js` | 217 | The building's security guard (bảo vệ) at the office's street door, with the city outside. |
 | `people/hr.js` | 362 | HR and the attendance terminal (company floor). |
+| `people/interns.js` | 196 | Interns made permanent (thực tập sinh lên chính thức). |
 | `people/karaoke-songs.js` | 51 | The karaoke box's songs (people/karaoke.js): words written for the office, nobody else's. |
 | `people/karaoke.js` | 342 | Karaoke in the box on the dev floor (company floor; the booth: world/props/karaoke.js). |
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
@@ -163,7 +164,7 @@ engine switches to demo mode and talks to no API.
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 125 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
 | `ui/group-chat-view.js` | 891 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type; writing to Claude, a prompt helper over it. |
-| `ui/group-chat.js` | 194 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
+| `ui/group-chat.js` | 196 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
