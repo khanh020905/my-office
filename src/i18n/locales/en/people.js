@@ -315,4 +315,19 @@ export default {
     },
     where: { going: 'Going down to the rice place', goingBd: 'Off for bún đậu mắm tôm', eating: "Having lunch at cô Ba's", eatingBd: 'Eating bún đậu mắm tôm', back: 'Lunch done, on the way back' },
   },
+  // pickleball after work at the court by the park (people/pickle.js, world/backdrops/street-pickle.js)
+  pickle: {
+    say: {
+      go: ["Pickleball time 🏓", "Off to the court, CI's green 🏓"],
+      ready: ['Visor on, a quick warm-up 🧢', "Nice court, let's play!"],
+      film: ["I'll film it 📱", "Smile, I'm filming 📱"],
+      net: ['Into the net 😭', 'Oh, the net!', 'So close, net!'],
+      out: ['Out!', "That's out 😅", 'Too long!'],
+      winner: ['Nice!', 'Point! 💪', 'What a shot 😆'],
+      work: ['Work came in, heading back! 🏃', 'Oh, work: you carry on!'],
+      end: ["Court time's up, let's go", 'My legs 😆 time to go'],
+    },
+    tally: { run: '{label} running… the next point is its 🏓', count: '✓ {n}/{of} tests · {label}', pass: '✓ {n} tests over the net · {label} · point!', fail: '✗ {f} failing · into the net after {n} shots · {label}' },
+    where: { going: 'Off to the pickleball court', playing: 'Playing pickleball', filming: 'Filming at the pickleball court', back: 'Pickleball done, on the way back' },
+  },
 };

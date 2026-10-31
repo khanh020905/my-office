@@ -27,6 +27,7 @@ import { wx } from '../life/weather.js';
 import { joinNhau, nhauNow, updateNhau } from './nhau.js';
 import { comNow, comPlanned, updateCom } from './comtrua.js';
 import { atmNow, updatePayday } from './payday.js';
+import { pickleNow, updatePickle } from './pickle.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
@@ -475,6 +476,7 @@ export function whereabouts(w) {
   if (R.kind === 'nhau') return nhauNow(R);
   if (R.kind === 'com') return comNow(R);
   if (R.kind === 'atm') return atmNow(R);
+  if (R.kind === 'pickle') return pickleNow(R);
   if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
 }
@@ -483,7 +485,7 @@ export function whereabouts(w) {
 let bikesAt = 0, shown = '';
 export function updateOutings() {
   updateNhau();   // (an evening at the quán nhậu: people/nhau.js)
-  updateCom(); updatePayday();   // (lunch at the quán cơm: people/comtrua.js; payday at the ATM: people/payday.js)
+  updateCom(); updatePayday(); updatePickle();   // (lunch at the quán cơm: people/comtrua.js; payday at the ATM: people/payday.js; pickleball: people/pickle.js)
   const S = street(), d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString();
   if (bags?.visible && (m >= 780 || bags.userData.day !== day)) bags.visible = false;
   // the comings and goings; the row of scooters; the session list when anyone's whereabouts change

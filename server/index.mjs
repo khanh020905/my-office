@@ -15,7 +15,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
-import { testRunner } from './testrun.mjs';
+import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
@@ -1002,7 +1002,8 @@ async function onHook(p) {
       const m = p.tool_name === 'Bash' && DEPLOY_RE.exec(String(p.tool_input?.command || ''));
       if (m) { stats.deploy++; dirty = true; trophies.bump('deploy'); e = mk('deploy', m[1]); }
       const runner = !e && p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
-      if (runner) { e = mk('testok', runner, { agent, quiet: !!agent }); if (agent) toFeed = false; }
+      // (with how many passed: the pickleball court's point, src/office/world/backdrops/street-pickle.js)
+      if (runner) { const r = p.tool_response, n = testCounts(typeof r === 'string' ? r : r && typeof r === 'object' ? `${r.stdout || ''}\n${r.stderr || ''}` : ''); e = mk('testok', runner, { agent, quiet: !!agent, ...(n || {}) }); if (agent) toFeed = false; }
       break;
     }
     case 'PostToolUseFailure': {
@@ -1010,7 +1011,7 @@ async function onHook(p) {
       if (s.status === 'wait') s.status = 'work';
       const c = await classifyVi(p.tool_name, p.tool_input), runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
       // (a failing test run is the test board's red lamp, not a failure that counts towards an incident)
-      e = runner ? mk('testfail', runner, { agent, quiet: !!agent }) : mk('fail', c.label || p.tool_name || '', { agent, quiet: !!agent });
+      e = runner ? mk('testfail', runner, { agent, quiet: !!agent, ...(testCounts(p.error) || {}) }) : mk('fail', c.label || p.tool_name || '', { agent, quiet: !!agent });
       if (agent) toFeed = false;
       break;
     }

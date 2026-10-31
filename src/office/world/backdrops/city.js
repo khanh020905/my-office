@@ -6,6 +6,7 @@ import { canvasTex, mat } from '../../scene/blocks.js';
 import { BULB_OFF, GY, bollards, boxAt, cI, cPick, cR, colorize, cr, mergeAll, mergedTo, vmat } from '../terrace.js';
 import { buildStreetLife } from './street-life.js';
 import { SHOPS, SHOP_CEIL, SHOP_W, buildShops, officeMiddle, shopDepth } from './shops.js';
+import { pickleSite } from './street-pickle.js';
 
 export let dotTex;
 export let poolTex;
@@ -116,6 +117,18 @@ export function buildCity(G) {
     }
     return all.filter((r) => toOM(r) < 30).sort((a, b) => toOM(a) - toOM(b)).slice(2, 4).map((r) => `${r[0].toFixed(1)},${r[2].toFixed(1)}`);
   })());
+  // the pickleball court (street-pickle.js): a park beside a street without traffic, not one of the two nearest (the
+  // bánh mì cart's and the trà đá stall's) nor a paved square's; no tree grows on it and no lamp stands in it
+  const pickle = (() => {
+    const all = [];
+    for (let i = 0; i < XS.length - 1; i++) for (let j = 0; j < ZS.length - 1; j++) {
+      const r = [XS[i] + STREET_W / 2, XS[i + 1] - STREET_W / 2, ZS[j] + STREET_W / 2, ZS[j + 1] - STREET_W / 2];
+      if (!inSB((r[0] + r[1]) / 2, (r[2] + r[3]) / 2) && wholePark((r[0] + r[1]) / 2, (r[2] + r[3]) / 2)) all.push(r);
+    }
+    all.sort((a, b) => toOM(a) - toOM(b));
+    return pickleSite({ SB, HALF: STREET_W / 2, parks: all.slice(2).filter((r) => !squareAt.has(`${r[0].toFixed(1)},${r[2].toFixed(1)}`)) });
+  })();
+  const onCourt = (x, z, m = 0) => !!pickle && x > pickle.x0 - m && x < pickle.x1 + m && z > pickle.z0 - m && z < pickle.z1 + m;
   function addBox(style, x, z, w, d, y0, h, tint, offU, offV) {
     const g = new THREE.BoxGeometry(w, h, d), uv = g.attributes.uv, n = g.attributes.normal;
     for (let i = 0; i < uv.count; i++) {
@@ -169,7 +182,7 @@ export function buildCity(G) {
         const gaps = [x - P[0], P[1] - x, z - P[2], P[3] - z], k = gaps.indexOf(Math.min(...gaps));
         if (k === 0) x = x0 + 0.65; else if (k === 1) x = x1 - 0.65; else if (k === 2) z = z0 + 0.65; else z = z1 - 0.65;
       }
-      tree(x, z, s);
+      if (!onCourt(x, z, 1.2)) tree(x, z, s);
     }
   }
   function building(x0, x1, z0, z1, floors, faces) {
@@ -250,7 +263,7 @@ export function buildCity(G) {
   /* street lamps on both sidewalks, every 12 units, with a pool of light under each */
   const lampGeo = [], bulbGeo = [], pools = [];
   const lamp = (x, z, ax, az) => {
-    if (x > -9.4 && x < 12.6 && z > -7.2 && z < 11.2) return;   // not on the terrace
+    if ((x > -9.4 && x < 12.6 && z > -7.2 && z < 11.2) || onCourt(x, z, 0.3)) return;   // not on the terrace, nor in the pickleball court
     lampGeo.push(colorize(new THREE.CylinderGeometry(0.06, 0.08, 3.8, 6).translate(x, GY + 1.9, z), '#2B2F36'));
     lampGeo.push(boxAt(ax ? 1.0 : 0.08, 0.07, az ? 1.0 : 0.08, x + ax * 0.45, GY + 3.75, z + az * 0.45, '#2B2F36'));
     bulbGeo.push(boxAt(ax ? 0.4 : 0.18, 0.06, az ? 0.4 : 0.18, x + ax * 0.85, GY + 3.68, z + az * 0.85, '#FFFFFF'));
@@ -260,7 +273,7 @@ export function buildCity(G) {
   for (const z of ZS) for (let x = xMin + 4, k = 0; x < xMax; x += 9, k++) { if (!inSB(x, z)) { if (k % 2) lamp(x, z - STREET_W / 2 - 0.5, 0, 1); else lamp(x, z + STREET_W / 2 + 0.5, 0, -1); } }
 
   /* traffic, the lights, the bus stop and people on the pavements (street-life.js) */
-  const life = buildStreetLife(G, { XS, ZS, STREET_W, SB, shops: nearest, parks, solids, trees, plazas, faces: fronts, inShop: stores.walk });
+  const life = buildStreetLife(G, { XS, ZS, STREET_W, SB, shops: nearest, parks, solids, trees, plazas, faces: fronts, inShop: stores.walk, pickle });
   lanes.push(...life.marks);
   FACADES.forEach((_, i) => mergedTo(G, parts[i].filter(Boolean), styleMats[i]));
   mergedTo(G, roofs, vmat({ roughness: 0.9 }));
