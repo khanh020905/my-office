@@ -242,6 +242,11 @@
   border-radius: 12px; background: #fff; color: #081B3A; box-shadow: 0 10px 30px rgba(0, 0, 0, .35); cursor: pointer;
   font: 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; animation: zc-in .25s ease-out; }
 .zc-peek.is-out { opacity: 0; transform: translateY(-6px); transition: opacity .3s, transform .3s; }
+/* a panel open on the right (the Mac, a session): its close button is where the card goes, so the card stands just left
+   of the panel, and on a window too narrow for both it waits (the chat button's badge still counts) */
+:root:not(.is-phone) body:has(.drawer:not([hidden])) .zc-peek { right: calc(min(460px, 100%) + 14px); }
+:root:not(.is-phone) body:has(.drawer--wide:not([hidden])) .zc-peek { right: calc(min(580px, 100%) + 14px); }
+@media (max-width: 960px) { :root:not(.is-phone) body:has(.drawer:not([hidden])) .zc-peek { display: none; } }
 .zc-peek-t { min-width: 0; display: grid; }
 .zc-peek-t b { font-size: 15px; font-weight: 600; }
 .zc-peek-t span { color: #5A6981; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
