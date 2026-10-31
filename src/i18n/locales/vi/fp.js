@@ -23,6 +23,7 @@ export default {
     coffee: 'cà phê', onigiri: 'cơm nắm onigiri', bun: 'bánh bao', water: 'nước suối', cone: 'kem ốc quế', chicken: 'gà rán', milk: 'sữa tươi',
     bubbleTea: 'trà sữa trân châu', phinSuaDa: 'phin sữa đá', freezeTraXanh: 'freeze trà xanh', phoneCase: 'ốp lưng điện thoại', charger: 'cáp sạc nhanh', veg: 'rau tươi', eggs: 'trứng gà', meat: 'thịt heo',
     oolongNuong: 'trà sữa ô long nướng', boGiaDuaNon: 'bơ già dừa non', traSuaPhucLong: 'trà sữa Phúc Long', traDao: 'trà đào', panadol: 'vỉ Panadol Extra (12 viên)', hapacol: 'vỉ Hapacol sủi (4 viên)',
+    kettle: 'bình đun siêu tốc', batteries: 'vỉ pin tiểu AA',
   },
   banhmi: 'Mua bánh mì',
   banhmiDone: 'Một ổ bánh mì thịt nóng giòn, 20 nghìn 🥖',

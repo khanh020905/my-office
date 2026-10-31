@@ -29,11 +29,12 @@ import { TGDD } from './shop-tgdd.js';
 import { KATINAT } from './shop-katinat.js';
 import { PHUCLONG } from './shop-phuclong.js';
 import { LONGCHAU } from './shop-longchau.js';
+import { DMX } from './shop-dmx.js';
 import { figure, glassOver } from './shop-paint.js';
 // the shops made whole in a file of their own (their printing, fittings, front and people; and `paint`, how the front looks
 // when it is too far to walk into: paint(g, cx, cy, dark) the whole cell, its sign and the picture under it, or
 // paint(g, x, y, w, h, dark) only the picture, in the front's rect, under the sign its draw() makes): chain key -> that module
-const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD, katinat: KATINAT, phuclong: PHUCLONG, longchau: LONGCHAU };
+const CUSTOM = { highlands: HIGHLANDS, tgdd: TGDD, katinat: KATINAT, phuclong: PHUCLONG, longchau: LONGCHAU, dmx: DMX };
 
 const BASE = process.env.NEXT_PUBLIC_BASE_PATH || '';
 export const SHOPS = 12, SHOP_W = 6.6, SHOP_CEIL = 2.75;   // how many, a shop's width and its ceiling (metres)
@@ -53,17 +54,18 @@ const FL = 0.12, GLASS = 2.42, SIGN_H_M = 0.9, DOOR = 0.82;      // the floor (l
    to a kilometre in the big cities, so one near the office in each; Highlands Coffee and Thế Giới Di Động in every city
    too. Long Châu in all 34 provinces, 2,700 of them: one near the office everywhere, often a second down the street.
    Phúc Long's own shops in Ho Chi Minh City, Hanoi, Đà Nẵng, Nha Trang, Đà Lạt, Cần Thơ and Hải Phòng (in Huế only
-   inside the mall). Katinat in Ho Chi Minh City (most of its ~93), Hanoi since 2022, Cần Thơ and Đà Lạt. 'rent': a
-   shuttered front to let. */
+   inside the mall). Katinat in Ho Chi Minh City (most of its ~93), Hanoi since 2022, Cần Thơ and Đà Lạt. Điện Máy Xanh
+   (the same group's appliance chain as Thế Giới Di Động) in every province: in the smaller cities in a front that was to
+   let. 'rent': a shuttered front to let. */
 const SETS = {
-  hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'longchau', 'phuclong', 'katinat', 'winmart', 'seven', 'ministop', 'bhx'],
-  hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'gs25', 'winmart', 'pho', 'circlek', 'buncha'],
-  hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'banhdacua', 'circlek', 'rent', 'winmart', 'haisan', 'longchau'],
-  dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'miquang', 'haisan', 'rent', 'winmart', 'banhxeo', 'longchau'],
-  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'bunbo', 'comhen', 'rent', 'winmart', 'banhxeo', 'longchau', 'bunbo'],
-  nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'bunchaca', 'haisan', 'rent', 'winmart', 'banhxeo', 'longchau'],
-  dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'banhcan', 'suadau', 'rent', 'winmart', 'banhxeo'],
-  ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'winmart', 'hutieu', 'laumam', 'rent', 'bhx'],
+  hcm: ['gs25', 'mixue', 'highlands', 'tgdd', 'circlek', 'longchau', 'phuclong', 'katinat', 'dmx', 'seven', 'ministop', 'bhx'],
+  hn: ['circlek', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'gs25', 'winmart', 'pho', 'dmx', 'buncha'],
+  hp: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'banhdacua', 'circlek', 'dmx', 'winmart', 'haisan', 'longchau'],
+  dn: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'miquang', 'haisan', 'dmx', 'winmart', 'banhxeo', 'longchau'],
+  hue: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'bunbo', 'comhen', 'dmx', 'winmart', 'banhxeo', 'longchau', 'bunbo'],
+  nt: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'bunchaca', 'haisan', 'dmx', 'winmart', 'banhxeo', 'longchau'],
+  dl: ['winmart', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'banhcan', 'suadau', 'dmx', 'winmart', 'banhxeo'],
+  ct: ['bhx', 'mixue', 'highlands', 'tgdd', 'longchau', 'phuclong', 'katinat', 'winmart', 'hutieu', 'laumam', 'dmx', 'bhx'],
 };
 /* the chains: logo, the sign (face, stripes), the staff's shirt, opening hours (null: day and night), a window counter to
    sit at, and the three things you can take: from the fridges, from the chain's own corner (`side`), at the till (`hot`).
@@ -83,6 +85,7 @@ const CHAINS = {
   mixue: { name: 'Mixue', parlour: true, face: '#E50914', stripes: ['#E50914'], accent: '#E50914', shirt: '#1E1E1E', hours: [9, 22], seats: true },
   highlands: { ...HIGHLANDS.chain, custom: 'highlands' }, tgdd: { ...TGDD.chain, custom: 'tgdd' },
   katinat: { ...KATINAT.chain, custom: 'katinat' }, phuclong: { ...PHUCLONG.chain, custom: 'phuclong' }, longchau: { ...LONGCHAU.chain, custom: 'longchau' },
+  dmx: { ...DMX.chain, custom: 'dmx' },
   bhx: { name: 'Bách Hóa Xanh', logo: 'bach-hoa-xanh.png', face: '#008C44', stripes: ['#FFE600', '#008C44'], accent: '#008C44', shirt: '#0B8A43', hours: [6.5, 21.5], seats: false,
     fridge: { id: 'eggs', price: 30, carry: 'grocery' }, side: { id: 'meat', price: 65, carry: 'grocery', unit: 'meat' }, hot: null },
 };

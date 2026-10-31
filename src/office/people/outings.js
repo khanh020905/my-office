@@ -119,10 +119,10 @@ function begin(R, w) {
 // the length of a walk from P along pts
 const lengthOf = (P, pts) => pts.reduce((a, p, k) => a + Math.hypot(p.x - (k ? pts[k - 1].x : P.x), p.z - (k ? pts[k - 1].z : P.z)), 0);
 // the chain behind a door (shops.js gives it; by the name on the sign otherwise)
-const CHAIN = { 'Circle K': 'circlek', GS25: 'gs25', '7-Eleven': 'seven', 'WinMart+': 'winmart', Ministop: 'ministop', 'Bách Hóa Xanh': 'bhx', Mixue: 'mixue', 'Highlands Coffee': 'highlands', 'Thế Giới Di Động': 'tgdd', Katinat: 'katinat', 'Phúc Long': 'phuclong', 'Long Châu': 'longchau' };
+const CHAIN = { 'Circle K': 'circlek', GS25: 'gs25', '7-Eleven': 'seven', 'WinMart+': 'winmart', Ministop: 'ministop', 'Bách Hóa Xanh': 'bhx', Mixue: 'mixue', 'Highlands Coffee': 'highlands', 'Thế Giới Di Động': 'tgdd', 'Điện Máy Xanh': 'dmx', Katinat: 'katinat', 'Phúc Long': 'phuclong', 'Long Châu': 'longchau' };
 const keyOf = (d) => d.key || CHAIN[d.name] || '';
 // what each one sends you back with (twice in the list: twice as likely): the chain's own food more often than a drink
-const TAKE = { circlek: ['noodle', 'noodle', 'cup'], gs25: ['tok', 'tok', 'cup'], seven: ['onigiri', 'bun', 'cup'], ministop: ['cone', 'chicken'], winmart: ['cup', 'cup', 'grocery'], bhx: ['cup', 'grocery'], mixue: ['cone', 'cone', 'cup'], highlands: ['cup'], tgdd: ['grocery'], katinat: ['cup'], phuclong: ['cup'], longchau: ['grocery'] };
+const TAKE = { circlek: ['noodle', 'noodle', 'cup'], gs25: ['tok', 'tok', 'cup'], seven: ['onigiri', 'bun', 'cup'], ministop: ['cone', 'chicken'], winmart: ['cup', 'cup', 'grocery'], bhx: ['cup', 'grocery'], mixue: ['cone', 'cone', 'cup'], highlands: ['cup'], tgdd: ['grocery'], dmx: ['grocery'], katinat: ['cup'], phuclong: ['cup'], longchau: ['grocery'] };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 // the drink's band (and the shopping bag) in the shop's colour
 function tint(w, item, d) {
@@ -164,7 +164,7 @@ function shopTrip(w, S, { key = '', night = false, why = '', version = '' } = {}
   let best = null;
   const from = indoors();
   for (const door of S.doors()) {
-    if (door.open === false || (key && keyOf(door) !== key) || (!key && ['tgdd', 'highlands', 'katinat', 'phuclong', 'longchau'].includes(keyOf(door))) || (night && door.h24 === false)) continue;   // (the phone shop and the café only when meant)
+    if (door.open === false || (key && keyOf(door) !== key) || (!key && ['tgdd', 'highlands', 'dmx', 'katinat', 'phuclong', 'longchau'].includes(keyOf(door))) || (night && door.h24 === false)) continue;   // (the phone shop and the café only when meant)
     for (const ex of S.exits(from.x, from.z)) {
       const r = S.route(ex, door), len = r && lengthOf(ex, r) + ex.d, score = len + (night && keyOf(door) !== 'circlek' ? 30 : 0);
       if (r && len < 80 && (!best || score < best.score)) best = { door, ex, r, score };
