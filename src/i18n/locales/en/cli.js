@@ -34,6 +34,8 @@ export default {
     noPerm: 'No approval hook yet. Run: my-office install',
     ask: "Hook installed to answer Claude's questions and approve its plans in the office",
     noAsk: 'No hook for questions / plan approval yet. Run: my-office install',
+    loop: 'Stuck-loop hook installed (a call that keeps failing the same way is blocked)',
+    noLoop: 'No stuck-loop hook yet. Run: my-office install',
     status: 'Status line installed: plan usage limits (5 hours / 7 days) and the exact context',
     noStatus: 'No My Office status line, so no plan usage limits. Run: my-office install',
     noEvents: "The server hasn't received any events yet. Open Claude Code and type something, then run doctor again.",

@@ -61,6 +61,8 @@
 .ri-dico svg { width: 12px; height: 12px; }
 .ri-dtxt { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ri[data-status="wait"] .ri-doing { color: var(--amber); font-weight: 600; }
+.ri[data-stuck="1"] { border-color: rgba(255, 90, 95, .5); }
+.ri[data-stuck="1"] .ri-doing { color: #FF8A8E; font-weight: 600; }
 .ri[data-status="work"] .ri-doing { color: #C8D0DD; }
 .ri-meta { display: grid; justify-items: end; gap: 3px; }
 .ri-time { font: 600 .7rem/1 var(--mono); color: var(--muted); font-variant-numeric: tabular-nums; }

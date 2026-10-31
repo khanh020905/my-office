@@ -5,6 +5,8 @@
 .tag--sub { font-size: 11px; padding: 4px 9px 4px 7px; }
 .tag--on { border-color: var(--green); box-shadow: 0 0 0 3px rgba(61, 220, 132, .22), 0 6px 16px rgba(0, 0, 0, .35); }
 .tag--wait { border-color: var(--amber); }
+.tag--stuck { border-color: #FF5A5F; box-shadow: 0 0 0 3px rgba(255, 90, 95, .25), 0 6px 16px rgba(0, 0, 0, .35); }   /* stuck in a loop (ui/stuck.js) */
+.tag-stuck { margin-left: 2px; padding: 2px 7px; border-radius: 999px; background: #E5484D; color: #fff; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .03em; }
 .shop-say { font-size: 11.5px; padding: 5px 10px; border-width: 1.5px; white-space: nowrap; }   /* a shop's cashier greeting you (shops.js) */
 .cat-say { border-color: #FF8FB0; color: #FFE0EA; font-size: 11px; padding: 4px 9px; }
 .bubble-wrap { width: 0; height: 0; position: relative; }

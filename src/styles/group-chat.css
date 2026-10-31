@@ -356,6 +356,24 @@
 .zc .zc-work-btn.is-ok { background: var(--zc-blue); color: #fff; }
 .zc .zc-work-btn.is-no { background: #FDECEC; color: #C31818; }
 .zc .zc-work-btn.is-stop { background: #F1F3F6; color: var(--zc-ink); margin-left: auto; }
+/* a session stuck in a loop (ui/stuck.js): what repeats, Stop, a hint for Claude */
+.zc-loop { display: grid; gap: 6px; min-width: 220px; max-width: 360px; padding-left: 9px; border-left: 3px solid #E5484D; }
+.zc-loop:not(.is-on):not(.is-stopping) { border-left-color: #C9CED6; }
+.zc-loop-h { display: flex; align-items: center; gap: 7px; }
+.zc-loop-h b { font-size: 14.5px; font-weight: 600; color: #C31818; }
+.zc-loop:not(.is-on):not(.is-stopping) .zc-loop-h b { color: var(--zc-grey); }
+.zc-loop-ic { flex: none; font-style: normal; font-size: 14px; }
+.zc-loop-t { margin: 0; font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.zc-loop-t code { padding: 1px 5px; border-radius: 4px; background: #F1F3F6; font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.zc-loop-note, .zc-loop-hint { color: var(--zc-grey); font-size: 12px; }
+.zc-loop-hint.is-got, .zc-loop-hint.is-rest { color: #1A7F37; }
+.zc-loop-hint.is-lost { color: #8A5A00; }
+.zc-loop-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.zc .zc-loop-stop.is-sure { background: #C31818; color: #fff; }
+.zc-loop-form { display: flex; gap: 6px; }
+.zc-loop-form[hidden] { display: none; }
+.zc-loop-in { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--zc-line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--zc-ink); background: #fff; }
+.zc-loop-in:focus { outline: 2px solid var(--zc-blue); outline-offset: -1px; }
 
 /* one conversation on its own screen (over the group's messages) */
 .zc-conv { flex: 1; min-height: 0; display: flex; flex-direction: column; background: var(--zc-ground); }

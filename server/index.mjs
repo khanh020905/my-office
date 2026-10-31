@@ -28,6 +28,7 @@ import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
+import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
 import { pickLang, createT } from '../src/i18n/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -274,6 +275,7 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
   dayFirst: s.dayFirst || null,
+  stuck: s.stuck || null,
   git: gitOf(s),
   usage: s.usage?.model ? { cost: Math.round(s.usage.cost * 100) / 100, ...liveCtx(s), model: s.usage.model, out: s.usage.out } : null });
 function gitOf(s) { const r = s.cwd && git.repoOf(s.cwd); return r ? { repo: r.name, branch: r.branch, dirty: r.dirty, ahead: r.ahead, ci: r.ci, ciName: r.ciName, ciUrl: r.ciUrl, born: r.born || null } : null; }
@@ -765,6 +767,7 @@ async function onHook(p) {
   lastHookAt = Date.now();
   const ev = p.hook_event_name, sid = p.session_id;
   if (!ev || !sid) return;
+  const loopSig = loops.onEvent(p);   // (at once, before anything awaited: the next call's check must already know)
   rollDay();
   let s = bySid(sid);
   if (!s) { await scanSessions(); s = bySid(sid); }
@@ -884,6 +887,7 @@ async function onHook(p) {
     default:
       return;
   }
+  if (loopSig) onLoop(s, loopSig);
   if (e) {
     if (toFeed) pushFeed(e);
     broadcast({ k: 'ev', e, s: pub(s), stats });
@@ -1182,6 +1186,80 @@ function planDecision(p, choice, note) {
   return { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: why ? tr('server.perm.planReviseWhy', { why }) : tr('server.perm.planRevise') } };
 }
 
+/* ---------- "Ngắt vòng lặp kẹt": a session going round in circles (server/loops.mjs) ----------
+   The async hooks and the status line feed it; a synchronous PreToolUse hook (curl, 0.3 s at most, nothing printed
+   when the office is down or slow: the call goes ahead) posts each call to /hook/loop, which answers at once. The Nth
+   identical failure makes the next identical call denied with a reason Claude reads; the person's name tag goes red,
+   a card in the chat says what repeats (Stop, a hint for Claude), and phones get a notification. The other two signs
+   (compaction after compaction, cost rising with nothing edited) are only shown. Settings → More turns it off. */
+const loopConfig = () => ({ ...LOOP_DEFAULTS, ...(prefs.get('loopGuard') || {}) });
+// the call in a few words, as the card and the reason show it: a command as typed, else the tool and its file
+const loopLabel = (name, i = {}) => clip(redact(oneLine(name === 'Bash' || name === 'PowerShell' ? i.command
+  : `${name}${i.file_path || i.notebook_path ? ` ${base(i.file_path || i.notebook_path)}` : i.url ? ` ${host(i.url)}` : i.pattern || i.query ? ` ${i.pattern || i.query}` : ''}`)), 60);
+const loops = createLoopGuard({ config: loopConfig, labelOf: loopLabel });
+let loopHookAt = 0;   // (the synchronous hook heard from: Settings says to run install again when it never was)
+const loopCards = new Map();   // session id -> its card in the chat (the last 16)
+const loopRun = (s) => (s.viaOffice && tasks.list().find((t) => t.id === s.viaOffice)) || (s.sid && runOf(s.sid, s.cwd)) || null;   // (a run from the office: Stop stops it)
+function loopLine(st, name) {
+  const usd = st.usd != null ? `$${st.usd.toFixed(2)}` : '';
+  return tr(`chat.loop.${st.kind}`, { name, label: `\`${st.label || ''}\``, n: st.n, next: (st.n || 0) + (st.blocked || 0), blocked: st.blocked || 0, mins: st.mins, usd });
+}
+function onLoop(s, sig) {
+  if (!s || !sig) return;
+  const card = loopCards.get(s.id), name = s.title || s.name;
+  const setCard = (loop) => { if (card) chat.setLoop(card.id, loop); };
+  if (sig.type === 'fire') {
+    const st = sig.stuck, run = loopRun(s);
+    if (card && ['on', 'stopping'].includes(chat.byId(card.id)?.loop?.state)) setCard({ state: 'over', why: 'again' });   // (stuck another way: the new card below says how)
+    s.stuck = { kind: st.kind, label: st.label || '', n: st.n || 0, blocked: st.blocked || 0, usd: st.usd ?? null, mins: st.mins || 0, at: st.at };
+    broadcast({ k: 'sess', s: pub(s) });
+    const m = chat.loopCard(s.id, { ...s.stuck, state: 'on', hint: sig.hint ? 'got' : null, sess: s.id, task: run?.id || null });
+    if (m) { loopCards.delete(s.id); loopCards.set(s.id, { id: m.id }); if (loopCards.size > 16) loopCards.delete(loopCards.keys().next().value); }
+    pushOut({ title: tr('server.loop.pushTitle', { name }), body: clip(loopLine(s.stuck, name), 180), tag: `loop-${s.id}`, url: '/?chat' });
+    fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck ${st.kind} ${s.sid} ${clip(oneLine(st.label || ''), 80)}${st.blocked ? ' (denied)' : ''}\n`).catch(() => {});
+  } else if (sig.type === 'blocked') {
+    if (s.stuck) { s.stuck.blocked = sig.stuck.blocked; broadcast({ k: 'sess', s: pub(s) }); }
+    setCard({ blocked: sig.stuck.blocked, ...(sig.hint && { hint: 'got' }) });
+  } else if (sig.type === 'clear') {
+    s.stuck = null; broadcast({ k: 'sess', s: pub(s) });
+    if (card && chat.byId(card.id)?.loop?.state !== 'stopped') setCard({ state: 'over', why: sig.why, ...(sig.hintLost && { hint: 'lost' }) });
+  } else if (sig.type === 'hint') setCard({ hint: 'got' });
+  else if (sig.type === 'hintLost') setCard({ hint: 'lost' });
+  else if (sig.type === 'stopped') setCard({ state: 'stopped' });
+}
+// the reply to the synchronous hook: nothing (Claude Code decides as usual), a deny with its reason, your hint, or Stop
+function loopReply(p) {
+  const r = loops.check(p), hint = r.hint ? tr('server.loop.hintFor', { hint: r.hint }) : '';
+  const out = r.stop ? { continue: false, stopReason: tr('server.loop.stopReason') }
+    : r.deny ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `${tr('server.loop.deny', { n: r.deny.n })}${hint ? `\n\n${hint}` : ''}` } }
+      : hint ? { hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: hint } } : null;
+  return { out, sig: r.sig };
+}
+// Stop and a hint from the card (any page that may give work: the Mac, a phone when it is allowed)
+function loopAct(b, mac) {
+  const id = String(b?.id || ''), s = [...sessions.values()].find((x) => x.id === id); if (!s?.sid) return { ok: false, message: tr('server.loop.gone') };
+  const card = loopCards.get(s.id);
+  if (b.op === 'stop') {
+    const run = loopRun(s);
+    if (run) { const ok = tasks.stop(run.id); if (ok && card) chat.setLoop(card.id, { state: 'stopped' }); return { ok, how: 'task' }; }
+    if (s.status === 'rest') return { ok: false, code: 'resting', message: tr('server.loop.resting', { name: s.title || s.name }) };
+    loops.stop(s.sid); if (card) chat.setLoop(card.id, { state: 'stopping' });
+    fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck stop ${s.sid} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
+    return { ok: true, how: 'next' };
+  }
+  if (b.op === 'hint') {
+    if (!mac && !prefs.get('phoneTasks')) return { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') };
+    // a turn already over can't take it at its next step: the page carries the conversation on instead (POST /api/tasks)
+    if (s.status === 'rest') return { ok: false, code: 'resting', sid: s.sid };
+    if (!loops.hint(s.sid, oneLine(b.text))) return { ok: false, code: 'empty' };
+    if (card) chat.setLoop(card.id, { hint: 'sent' });
+    fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck hint ${s.sid} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
+    return { ok: true };
+  }
+  return { ok: false };
+}
+const loopOut = () => ({ ok: true, ...loopConfig(), choices: { n: LOOP_N, min: LOOP_MIN }, hookAt: loopHookAt });
+
 /* ---------- plan usage from Claude Code's status line ----------
    bin/cli.mjs installs hooks/status-line.mjs as the statusLine command; it posts the documented fields here: the
    5-hour and 7-day windows (Pro / Max), the exact context window, the session's cost. Kept in data/limits.json. */
@@ -1221,6 +1299,7 @@ function onStatus(p) {
   if (s) {
     const cw = p.context_window || {}, size = numOr(cw.context_window_size), pctUsed = numOr(cw.used_percentage);
     s.live = { at: statusAt, ctxMax: size, ctx: size && pctUsed != null ? Math.round((size * pctUsed) / 100) : null, cost: numOr(p.cost?.total_cost_usd) };
+    onLoop(s, loops.onStatus(p.session_id, p.cost, s.status !== 'rest'));
   }
 }
 
@@ -1786,6 +1865,16 @@ const server = http.createServer((req, res) => {
     readJson(req, 200_000).then((p) => { onStatus(p); res.writeHead(200).end('{}'); }).catch(() => { try { res.writeHead(200).end('{}'); } catch { /* gone */ } });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/hook/loop') {   // every tool call, synchronously: answered at once, from memory
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    loopHookAt = Date.now();
+    readJson(req, 4_000_000).then((p) => {
+      let r = null; try { r = p && loopReply(p); } catch (err) { console.error('loop', err); }
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(r?.out ? JSON.stringify(r.out) : '');
+      if (r?.sig) onLoop(bySid(p.session_id), r.sig);   // (after the answer: Claude Code isn't kept waiting for the chat)
+    }).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     readJson(req, 4_000_000).then((p) => onPermission(p, res)).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
@@ -1794,7 +1883,7 @@ const server = http.createServer((req, res) => {
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/push', '/api/quick'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2091,6 +2180,19 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/loop') {   // a stuck session's card: { op: 'stop' | 'hint', id, text }; Settings (this computer only): { op: 'config', on, n, min }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then((b) => {
+      if (b?.op !== 'config') { json(res, 200, loopAct(b, mac)); return; }
+      if (!mac) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+      const now = loopConfig(), next = { on: b.on === undefined ? now.on : !!b.on, n: LOOP_N.includes(b.n) ? b.n : now.n, min: LOOP_MIN.includes(b.min) ? b.min : now.min };
+      prefs.set('loopGuard', next);
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} stuck guard ${next.on ? 'on' : 'off'} n=${next.n} min=${next.min}\n`).catch(() => {});
+      json(res, 200, loopOut());
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/prefs') {
     const sameOrigin = sameOriginOf(req);
     if (!authorized(req, url) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.forbidden') }); return; }
@@ -2121,6 +2223,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
+  if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/quick') { let list = null; try { list = JSON.parse(fs.readFileSync(QUICK_FILE, 'utf8')); } catch { /* the page's own until you change them */ } json(res, 200, { ok: true, list }); return; }
   if (url.pathname === '/api/claude-version') { json(res, 200, { ok: true, ...claudeVersion.get() }); return; }   // (a new one: someone goes to Thế Giới Di Động, outings.js)

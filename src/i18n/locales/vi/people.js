@@ -3,6 +3,8 @@ export default {
   subagent: 'trợ lý',
   team: '{n} trợ lý',
   needsApproval: 'Chờ duyệt',
+  stuck: 'kẹt',
+  stuckSay: 'Loay hoay mãi một chỗ…',
   subOnIt: 'Nhận việc: {task}',
   subThinking: 'Đang nghĩ cách làm',
   subReport: 'Báo cáo: {what}',

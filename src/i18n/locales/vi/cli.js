@@ -33,6 +33,8 @@ export default {
     noPerm: 'Chưa có hook duyệt quyền. Chạy: my-office install',
     ask: 'Có hook trả lời câu hỏi và duyệt kế hoạch của Claude trong văn phòng',
     noAsk: 'Chưa có hook trả lời câu hỏi / duyệt kế hoạch. Chạy: my-office install',
+    loop: 'Có hook ngắt vòng lặp kẹt (lệnh lỗi y hệt nhiều lần sẽ bị chặn)',
+    noLoop: 'Chưa có hook ngắt vòng lặp kẹt. Chạy: my-office install',
     status: 'Có status line báo hạn mức gói (5 giờ / 7 ngày) và ngữ cảnh chính xác',
     noStatus: 'Chưa có status line của My Office: không thấy hạn mức gói. Chạy: my-office install',
     noEvents: 'Server chưa nhận sự kiện nào. Mở Claude Code và gõ một câu, rồi chạy lại doctor.',

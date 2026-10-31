@@ -97,6 +97,7 @@ export function upsertSession(s, walkIn = true) {
     for (const x of s.subs || []) { if (!subs.has(x.id)) spawnSub(w, x.id, x.type); const sw = subs.get(x.id); if (sw && x.desc) sw.desc = x.desc; }
     w.setTeam([...subs.values()].filter((x) => x.parent === w).length);
     w.setAcct(s.acct);
+    w.setStuck(s.stuck);
   }
   queueUi();
 }

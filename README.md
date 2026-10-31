@@ -243,6 +243,15 @@ Then open <http://localhost:4310>.
   editing".
 - **When this applies**: only while the page is open and visible, and for at most 45 seconds. Otherwise Claude Code
   asks as usual. You can turn this off in Settings.
+- **Stuck loops get broken**: when a session runs the same thing and gets the same error three times in a row, its
+  fourth try is blocked and Claude is told to change course (a synchronous `PreToolUse` hook that answers from memory;
+  it gives up after 0.3 s, so with the office closed or busy the call simply goes ahead). The person's name tag turns
+  red with "stuck", the team chat gets a card ("api-worker ran `npm test` and got the same error 3 times: try 4
+  blocked") with **Stop** (at its next step; a run started from the office is stopped outright) and **Send a hint**
+  (Claude reads it with its next step; once its turn is over, the hint carries the conversation on), and your phone
+  gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
+  without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
+  failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 
 ### Your plan and your Mac
 
@@ -300,7 +309,8 @@ Then open <http://localhost:4310>.
 ## Privacy and safety
 
 - **Everything stays on your Mac.** Hooks post to `127.0.0.1` in the background. If the office is not running, Claude
-  Code carries on as normal.
+  Code carries on as normal. The stuck-loop hook is the one that waits for an answer, 0.3 s at most, and prints
+  nothing when the office is closed or slow, so it never holds Claude Code up because of the office.
 - **Secrets are masked.** Strings that look like passwords, tokens or API keys are masked before they are stored or
   shown.
 - **Plan usage** is read the way the IDE's Usage panel reads it:

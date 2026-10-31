@@ -201,6 +201,14 @@ export function setup() {
       if (!this.teamEl) { this.teamEl = el('span', 'tag-team'); this.tagEl.append(this.teamEl); }
       this.teamEl.hidden = !n; this.teamEl.textContent = n ? tr('people.team', { n }) : '';
     }
+    // stuck in a loop (server/loops.mjs): a red "kẹt" on the name tag, and said out loud once when it starts
+    setStuck(st) {
+      const on = !!st; if (this.stuck === on) return;
+      const was = this.stuck; this.stuck = on;
+      if (!this.stuckEl) { this.stuckEl = el('span', 'tag-stuck', tr('people.stuck')); this.tagEl.append(this.stuckEl); }
+      this.stuckEl.hidden = !on; this.tagEl.classList.toggle('tag--stuck', on);
+      if (on && was === false) this.say('fail', tr('people.stuckSay'), 'fail');
+    }
     rebuild() {
       const { root, P } = makeChibi({ ...this.cfg, look: state.LOOK }, this.scale);
       if (SEASON === 'noel') wearHat(P);

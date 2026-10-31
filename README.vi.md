@@ -81,6 +81,7 @@ Khởi động lại sau khi sửa code: `launchctl kickstart -k gui/$(id -u)/co
 - **Bảng kế hoạch**: bảng trắng ghi việc của từng session (đang làm, chờ bạn, xong; kèm tiến độ checklist TodoWrite nếu Claude có dùng) và việc của riêng bạn dưới dạng giấy dán. Bấm bảng để thêm, đánh dấu xong hay xoá việc; lưu trong `data/todos.json`.
 - **Hội thoại dễ đọc**: tab Hội thoại hiển thị markdown (danh sách, bảng, code có nút chép), thu gọn tin dài, gom các bước công cụ thành một dòng đếm "đọc / sửa / lệnh", và gập đoạn tóm tắt Claude tự viết khi phiên quá dài.
 - **Duyệt quyền ngay trong văn phòng**: khi trang đang mở và đang được nhìn, yêu cầu quyền của Claude Code hiện thành thẻ Cho phép / Luôn cho phép / Từ chối. Trang không được nhìn, hoặc 45 giây không ai bấm, thì Claude Code hỏi như bình thường. Tắt trong Cài đặt.
+- **Ngắt vòng lặp kẹt**: một phiên chạy đi chạy lại một lệnh mà lỗi y hệt 3 lần liền thì lần thứ 4 bị chặn, Claude được nhắc đổi cách khác hoặc hỏi bạn (hook `PreToolUse` chạy đồng bộ, văn phòng trả lời ngay từ bộ nhớ; quá 0,3 giây là bỏ qua, nên văn phòng tắt hay đang bận thì lệnh vẫn chạy như thường). Bảng tên của người đó đỏ lên chữ "kẹt", nhóm chat có thẻ ("api-worker chạy `npm test` lỗi y hệt 3 lần — đã chặn lần 4") với nút **Dừng** (dừng ở bước kế tiếp; việc giao từ văn phòng thì dừng hẳn) và **Gửi gợi ý** (Claude đọc ở bước kế tiếp; lượt đã xong thì gợi ý nhắn tiếp cuộc trò chuyện), điện thoại nhận thông báo. Văn phòng cũng báo khi phiên nén bộ nhớ liên tục hay tiêu tiền 10 phút mà chưa sửa file nào, nhưng không chặn gì. Bạn gõ gì vào phiên là xoá hết. Cài đặt → Khác: bật/tắt, chặn sau mấy lần lỗi, sau bao nhiêu phút. Cài từ trước: chạy lại `node bin/cli.mjs install` một lần để thêm hook.
 - **Câu hỏi và kế hoạch của Claude**: khi Claude hỏi bạn chọn phương án (AskUserQuestion) hay xin duyệt kế hoạch (ExitPlanMode), văn phòng hiện thẻ có đủ câu hỏi, các lựa chọn, ô "Khác", hoặc nội dung kế hoạch với nút Duyệt / Sửa tiếp kèm góp ý. Cùng luật với duyệt quyền: chỉ giữ khi trang đang được nhìn, tối đa 45 giây; "Trả lời trong IDE" trả lại cho Claude Code hỏi như thường.
 - **Hạn mức gói**: viên "Gói Claude" trên thanh trên cùng hiện hạn mức sát nhất, tô màu theo mức; bấm vào xem từng hạn mức:
   - 5 giờ;
@@ -133,7 +134,7 @@ Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại c
 
 ## An toàn
 
-- Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường.
+- Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường. Hook ngắt vòng lặp chạy đồng bộ nhưng chờ tối đa 0,3 giây và không in gì khi văn phòng tắt hay chậm, nên không bao giờ chặn Claude Code vì văn phòng.
 - Chuỗi giống mật khẩu, token, khoá API bị che trước khi lưu hay hiển thị (`redact.mjs`).
 - Nút Tắt kiểm lại PID **và giờ khởi động** của tiến trình ngay trước khi tắt, nên không tắt nhầm tiến trình mới mang lại PID cũ. Mọi lần tắt, dọn, duyệt quyền ghi vào `data/actions.log`.
 

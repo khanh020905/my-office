@@ -31,4 +31,13 @@ export default {
   weatherOff: 'Off',
   notify: 'Phone and alerts',
   behaviour: 'Behaviour',
+  // Settings → More: the stuck-loop breaker (server/loops.mjs)
+  loop: {
+    title: 'Stuck loops',
+    on: 'Break stuck loops',
+    note: 'When a session runs the same thing and gets the same error again and again, its next try is blocked and Claude is told to change course; a card in the chat lets you stop it or send a hint. It also points out compaction after compaction, and spending with no file edited.',
+    after: 'Block after', tries: { one: '{n} failure', other: '{n} failures' },
+    costAfter: 'Spending with no file edited for', mins: '{n} min',
+    install: 'Run `node bin/cli.mjs install` once more so Claude Code checks with the office before each step.',
+  },
 };

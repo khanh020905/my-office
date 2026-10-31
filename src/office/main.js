@@ -87,6 +87,7 @@ import * as uiPhoto from './ui/photo.js';
 import * as uiTimelapse from './ui/timelapse.js';
 import * as uiGroupChat from './ui/group-chat.js';
 import * as uiGroupChatView from './ui/group-chat-view.js';
+import * as uiStuck from './ui/stuck.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
 import * as netLive from './net/live.js';
@@ -191,6 +192,7 @@ const MODULES = [
   uiTimelapse,
   uiGroupChat,
   uiGroupChatView,
+  uiStuck,
   uiTips,
   interactFirstPerson,
   netLive,

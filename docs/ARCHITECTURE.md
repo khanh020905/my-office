@@ -26,6 +26,7 @@ Claude Code ──hooks (curl, loopback only)──▶ server/index.mjs ──SS
 | `redact.mjs` | Masks secrets in anything shown in the UI. |
 | `git.mjs` | Git per session folder (branch, uncommitted files, commits and pushes by watching HEAD and the upstream) and the latest CI run through `gh`. |
 | `wrapped.mjs` | The weekly recap: totals over the last seven replay logs. |
+| `loops.mjs` | "Ngắt vòng lặp kẹt": a session going round in circles (the same call failing the same way N times, compaction after compaction, cost rising with nothing edited), from the hooks and the status line; the synchronous PreToolUse hook (`/hook/loop`) gets a deny, your hint or Stop back from it. |
 | `tasks.mjs` | "Give work": a `claude -p` run on this Mac from the chat or a phone, carrying on a tagged conversation (`--resume --fork-session`) or new in a known folder; caps, photos, its answer back to the chat. |
 | `prefs.mjs` | The office's language (`data/prefs.json`, `OFFICE_LANG`) and the server's translator `tr()`. |
 
@@ -109,7 +110,7 @@ engine switches to demo mode and talks to no API.
 | `life/trophies.js` | 119 | The trophy cabinet and the opening plaque. |
 | `life/weather.js` | 90 | Real weather outside (Open-Meteo). |
 | `life/your-turn.js` | 37 | "Your turn": sessions that finished or wait for you. |
-| `net/live.js` | 147 | The live connection: sessions, desks, teams, events. |
+| `net/live.js` | 148 | The live connection: sessions, desks, teams, events. |
 | `people/accountant.js` | 255 | The accountant (company floor): her desk in the director's office, the day's API cost on her screen, the report to the director at 17:30, and a word with whoever spends the most when the plan's limit gets near. |
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
 | `people/billiards.js` | 484 | Pool in the lounge (company floor; the table: world/props/billiards.js). |
@@ -134,19 +135,19 @@ engine switches to demo mode and talks to no API.
 | `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
 | `people/teatime.js` | 89 | Friday 16:00: afternoon tea. |
-| `people/workers.js` | 522 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/workers.js` | 530 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
 | `scene/lights.js` | 35 | Sun, sky light and the room lamps (per-room night lighting on the company floor). |
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
-| `ui/activity.js` | 300 | The activity column and the session list. |
+| `ui/activity.js` | 301 | The activity column and the session list. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
 | `ui/chat-avatars.js` | 72 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 123 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
-| `ui/group-chat-view.js` | 766 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
+| `ui/group-chat-view.js` | 768 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type. |
 | `ui/group-chat.js` | 176 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
@@ -161,6 +162,7 @@ engine switches to demo mode and talks to no API.
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
 | `ui/session-drawer.js` | 382 | The session drawer: chat, steps, subagents. |
 | `ui/settings.js` | 122 | Settings popover: backdrop, floor plan, look, time, toggles. |
+| `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |
 | `ui/task-sheet.js` | 98 | "Giao việc": giving Claude work from the group chat (server/tasks.mjs runs it on the Mac). |
 | `ui/timelapse.js` | 156 | A 15-second clip of the office to share: square (1080 × 1080) for a feed or vertical (1080 × 1920) for Reels, TikTok and Shorts, the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds, with an original lo-fi tune under it (clip-music.js; it can be turned off). |
 | `ui/tips.js` | 115 | The first visit: a short tour of what you can click. |

@@ -31,4 +31,12 @@ export default {
   weatherOff: 'Tắt',
   notify: 'Điện thoại và thông báo',
   behaviour: 'Cách hoạt động',
+  loop: {
+    title: 'Vòng lặp kẹt',
+    on: 'Ngắt vòng lặp kẹt',
+    note: 'Khi một phiên chạy đi chạy lại một lệnh mà lỗi y hệt, lần kế tiếp sẽ bị chặn và Claude được nhắc đổi cách; một thẻ trong nhóm chat cho bạn dừng nó hoặc gửi gợi ý. Văn phòng cũng báo khi phiên nén bộ nhớ liên tục, hay tiêu tiền mãi mà chưa sửa file nào.',
+    after: 'Chặn sau', tries: '{n} lần lỗi',
+    costAfter: 'Tiêu tiền mà chưa sửa file nào trong', mins: '{n} phút',
+    install: 'Chạy lại `node bin/cli.mjs install` một lần để Claude Code hỏi văn phòng trước mỗi bước.',
+  },
 };

@@ -13,6 +13,7 @@ const LOOKS = ['toy', 'pixar'] as const;
 const QUALITY = [['auto', 0], ['low', 1], ['medium', 2], ['high', 3]] as const;
 const CITIES = [['hn', 'Hà Nội'], ['hcm', ''], ['dn', 'Đà Nẵng'], ['hue', 'Huế'], ['hp', 'Hải Phòng'], ['ct', 'Cần Thơ'], ['dl', 'Đà Lạt'], ['nt', 'Nha Trang']] as const;
 const TIME_ICON = { auto: 'clock', day: 'sun', night: 'moon' } as const;
+const LOOP_N = [2, 3, 4, 5], LOOP_MIN = [5, 10, 20, 30];   // (the server's choices: server/loops.mjs)
 
 export default async function SettingsPanel() {
   const t = await getT();
@@ -120,6 +121,17 @@ export default async function SettingsPanel() {
           <h3>{t('settings.behaviour')}</h3>
           <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}</div>
           <div className="pop-acts"><button id="btn-tips" className="tb-btn" type="button"><span data-icon="sparkle"></span><span className="lbl">{t('tips.again')}</span></button></div>
+          {/* the stuck-loop breaker (src/office/ui/stuck.js fills it in from the server; hidden in the demo) */}
+          <div className="st-loop" id="st-loop" hidden>
+            <h3>{t('settings.loop.title')}</h3>
+            <div className="pop-toggles"><button type="button" className="tgl" data-loop-tgl="" role="switch" aria-checked="true"><span>{t('settings.loop.on')}</span><i></i></button></div>
+            <p className="pop-note">{t('settings.loop.note')}</p>
+            <div className="st-loop-row"><span>{t('settings.loop.after')}</span>
+              <div className="seg">{LOOP_N.map((n) => <button key={n} type="button" data-loop-n={n} aria-pressed={n === 3 ? 'true' : 'false'}>{t('settings.loop.tries', { n })}</button>)}</div></div>
+            <div className="st-loop-row"><span>{t('settings.loop.costAfter')}</span>
+              <div className="seg">{LOOP_MIN.map((n) => <button key={n} type="button" data-loop-min={n} aria-pressed={n === 10 ? 'true' : 'false'}>{t('settings.loop.mins', { n })}</button>)}</div></div>
+            <p className="pop-note st-loop-install" id="st-loop-install" hidden>{t('settings.loop.install')}</p>
+          </div>
         </section>
       </div>
     </div>
