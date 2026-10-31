@@ -126,6 +126,12 @@ export function renderPhone() {
   list.append(phoneSwitch(tr('topbar.phone.approve'), !!state.phoneApprove, false, async (want) => { const r = await post('/api/phone', { approve: want }); if (!r?.ok) return false; state.phoneApprove = r.approve; renderPhone(); return true; }, tr('topbar.phone.approveShort')));
   // "Giao việc" from the group chat on a phone: a new Claude Code run on this Mac (server/tasks.mjs)
   if (tun) list.append(phoneSwitch(tr('topbar.phone.tasksSwitch'), !!tun.tasks, false, async (want) => { const r = await post('/api/tasks/allow', { on: want }); if (!r?.ok) return false; tun.tasks = r.allowed; renderPhone(); return true; }, tr('topbar.phone.tasksShort')));
+  // that work as Claude Code background sessions (server/bg-sessions.mjs), when this Claude Code has them: offered with
+  // the switch above on (or this one on, to turn it off)
+  if (tun && (tun.tasks || tun.bg?.on)) {
+    const b = tun.bg || {}, why = b.ok === false ? tr('topbar.phone.bgNo') : b.ok == null ? tr('topbar.phone.bgChecking') : tr('topbar.phone.bgShort');
+    list.append(phoneSwitch(tr('topbar.phone.bgSwitch'), !!b.on && b.ok !== false, b.ok === false, async (want) => { const r = await post('/api/tasks/bg', { on: want }); if (!r?.ok) return false; tun.bg = r.bg; renderPhone(); return true; }, why));
+  }
   // Claude Code's own Remote Control, on by itself in every new session if you like
   if (tun) list.append(phoneSwitch(tr('topbar.phone.rcSwitch'), !!tun.rc, false, async (want) => { const r = await post('/api/rc', { on: want }); if (!r?.ok) return false; tun.rc = r.rc; renderPhone(); return true; }, tr(tun.rc ? 'topbar.phone.rcShortOn' : 'topbar.phone.rcShort')));
   body.append(el('h4', 'pm-h', tr('topbar.phone.mayTitle')), list);

@@ -47,5 +47,7 @@ try {
   process.exitCode = 1;
 } finally {
   server.kill();
-  fs.rmSync(data, { recursive: true, force: true });
+  // (it writes its last state as it stops: wait for it, then clear its folder)
+  await new Promise((done) => { if (server.exitCode !== null || server.signalCode) done(); else { server.once('exit', done); setTimeout(done, 5000); } });
+  fs.rmSync(data, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 }

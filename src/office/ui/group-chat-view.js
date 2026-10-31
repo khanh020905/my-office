@@ -213,7 +213,7 @@ function workCard(m) {
     el('small', null, tr('chat.card.meta', { n: w.n || 0, took: clock((w.end || Date.now()) - (w.at || m.at)) })));
   if (live) Object.assign(head.lastChild.dataset, { at: String(w.at || m.at), n: String(w.n || 0) });   // (its clock runs on: tick())
   box.append(head);
-  if (state === 'wait' && w.ask) box.append(el('div', 'zc-work-ask', tr(w.perm ? 'chat.card.askHere' : 'chat.card.ask', { what: w.ask })));
+  if (state === 'wait' && w.ask) box.append(el('div', 'zc-work-ask', tr(w.perm || w.attach ? 'chat.card.askHere' : 'chat.card.ask', { what: w.ask })));   // (a background session's: no 45 s)
   // right here: allow or deny what it waits for (a risky command: deny only, as on any phone), stop it
   if (live) {
     const acts = el('div', 'zc-work-acts');
@@ -237,6 +237,8 @@ function workCard(m) {
     box.append(more);
   }
   if (!live && !steps.length) box.append(el('small', 'zc-work-none', tr('chat.card.none')));
+  // a background session (server/bg-sessions.mjs): how to open it on the Mac, its command to select whole
+  if (w.attach) { const [a, b = ''] = tr('chat.card.attach', { cmd: '\u0001' }).split('\u0001'), hint = el('small', 'zc-work-attach'); hint.append(a, el('code', null, w.attach), b); box.append(hint); }
   return box;
 }
 // one to three emoji and nothing else (a 👍 sent with the button, say): shown big, without a bubble

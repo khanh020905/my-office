@@ -22,6 +22,7 @@ import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
+import { createBg, bgSettings } from './bg-sessions.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createClaudeVersion } from './claude-version.mjs';
@@ -526,10 +527,17 @@ const chatOut = () => ({ ok: true, msgs: chat.state.msgs, pinned: chat.state.pin
 
 /* ---------- "Giao việc" (server/tasks.mjs): Claude Code runs started from the office ---------- */
 const taskSids = new Set(), taskQuote = new Map();   // the sessions those runs became (their leaving isn't announced: their result is); your task, quoted in the answer
+// Phone work as Claude Code background sessions (server/bg-sessions.mjs), when switched on on the Mac and this Claude Code
+// has them: their settings call the office back the way the hooks do (curl; the small node script on Windows)
+const bgRun = createBg(), WIN = process.platform === 'win32', fwd = (p) => p.replace(/\\/g, '/');
+const bgOn = () => !!prefs.get('phoneTasksBg');
+const bgOut = () => { const k = bgRun.known(findClaude()); return { on: bgOn(), ok: k ? k.ok : null, version: k?.version || null }; };
 const tasks = createTasks({
   dataDir: DATA_DIR, claude: () => findClaude(),
   env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; },   // (the account new sessions start on)
+  bg: { ...bgRun, want: bgOn, settings: () => bgSettings({ port: PORT, win: WIN, send: `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'send.mjs'))}"` }) },
   onStep: (t, x) => cardStep(t.id, stepOf(x.name, x.input)),
+  onBg: (t, what, detail) => onBgTask(t, what, detail),
   onDone: (t) => {
     if (t.sid) taskSids.add(t.sid);
     const card = cards.get(t.id); cards.delete(t.id);
@@ -565,6 +573,27 @@ function cardStep(taskId, step) {
   const c = cards.get(taskId); if (!c) return;
   c.steps.push(step); c.n++; if (c.steps.length > 40) c.steps.shift();
   if (!c.timer) c.timer = setTimeout(() => { c.timer = 0; chat.setWork(c.id, { steps: c.steps, n: c.n }); }, 700);   // (a burst of steps: one update; its state is set where it changes)
+}
+// The command that opens a phone's work, running as a background session, on the Mac (with its account's folder)
+function attachCmd(t) {
+  const bin = findClaude(), cli = !bin || bin.onPath ? 'claude' : tilde(bin.file), dir = t.env?.CLAUDE_CONFIG_DIR;
+  const acct = dir && path.resolve(dir) !== path.resolve(CLAUDE_DIR) ? (WIN ? `$env:CLAUDE_CONFIG_DIR="${dir}"; ` : `CLAUDE_CONFIG_DIR=${tilde(dir)} `) : '';
+  return `${acct}${WIN && bin && !bin.onPath ? `& "${bin.file}"` : cli} attach ${t.job}`;
+}
+// A phone's work as a background session: started (its card says how to open it on the Mac), run as `claude -p` instead
+// (said once, with why), or waiting for you on the Mac (a prompt of its own, not one the office holds)
+function onBgTask(t, what, detail) {
+  const card = cards.get(t.id), folder = path.basename(t.dir);
+  if (what === 'started') { if (card) chat.setWork(card.id, { attach: attachCmd(t) }); fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} background session ${t.job}${t.copy ? ' (a copy)' : ''}\n`).catch(() => {}); return; }
+  if (what === 'fallback') {
+    fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} task ${t.id} as claude -p (${detail})\n`).catch(() => {});
+    if (detail === 'untrusted') chat.system(tr('chat.task.bgUntrusted', { folder }));
+    else if (detail !== 'old') chat.system(tr('chat.task.bgFailed', { folder }));   // (a Claude Code without them: the switch says so already)
+    return;
+  }
+  if (!card || (card.wait && !card.macWait)) return;   // (one the office holds: its card shows that one)
+  if (what === 'wait') { card.macWait = true; card.wait = tr(`chat.card.waitMac.${/permission/.test(detail || '') ? 'perm' : /input/.test(detail || '') ? 'input' : 'other'}`); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: null, steps: card.steps, n: card.n }); }
+  else if (what === 'work' && card.macWait) { card.macWait = false; card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); }
 }
 // one line for a step on the card: what Claude does (its tool), on what (a file, a command, a search)
 function stepOf(name, i = {}) {
@@ -612,7 +641,13 @@ async function parkForPhone(s) {
   broadcast({ k: 'sess', s: pub(s) });
   return { ok: true };
 }
-const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
+// a background session (agent view) stopped with `claude stop`, on its account: its conversation is kept
+async function stopBgSession(s) {
+  const bin = findClaude(), slug = acctOf(s) || '', e = { ...process.env };
+  if (slug) e.CLAUDE_CONFIG_DIR = dirOfSlug(slug); else delete e.CLAUDE_CONFIG_DIR;
+  return !!bin && bgRun.stop(bin.file, s.jobId, e);
+}
+const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(), bg: bgOut(),
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
   sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status, cache: cacheOut(s) })) });
 
@@ -701,6 +736,7 @@ async function doScan() {
     const name = j.name || base(j.cwd) || 'claude';
     if (s.name !== name || s.cwd !== j.cwd || s.link !== link) { s.name = name; s.cwd = j.cwd || ''; s.link = link; changed = true; noteDir(s.cwd); }
     s.pid = j.pid; s.fromFile = true; s.busy = j.status === 'busy'; s.entry = j.entrypoint || '';
+    s.jobId = j.kind === 'bg' && /^[0-9a-f]{6,16}$/.test(j.jobId || '') ? j.jobId : null;   // (a background session: `claude stop` / `attach` take this)
     // Claude's own session file says busy: trust it even if we missed the hook (e.g. the server restarted mid-turn).
     if (s.busy && s.status === 'rest') { s.status = 'work'; if (!s.taskStart) s.taskStart = j.statusUpdatedAt || Date.now(); s.lastEventAt = Math.max(s.lastEventAt, Date.now()); changed = true; }
     if (changed) broadcast({ k: 'sess', s: pub(s) });
@@ -822,13 +858,15 @@ async function onHook(p) {
   s.lastEventAt = now;
   { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
   if (p.transcript_path) s.transcript = p.transcript_path;
-  { const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id; }   // (a run from the office: its card tells it)
+  const run = runOf(sid, p.cwd, now); if (run && !s.viaOffice) s.viaOffice = run.id;   // (a run from the office: its card tells it)
+  const bgTask = run?.mode === 'bg' ? run : null;   // (a background session: its card's steps and its answer come from here)
   const agent = p.agent_id || null;
   if (agent && ev !== 'SubagentStop') ensureSub(s, agent, p.agent_type, now).seenAt = now;
   const prevStatus = s.status;
   let e = null; // event for the page
   let toFeed = true;
   const mk = (type, label = '', extra = {}) => ({ id: ++seq, ts: now, sess: s.id, name: s.name, type, label, ...extra });
+  let after = null;   // (a background session's turn over: its task settled once this event is out, still as the office's)
 
   switch (ev) {
     case 'SessionStart': {
@@ -858,6 +896,7 @@ async function onHook(p) {
       if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
       else { const x = s.subs[agent]; if (x) { x.last = { type: c.type, label: c.label }; x.steps++; } }   // (it may have stopped while the call was being read)
+      if (bgTask && !agent) cardStep(bgTask.id, stepOf(p.tool_name, p.tool_input || {}));
       const img = imageId(c.file);
       e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent, ...(c.runner ? { runner: c.runner } : {}), ...(img ? { img } : {}) });
       if (agent) toFeed = false;
@@ -915,6 +954,7 @@ async function onHook(p) {
       trackBackground(s, p);
       s.lastReply = clip(redact(oneLine(typeof p.last_assistant_message === 'string' ? p.last_assistant_message : await lastReplyOf(s))), 240);
       e = mk('stop', clip(s.lastReply, 90));
+      if (bgTask) { const said = typeof p.last_assistant_message === 'string' ? p.last_assistant_message : await lastReplyOf(s); after = () => tasks.settle(bgTask.id, { result: said }); }   // (its whole answer)
       break;
     case 'StopFailure': {
       s.status = 'rest';
@@ -923,6 +963,7 @@ async function onHook(p) {
       if (out) autoMoveSoon(acct);   // (with switching on, this conversation and the others resting on it move over)
       const moves = out?.to && prefs.get('autoMove') !== false && s.entry === 'claude-vscode' && untilOf(acct) - Date.now() >= 15 * 60e3;
       e = mk('fail', !out ? tr('server.event.modelError') : out.to ? tr(moves ? 'server.event.limitMove' : 'server.event.limitSwitch', { to: out.to }) : tr('server.event.limitHit'), { limit: !!out });
+      if (bgTask) after = () => tasks.settle(bgTask.id, { error: String(p.last_assistant_message || p.error || 'error') });
       break;
     }
     case 'PreCompact':
@@ -941,6 +982,7 @@ async function onHook(p) {
   } else if (ev === 'PostToolUse') {
     broadcast({ k: 'stats', stats, s: pub(s), post: agent || 'main' });   // `post`: whose tool finished (timeline)
   }
+  after?.();
 }
 
 /* ---------- conversation view ---------- */
@@ -1130,7 +1172,11 @@ const lockMsg = (until) => tr('server.pin.locked', { n: Math.max(1, Math.ceil((u
    A synchronous PermissionRequest hook (curl, at most 50 s) posts here. The request is held only while an office page
    has focus: pages report focus every 2 s and on blur, so a prompt in the IDE or terminal is never held up by a page
    nobody is looking at. Unanswered after 45 s, the page blurred, or the hook went away: the reply is empty and Claude
-   Code shows its own prompt as usual. "Always allow" echoes Claude Code's own suggestion back (documented). */
+   Code shows its own prompt as usual. "Always allow" echoes Claude Code's own suggestion back (documented).
+   A phone's work running as a background session has a hook of its own that waits (`?long=1`, server/bg-sessions.mjs):
+   held with no deadline until answered (on the phone, in the office), whoever looks; its usual hook is answered at once.
+   OFFICE_HOLD_MS shortens the 45 s for the tests. */
+const HOLD_MS = Math.min(45_000, Number(process.env.OFFICE_HOLD_MS) || 45_000);
 const presence = new Map();   // page id -> { focused, at }
 const officeFocused = () => { const now = Date.now(); for (const p of presence.values()) if (p.focused && now - p.at < 5000) return true; return false; };
 const pending = new Map();    // request id -> held request
@@ -1161,22 +1207,29 @@ function ruleText(sug) {
   const where = ['session', 'localSettings', 'projectSettings', 'userSettings'].includes(sug.destination) ? tr(`server.rule.${sug.destination}`) : '';
   return `${r0.toolName}${r0.ruleContent ? `(${clip(redact(r0.ruleContent), 60)})` : ''} ${where}`.trim();
 }
-async function onPermission(p, res) {
+// a phone's work running as a background session: which of its two hooks this is decides who answers (see above)
+function longHold(p, long) {
+  const t = tasks.of(p?.session_id), bg = t?.mode === 'bg' ? t : null;
+  if (long) return bg ? { task: bg } : { skip: true };   // (its settings, but not a phone's work now: Claude Code goes on as usual)
+  return bg?.hooked ? { skip: true } : {};   // (its long-waiting hook carries this one)
+}
+async function onPermission(p, res, long = false) {
+  const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
   // a run started from the office (a phone's work) may wait for a phone to answer even with no office open: they get a push
   const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id || t.from?.sid === p.session_id);
-  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !ours)) { res.writeHead(200).end(''); return; }
+  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !ours && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const c = await classifyVi(p.tool_name, p.tool_input);
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
   const id = crypto.randomUUID(), now = Date.now();
   const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, type: c.type, label: c.label, detail: permDetail(p),
-    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: now + 45_000 };
-  entry.timer = setTimeout(() => settlePerm(id), 45_000);
+    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + HOLD_MS, long, task: lh.task?.id || null };
+  if (!long) entry.timer = setTimeout(() => settlePerm(id), HOLD_MS);   // (the long one: until answered, or its hook gives up)
   pending.set(id, entry);
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
-  if (ours) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
+  if (ours || (long && prefs.get('phoneApprove'))) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
   { const run = tasks.list().find((t) => t.sid === p.session_id || t.from?.sid === p.session_id), card = run && cards.get(run.id);
     if (card) { card.wait = clip(`${c.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: id, risky: !!dangerKey(entry), steps: card.steps, n: card.n });   // (perm: its Allow / Deny buttons)
       res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } }); } }
@@ -1189,11 +1242,12 @@ async function onPermission(p, res) {
    (question text -> chosen label, several labels joined with ", "). A plan is approved by allowing ExitPlanMode, or
    sent back with your note by denying it. The page sends indexes; texts are taken from the original input here. */
 const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
-async function onQuestion(p, res) {
-  if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || !officeFocused()) { res.writeHead(200).end(''); return; }
+async function onQuestion(p, res, long = false) {
+  const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
+  if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const i = p.tool_input || {}, id = crypto.randomUUID(), now = Date.now(), txt = (v, n) => clip(redact(oneLine(v)), n);
-  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: now + 45_000 };
+  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + HOLD_MS, long, task: lh.task?.id || null };
   if (p.tool_name === 'AskUserQuestion') {
     const qs = Array.isArray(i.questions) ? i.questions.slice(0, 4) : [];
     if (!qs.length) { res.writeHead(200).end(''); return; }
@@ -1205,11 +1259,18 @@ async function onQuestion(p, res) {
     Object.assign(entry, { kind: 'plan', type: 'plan', label: tr('server.tool.plan') });
     entry.plan = clip(redact(String(i.plan || '')), 20000); entry.detail = clip(oneLine(entry.plan), 200);
   }
-  entry.timer = setTimeout(() => settlePerm(id), 45_000);
+  if (!long) entry.timer = setTimeout(() => settlePerm(id), HOLD_MS);
   pending.set(id, entry);
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
+  // a phone's work asking (a background session): its card says so, answered where approvals are; a push if nobody looks
+  const card = lh.task && cards.get(lh.task.id);
+  if (card) {
+    card.wait = clip(`${entry.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: null, steps: card.steps, n: card.n });
+    res.on('close', () => { if (cards.get(lh.task.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } });
+    if (prefs.get('phoneApprove')) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(oneLine(entry.detail), 180), tag: `perm-${id}`, url: '/', urgent: true });
+  }
 }
 // The reply for a question card: `answers` from the page is [{ q, pick: [option indexes], other }].
 function askDecision(p, b) {
@@ -1973,7 +2034,12 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && url.pathname === '/hook/question') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    readJson(req, 4_000_000).then((p) => onQuestion(p, res)).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    readJson(req, 4_000_000).then((p) => onQuestion(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/hook/bind') {   // a background session the office started, saying which it is (server/bg-sessions.mjs)
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    readJson(req, 200_000).then((p) => { tasks.bind(String(req.headers['x-office-job'] || ''), String(p?.session_id || '')); res.writeHead(200).end('{}'); }).catch(() => { try { res.writeHead(200).end('{}'); } catch { /* gone */ } });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/hook/status') {
@@ -1993,7 +2059,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    readJson(req, 4_000_000).then((p) => onPermission(p, res)).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
@@ -2036,7 +2102,7 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/presence') {
         const page = String(b.page || '').slice(0, 64);
         if (b.focused) presence.set(page, { focused: true, at: Date.now() }); else presence.delete(page);
-        if (!officeFocused()) for (const id of [...pending.keys()]) settlePerm(id);   // nobody is looking: give the prompt back
+        if (!officeFocused()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // nobody is looking: give the prompt back (a background session's waits on)
         json(res, 200, { ok: true, pending: pending.size });
         return;
       }
@@ -2134,6 +2200,13 @@ const server = http.createServer((req, res) => {
         broadcast({ k: 'phone', approve: !!prefs.get('phoneApprove'), tasks: !!b?.on });
         json(res, 200, tasksOut(true)); return;
       }
+      if (url.pathname === '/api/tasks/bg') {   // phone work as background sessions (server/bg-sessions.mjs): on the Mac only
+        if (!mac) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+        prefs.set('phoneTasksBg', b?.on ? true : undefined);
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} phone work as background sessions ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
+        await bgRun.probe(findClaude()).catch(() => null);
+        json(res, 200, tasksOut(true)); return;
+      }
       if (url.pathname === '/api/tasks/stop') { json(res, 200, { ok: tasks.stop(String(b?.id || '')) }); return; }
       if (url.pathname !== '/api/tasks') { json(res, 404, { ok: false }); return; }
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
@@ -2150,16 +2223,21 @@ const server = http.createServer((req, res) => {
       if (s) {   // the conversation itself: open in the editor and resting, it is closed there first; at work there: not now
         const open = s.pid && !s.parked;
         if (open && (s.status !== 'rest' || s.busy || [...pending.values()].some((p) => p.sess === s.id))) { json(res, 409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name }) }); return; }
-        if (open) { const pk = await parkForPhone(s); if (!pk.ok) { json(res, 409, { ok: false, code: 'macOpen', message: pk.message }); return; } }
+        // (a background session resting: stopped, its conversation kept, then carried on; with background sessions on,
+        // server/tasks.mjs does that itself and wakes it in the background again)
+        if (open && s.jobId) { if (!bgOn() && !(await stopBgSession(s))) { json(res, 409, { ok: false, code: 'macOpen', message: tr('server.move.failed') }); return; } }
+        else if (open) { const pk = await parkForPhone(s); if (!pk.ok) { json(res, 409, { ok: false, code: 'macOpen', message: pk.message }); return; } }
         from = { sid: s.sid, fork: false, name, id: s.id, orig: key, chat: true, acct: acctOf(s) || '' };
       } else {   // a project: a new conversation, or the one you started there (for 6 hours; ＋ asks for a new one)
         const on = th?.sid && !b.fresh && Date.now() - th.at < 6 * 3600e3 ? th.sid : null;
+        const live = on && bySid(on);   // (that one opened on the Mac since, `claude attach`, and at work there: it waits)
+        if (live?.pid && (live.status !== 'rest' || live.busy)) { json(res, 409, { ok: false, code: 'macBusy', message: tr('chat.task.macBusy', { name: live.title || live.name }) }); return; }
         from = { sid: on, fork: false, name, orig: key, chat: true };
       }
       chat.say('me', `@${name} ${text}`, { now: true, long: true });
       const mine = chat.state.msgs.at(-1);
       for (const img of images) if (/^data:image\/jpeg;base64,/.test(img) && img.length < 500_000) chat.photo(img);
-      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK });
+      const r = tasks.start({ dir: s ? s.cwd : pdir, text, images, from, env: s ? acctEnv(from.acct) : null, system: SHOT_ASK, stopAfter: s?.entry === 'claude-vscode' });   // (one from your editor goes back to it alone)
       if (r.ok) {
         threads.set(key, { sid: from.sid, at: Date.now(), running: true });
         if (s) s.viaOffice = r.task.id;
@@ -2205,7 +2283,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/tunnel' && (req.method === 'POST' || req.method === 'GET')) {   // the office from anywhere: { on } (this computer only)
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || (req.method === 'POST' && !String(req.headers['content-type'] || '').startsWith('application/json'))) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
-    if (req.method === 'GET') { json(res, 200, tunnelOut()); return; }
+    if (req.method === 'GET') { Promise.race([bgRun.probe(findClaude()).catch(() => null), new Promise((r) => setTimeout(r, 4000))]).then(() => json(res, 200, tunnelOut())); return; }   // (whether this Claude Code has background sessions: looked at once)
     readJson(req).then((b) => {
       prefs.set('tunnel', b?.on ? true : undefined);
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tunnel ${b?.on ? 'on' : 'off'}\n`).catch(() => {});
@@ -2513,7 +2591,7 @@ setInterval(syncLan, 30_000).unref();
 const tunnel = { state: 'off', url: '', host: '', error: '', pid: 0, srv: null, port: 0, tries: 0, gen: 0, watch: null };
 const TUNNEL_PID = path.join(DATA_DIR, 'tunnel.pid'), CF_BIN = path.join(DATA_DIR, 'bin', process.platform === 'win32' ? 'cloudflared.exe' : 'cloudflared');
 const tunnelOut = () => ({ ok: true, on: !!prefs.get('tunnel'), state: tunnel.state, url: tunnel.url, error: tunnel.error, port: tunnel.port, pin: currentPin(),
-  awake: process.platform === 'darwin' ? { held: !!awakeProc, ac: powerAC } : null, rc: rcAtStartup(), tasks: !!prefs.get('phoneTasks') });
+  awake: process.platform === 'darwin' ? { held: !!awakeProc, ac: powerAC } : null, rc: rcAtStartup(), tasks: !!prefs.get('phoneTasks'), bg: bgOut() });
 // Giving Claude work from a phone is Claude Code's own Remote Control: with remoteControlAtStartup in its settings every
 // new session opens its bridge by itself (the other accounts share these settings by a link), and the office shows each
 // session's link. Switched in the phone window, by you, on the Mac; the rest of the file is left as it is.

@@ -16,6 +16,7 @@ export default {
     prod: 'có chữ "prod": có thể đụng môi trường thật',
   },
   asks: 'hỏi bạn',
+  noDeadline: 'chờ bạn',
   plan: 'xin duyệt kế hoạch',
   wants: {
     bash: 'xin phép chạy lệnh',

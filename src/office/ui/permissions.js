@@ -92,7 +92,8 @@ function permCard(p) {
   }
   // a phone, while the Mac doesn't let phones approve: the card says where to answer it instead of offering buttons
   if (!state.isLocal && !state.phoneApprove && !DEMO) acts.replaceChildren(el('small', 'pc-phone-note', tr('perm.phoneOff')));
-  card._tick = () => { const ms = Math.max(0, p.until - Date.now()); left.textContent = tr('time.sec', { n: Math.ceil(ms / 1000) }); fill.style.width = `${(ms / 45000) * 100}%`; };
+  // (a background session's waits until answered: no countdown)
+  card._tick = () => { if (!p.until) { left.textContent = tr('perm.noDeadline'); fill.style.width = '100%'; return; } const ms = Math.max(0, p.until - Date.now()); left.textContent = tr('time.sec', { n: Math.ceil(ms / 1000) }); fill.style.width = `${(ms / 45000) * 100}%`; };
   card._tick();
   return card;
 }
