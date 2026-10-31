@@ -155,6 +155,11 @@ export default {
     },
     recall: ['Ơ có việc, về liền! 🏃', 'Có việc rồi, chạy về đây!'],
   },
+  // thang bộ khi thang máy bảo trì (world/entrance.js): thở dài trước tấm biển, lên tới nơi thì hụt hơi
+  stairs: {
+    sigh: ['Thang máy bảo trì à 😩', 'Lại bảo trì 😩 đi bộ vậy', 'Haizz, thang bộ thôi'],
+    puff: ['Hộc hộc… {n} tầng 😮‍💨', 'Leo {n} tầng, rụng rời cả chân 🥵', 'Phù… tới rồi 😮‍💨'],
+  },
   rouse: {
     stir: ['Hửm…? 😪', 'Ơ… ai đấy? 🥱', 'Ưm… gì thế…'],
     hi: ['A, sếp! Em đang sạc pin tí thôi 🔋', 'Chào sếp! Em xong việc rồi, có gì mới không ạ? 😳'],

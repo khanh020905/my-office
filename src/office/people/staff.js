@@ -7,7 +7,7 @@ import { canvasTex, cyl, mat, put, rbox } from '../scene/blocks.js';
 import { DOOR_IN, DOOR_OUT, NODES, wet } from './navigation.js';
 import { Worker, dn, hash, npcs, sessions, workers } from './workers.js';
 import { asleep, free, quip } from './errands.js';
-import { liftArrive } from '../world/entrance.js';
+import { liftArrive, liftDown } from '../world/entrance.js';
 import { wetSign } from '../life/rain.js';
 import { night } from '../world/room-update.js';
 import { altar, arrange, arranged, lightIncense, offeringDay } from '../life/altar.js';
@@ -42,8 +42,7 @@ function depart(p, then) {
   p.leavingNow = true;
   p.goTo(DOOR_IN, () => {
     if (!PRO) { p.goTo(DOOR_OUT, gone); return; }
-    p.anim = 'idle'; p.faceTarget = DOOR_IN.face;
-    p.liftWait = () => p.goTo(DOOR_OUT, () => { p.faceTarget = Math.PI / 2; p.liftRide = gone; });
+    liftDown(p, gone);
   });
 }
 

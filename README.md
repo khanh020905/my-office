@@ -84,6 +84,13 @@ Then open <http://localhost:4310>.
   come back as soon as there is work, or in the morning. With the city outside they go by the street, each their own way:
   their own scooter from the row parked on the pavement in front of the building, a GrabBike or Xanh SM bike (on the
   back), or a Xanh SM taxi. The session list says where anyone out is ("In Circle K", "Heading home (GrabBike)").
+- **The lift after a restart** (company floor): for the first three minutes after the office's server starts (five when
+  it starts on a new build) the lift is being serviced: doors half open behind a yellow-and-black barrier ("UNDER
+  MAINTENANCE · Sorry for the inconvenience"), the call panel open, the car's light flickering, a technician in blue at
+  work with his toolbox and multimeter. Everyone takes the stairs beside it, slower down and out of breath at the top,
+  and the group chat grumbles. At the end he takes the barrier away and rides the lift down; after a new build he first
+  puts an inspection sticker with the version and the date in the car, which stays there. Nothing waits for it.
+  (`?liftservice`, or `?liftservice=new`, shows it.)
 - **Out of Claude**: when an account's plan limit (the 5 hours or the week) is used up, the people on that account leave
   their desks for a break: a tea at the pantry tables, a book, a chat. A board on the wall counts down to when it can be
   used again; when it resets the bell rings and they go back to their desks. Anyone whose session is still working keeps

@@ -9,7 +9,7 @@ import { TYPE_ICON, icon } from '../ui/icons.js';
 import { scene } from '../scene/renderer.js';
 import { canvasTex } from '../scene/blocks.js';
 import { inside } from '../world/layout.js';
-import { lift, liftArrive } from '../world/entrance.js';
+import { lift, liftArrive, liftDown } from '../world/entrance.js';
 import { BAGS, COATS, chairs, deskKit } from '../world/desks.js';
 import { CLAUDE_MARK } from '../world/pro/pieces.js';
 import { DESK_SPOTS, DOOR_IN, DOOR_OUT, NODES, STATIONS, allocate, faceTo, nearestNode, route } from './navigation.js';
@@ -439,17 +439,16 @@ export function setup() {
       this.leaving = true; this.hush(); this.want = null; this.after = null; this.chore = null;
       const gone = () => { this.remove(); onGone && onGone(); };
       if (this.outing) this.outing.drop(this);
-      if (this.liftHold || this.away || this.street || this.offstage) { this.liftHold = false; gone(); return; }   // still in the lift that brought them, gone home, or out (they don't come back)
+      if (this.liftHold || this.away || this.street || this.offstage || this.stairs) { this.liftHold = false; gone(); return; }   // still in the lift that brought them (or on the stairs), gone home, or out (they don't come back)
       this.walkOut(gone);
     }
     // packing up at the desk (coat on, bag on the back), then out: the lift (press the button, wait, step in, ride
-    // down) or the door
+    // down; the stairs while it is serviced) or the door
     walkOut(gone) {
       const down = () => streetHooks.home?.(this, gone) || gone();   // (and with the city outside, out into the street)
       const out = () => viaClock('out', this, () => this.goTo(DOOR_IN, () => {
         if (!lift) { this.goTo(DOOR_OUT, down); return; }
-        this.anim = 'idle'; this.faceTarget = DOOR_IN.face;   // press the button, wait for the car
-        this.liftWait = () => this.goTo(DOOR_OUT, () => { this.faceTarget = Math.PI / 2; this.liftRide = down; });
+        liftDown(this, down);
       }));
       const d = deskKit.indexOf(this);
       if (d < 0) { out(); return; }
@@ -486,7 +485,7 @@ export function setup() {
     }
     remove() {
       { const k = deskKit.indexOf(this); if (k >= 0) deskKit[k] = null; }
-      this.liftHold = false; this.liftWait = this.liftRide = null;
+      this.liftHold = false; this.liftWait = this.liftRide = null; this.stairs = null;
       if (this.queued) leaveCoffee(this);
       if (this.mealBox) hideMeal(this);
       if (this.spot && this.spot.by === this) this.spot.by = null;
@@ -499,7 +498,7 @@ export function setup() {
       this.held = false;
       if (this.phase === 'walk' && !this.liftHold) {
         const tgt = this.path[0];
-        const dx = tgt.x - this.pos.x, dz = tgt.y - this.pos.y, d = Math.hypot(dx, dz), step = (this.hurry ? 4.2 : 2.7) * dt;
+        const dx = tgt.x - this.pos.x, dz = tgt.y - this.pos.y, d = Math.hypot(dx, dz), step = (this.hurry ? 4.2 : this.puffUntil > state.sim ? 1.7 : 2.7) * dt;   // (slower, out of breath: up the stairs, world/entrance.js)
         // out on the street (outings.js): a crossing waits at the kerb for the green man, and is walked at road level
         if (tgt.gate) { if (tgt.gate()) tgt.gate = null; else this.held = true; }
         if (tgt.y0 != null && !this.held) this.ground = tgt.y0;
@@ -529,7 +528,7 @@ export function setup() {
         { sit, scale: this.scale, look: idleish ? this.lookY : 0, wave: !walking && this.waveUntil > t, blink: this.blinkAt < 0.12, carry: this.carry, doze: this.doze });
       const y = applyChibiPose(this.P, pose, dt) * this.scale;
       this.root.position.set(this.pos.x + this.stompShift, y + this.gy(), this.pos.y);
-      const hid = (!!this.inStall && !walking) || !!this.away || !!this.offstage;   // behind a shut stall door, gone home, inside a shop or the lift
+      const hid = (!!this.inStall && !walking) || !!this.away || !!this.offstage || !!this.stairs;   // behind a shut stall door, gone home, inside a shop, the lift or the stairs
       if (this.root.visible === hid) { this.root.visible = !hid; this.root.matrixWorldAutoUpdate = !hid; if (hid) { this.tagObj.visible = false; this.bubbleObj.visible = false; } }   // (out of sight: no matrices to keep up)
       this.face += wrapAngle(this.faceTarget - this.face) * Math.min(1, dt * 10);
       this.root.rotation.y = this.face; this.root.rotation.z = pose.tilt;

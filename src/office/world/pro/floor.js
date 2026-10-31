@@ -6,7 +6,7 @@ import { canvasTex, cyl, lampBulbs, mat, put, rbox, rug, toonMat } from '../../s
 import { BULB_OFF, metal, potPlant, woodDark, woodMid } from '../terrace.js';
 import { wallWindow } from '../windows.js';
 import { makeSofa } from '../furniture/room-pieces.js';
-import { DZ } from '../entrance.js';
+import { DZ, STAIR } from '../entrance.js';
 import { PODS, officeChair } from '../desks.js';
 import { nightHooks, trinket } from '../props/trinkets.js';
 import { OFFICE_MARK, PRO_FX, armchair, backPanel, chairUph, diningSet, floorZone, glassWall, gridTex, leftPanel, lowWall, plankTex, plateTex, speckTex } from './pieces.js';
@@ -17,11 +17,15 @@ function buildProFloor() {
   put(scene, rbox(22.6, 0.5, 17.6, '#7A5A3E', 0.05), 3, -0.25, 0.5);
   const wallM = mat('#EEE8DE', { roughness: 0.9 });
   put(scene, rbox(22.6, 4.2, 0.3, wallM, 0.04), 3, 2.1, -8.15);
-  put(scene, rbox(0.3, 4.2, 17.6, wallM, 0.04), -8.15, 2.1, 0.5);
+  // (the left one with the stairs' doorway in it, beside the lift: world/entrance.js hangs the door)
+  { const a = STAIR.z - STAIR.w / 2, b = STAIR.z + STAIR.w / 2;
+    put(scene, rbox(0.3, 4.2, a + 8.3, wallM, 0.01), -8.15, 2.1, (a - 8.3) / 2);
+    put(scene, rbox(0.3, 4.2, 9.3 - b, wallM, 0.01), -8.15, 2.1, (b + 9.3) / 2);
+    put(scene, rbox(0.3, 4.2 - STAIR.h, STAIR.w, wallM, 0.01), -8.15, (4.2 + STAIR.h) / 2, STAIR.z); }
   put(scene, rbox(22.6, 0.14, 0.42, '#E2D9C8', 0.03), 3, 4.25, -8.15);
   put(scene, rbox(0.42, 0.14, 17.6, '#E2D9C8', 0.03), -8.15, 4.25, 0.5);
   put(scene, rbox(22, 0.18, 0.06, '#6E5440', 0.02), 3, 0.09, -7.97);    // skirting
-  put(scene, rbox(0.06, 0.18, 17, '#6E5440', 0.02), -7.97, 0.09, 0.5);
+  for (const [z0, z1] of [[-8, STAIR.z - STAIR.w / 2 - 0.05], [STAIR.z + STAIR.w / 2 + 0.05, 9]]) put(scene, rbox(0.06, 0.18, z1 - z0, '#6E5440', 0.02), -7.97, 0.09, (z0 + z1) / 2);
 
   /* floors */
   const devWood = plankTex(32, 74, 22), darkWood = plankTex(24, 46, 34), warmWood = plankTex(28, 58);
@@ -54,7 +58,8 @@ function buildProFloor() {
     });
     put(scene, new THREE.Mesh(new THREE.PlaneGeometry(5.36, 0.64), toonMat({ map: tiles, roughness: 0.35 })), 11.3, 1.3, -7.955); }
   leftPanel(-3, 1.2, '#38404C');
-  leftPanel(1.2, 5.4, '#2F4A3D');
+  { const a = STAIR.z - STAIR.w / 2 - 0.05, b = STAIR.z + STAIR.w / 2 + 0.05;   // (the lobby's green, round the stairs' door)
+    leftPanel(1.2, a, '#2F4A3D'); leftPanel(a, b, '#2F4A3D', STAIR.h + 0.06); if (b < 5.38) leftPanel(b, 5.4, '#2F4A3D'); }
   leftPanel(5.4, 9, '#DDE8EE', 0, 2.0);
 
   /* windows (all show the backdrop) */
@@ -243,8 +248,9 @@ function buildProFloor() {
     officeChair(rc, 0, -0.45, mat('#2F3A48', { roughness: 0.6 })); }   // (behind her, against the glass: the altar, life/altar.js)
   potPlant(-3.95, 5.0, 0.42, 'bush');   // the corner by the glass doors (the one by the lift has the lobby's floor lamp)
   /* the waiting corner: two armchairs facing the reception, a little round table with magazines between them */
-  chairUph(-6.95, 4.88, Math.PI, '#2F4A3D'); chairUph(-5.7, 4.88, Math.PI, '#2F4A3D');
-  { const t = new THREE.Group(); t.position.set(-6.32, 0, 4.98); scene.add(t);
+  /* (one armchair since the stairs' door came in beside the lift: the way to it passes where the other stood) */
+  chairUph(-5.75, 4.88, Math.PI, '#2F4A3D');
+  { const t = new THREE.Group(); t.position.set(-6.35, 0, 5.05); scene.add(t);
     put(t, cyl(0.22, 0.22, 0.03, mat('#E3DACB', { roughness: 0.4 }), 24), 0, 0.5, 0); put(t, cyl(0.03, 0.03, 0.48, metal, 8), 0, 0.25, 0); put(t, cyl(0.15, 0.15, 0.02, metal, 16), 0, 0.01, 0);
     for (const [c, r, y] of [['#D97757', 0.25, 0.525], ['#3F7CC4', -0.15, 0.537]]) put(t, rbox(0.17, 0.01, 0.23, c, 0.003), 0.03, y, -0.02).rotation.y = r;
     trinket('cactus', -0.1, 0.515, 0.08, 0, t); }
@@ -317,7 +323,7 @@ function buildProFloor() {
       put(g, rbox(w + 0.08, h + 0.08, 0.04, '#2B2F36', 0.01), 0, 0, 0);
       put(g, new THREE.Mesh(new THREE.PlaneGeometry(w, h), toonMat({ map: tex, roughness: 0.9 })), 0, 0, 0.022);
     };
-    poster(-7.96, 2.0, 4.95, Math.PI / 2, 0.66, 0.9, (g, w, h) => {
+    poster(-7.47, 1.75, 4.42, 0, 0.66, 0.9, (g, w, h) => {   // (on the lift's side, by the stairs' door)
       g.fillStyle = '#F6EFE4'; g.fillRect(0, 0, w, h); g.fillStyle = '#D97757'; g.fillRect(0, 0, w, 10);
       g.fillStyle = '#1E232B'; g.font = '800 30px "Be Vietnam Pro", system-ui, sans-serif'; g.textAlign = 'center';
       ['SHIP', 'SMALL,', 'SHIP', 'OFTEN'].forEach((t, i) => g.fillText(t, w / 2, 90 + i * 52));

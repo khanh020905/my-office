@@ -47,6 +47,18 @@ export default {
     backOther: '🔔 {name} is back, to the desks!',
     cheer: ['We are back, to the desk!', 'Back to it!', 'Off to my desk.'],
   },
+  // the lift being serviced after the office's server restarts (life/lift-service.js): the barrier's sign, the
+  // inspection sticker put in the car after a new build, the technician
+  liftService: {
+    sign: 'UNDER MAINTENANCE',
+    sorry: 'Sorry for the inconvenience',
+    stickerHead: 'INSPECTED',
+    stickerWhat: 'My Office v{version}',
+    stickerDate: 'Date {date}',
+    stickerNo: 'No. {no}',
+    tech: 'Lift technician',
+    techSay: ['Stairs for now, please 🙏', 'Nearly done, bear with me 🔧', 'Just the routine service, running again in a few minutes 🔧'],
+  },
   altar: {
     header: 'THẦN TÀI · THỔ ĐỊA',
     left: 'Thổ năng sinh bạch ngọc',

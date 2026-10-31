@@ -98,7 +98,7 @@ function placeContent(id) {
     case 'door': {
       const ev = recentEvents(['start', 'end'], 10), box = el('div', 'pl-rows');
       for (const e of ev) box.append(plRow({ ic: 'door', color: sessColor(e.sess), title: tr(e.type === 'start' ? 'places.door.came' : 'places.door.went', { name: dnOf(e) }), meta: agoText(e.ts), onClick: sessions.has(e.sess) ? () => openSession(e.sess) : null }));
-      return { icon: 'door', title: tr(lift ? 'places.door.titleLift' : 'places.door.title'), sub: tr(lift ? 'places.door.subLift' : 'places.door.sub'), body: ev.length ? box : plEmpty(tr('places.door.empty')), foot: el('span', null, tr('places.door.open', { n: list.length })) };
+      return { icon: 'door', title: tr(lift ? 'places.door.titleLift' : 'places.door.title'), sub: tr(!lift ? 'places.door.sub' : lift.service ? 'places.door.subService' : 'places.door.subLift'), body: ev.length ? box : plEmpty(tr('places.door.empty')), foot: el('span', null, tr('places.door.open', { n: list.length })) };
     }
     case 'coffee': {
       const rest = list.filter((s) => s.status === 'rest').sort((a, b) => (b.doneAt || b.lastAt) - (a.doneAt || a.lastAt)), box = el('div', 'pl-rows');

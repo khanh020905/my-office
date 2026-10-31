@@ -167,6 +167,11 @@ export default {
   },
   // woken up in first person (E next to someone asleep): stirring, what they say (or one of the poke lines), the second
   // and third time within two minutes, the fourth (they don't wake), dozing off again
+  // the stairs, while the lift is being serviced (world/entrance.js): a sigh at the sign, out of breath at the top
+  stairs: {
+    sigh: ['The lift’s being serviced? 😩', 'Serviced again 😩 stairs then', 'Sigh, the stairs it is'],
+    puff: ['Phew… {n} floors 😮‍💨', '{n} floors on foot, my legs 🥵', 'Huff… made it 😮‍💨'],
+  },
   rouse: {
     stir: ['Hm…? 😪', 'Wha… who is it? 🥱', 'Mmh… what…'],
     hi: ['Oh, boss! Just recharging 🔋', 'Hi! All done here, anything new? 😳'],
