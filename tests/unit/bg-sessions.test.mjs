@@ -70,13 +70,15 @@ function fakeBg({ ok = true, out = BACKGROUNDED, code = 0, rows = [] } = {}) {
     stop: async (file, id) => { calls.push(['stop', id]); return true; },
   };
 }
+// (stands in for `claude` where a run really starts: exits at once on Claude's flags, on every system; Windows has no /bin/echo)
+const QUICK = process.execPath;
 const until = async (fn, ms = 3000) => { const end = Date.now() + ms; while (!fn()) { if (Date.now() > end) throw new Error('timed out'); await new Promise((r) => setTimeout(r, 10)); } };
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-bg-'));
 after(() => fs.rmSync(dir, { recursive: true, force: true }));
 
 test('a task as a background session: started, told which it is, its answer from its Stop hook', async () => {
   const bg = fakeBg(), seen = [], done = [];
-  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: '/bin/echo' }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 60_000 });
+  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: QUICK }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 60_000 });
   const r = tasks.start({ dir, text: '-p tidy the docs', system: 'a word from the office' });
   assert.equal(r.ok, true);
   await until(() => seen.some(([w]) => w === 'started'));
@@ -93,7 +95,7 @@ test('a task as a background session: started, told which it is, its answer from
 
 test('carrying on a background session: stopped first while it runs, then woken with the options it keeps', async () => {
   const bg = fakeBg({ rows: [{ id: 'aaaa1111', sessionId: 'sess-2', pid: 42, state: 'done' }] }), seen = [];
-  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: '/bin/echo' }), env: () => ({}), bg, onBg: (t, what) => seen.push(what), watchMs: 60_000 });
+  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: QUICK }), env: () => ({}), bg, onBg: (t, what) => seen.push(what), watchMs: 60_000 });
   tasks.start({ dir, text: 'and the tests', from: { sid: 'sess-2', fork: false } });
   await until(() => seen.includes('started'));
   assert.deepEqual(bg.calls[0], ['stop', 'aaaa1111']);
@@ -102,7 +104,7 @@ test('carrying on a background session: stopped first while it runs, then woken 
 
 test('a folder Claude Code won\'t start one in: the same task as `claude -p`, said why', async () => {
   const bg = fakeBg({ code: 1, out: 'Workspace not trusted. Run `claude` in /x once and accept the trust prompt, then retry.' }), seen = [], done = [];
-  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: '/bin/echo' }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 60_000 });
+  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: QUICK }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 60_000 });
   tasks.start({ dir, text: 'fix it' });
   await until(() => done.length === 1);
   assert.deepEqual(seen, [['fallback', 'untrusted']]);
@@ -112,7 +114,7 @@ test('a folder Claude Code won\'t start one in: the same task as `claude -p`, sa
 test('stopped from its card before it even started: stopped as it starts', async () => {
   const bg = fakeBg(), done = [];
   let release; bg.run = (file, args) => { bg.calls.push(['run', ...args]); return new Promise((r) => { release = () => r({ code: 0, out: BACKGROUNDED, err: '' }); }); };
-  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: '/bin/echo' }), env: () => ({}), bg, onDone: (t) => done.push(t), watchMs: 60_000 });
+  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: QUICK }), env: () => ({}), bg, onDone: (t) => done.push(t), watchMs: 60_000 });
   const r = tasks.start({ dir, text: 'slowly' });
   await until(() => bg.calls.length === 1);
   assert.equal(tasks.stop(r.task.id), true);
@@ -124,7 +126,7 @@ test('stopped from its card before it even started: stopped as it starts', async
 
 test('looked at while it runs: waiting on the Mac, then failed', async () => {
   const bg = fakeBg(), seen = [], done = [];
-  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: '/bin/echo' }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 20 });
+  const tasks = createTasks({ dataDir: dir, claude: () => ({ file: QUICK }), env: () => ({}), bg, onBg: (t, what, d) => seen.push([what, d]), onDone: (t) => done.push(t), watchMs: 20 });
   tasks.start({ dir, text: 'work' });
   await until(() => seen.some(([w]) => w === 'started'));
   bg.rows.push({ id: '7c5dcf5d', sessionId: 'sess-3', state: 'blocked', status: 'waiting', waitingFor: 'permission prompt' });
