@@ -73,6 +73,23 @@ export async function memory() {
   const pressure = psi ? (full >= 5 || some >= 30 ? 'critical' : some >= 10 ? 'warn' : 'normal') : left < 0.08 ? 'critical' : left < 0.18 ? 'warn' : 'normal';
   return { total, used, compressed: 0, swapTotal: m.swapTotal, swapUsed: Math.max(0, m.swapTotal - m.swapFree), pressure };
 }
+// the battery (the e-scooters' gauges, src/office/world/backdrops/street-ev.js): /sys/class/power_supply's first
+// battery, read at most once a minute; null without one (a desktop, a container)
+/** capacity "80", status "Charging" | "Discharging" | "Full" | "Not charging", the adapter's online "1" → { pct, charging, ac } */
+export function parseSupply(capacity, status, online) {
+  const pct = Number(String(capacity || '').trim());
+  if (!String(capacity || '').trim() || !Number.isFinite(pct)) return null;
+  const st = String(status || '').trim();
+  return { pct: Math.min(100, pct), charging: st === 'Charging', ac: st === 'Charging' || st === 'Full' || String(online || '').trim() === '1' };
+}
+let batt = { at: 0, v: null };
+export async function battery() {
+  if (Date.now() - batt.at < 60_000) return batt.v;
+  const dir = '/sys/class/power_supply', names = await fsp.readdir(dir).catch(() => []);
+  const bat = names.find((n) => /^BAT/i.test(n)), ac = names.find((n) => /^(AC|ADP)/i.test(n));
+  batt = { at: Date.now(), v: bat ? parseSupply(await readText(path.join(dir, bat, 'capacity')), await readText(path.join(dir, bat, 'status')), ac ? await readText(path.join(dir, ac, 'online')) : '') : null };
+  return batt.v;
+}
 export async function disk() {
   try { const s = await fsp.statfs('/'); const total = s.blocks * s.bsize, free = s.bavail * s.bsize; return { total, free, used: total - free }; }
   catch { return { total: 0, free: 0, used: 0 }; }

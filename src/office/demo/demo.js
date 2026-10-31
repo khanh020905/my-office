@@ -1,6 +1,6 @@
 // Demo mode: fictional projects and a fictional Mac.
 import { state } from '../core/state.js';
-import { $, STATIC, rand, replay } from '../core/env.js';
+import { $, STATIC, officeNow, rand, replay } from '../core/env.js';
 import { CHAIR_IDLE, chairs } from '../world/desks.js';
 import { sessions, subs, workers } from '../people/workers.js';
 import { chatAct, chatApply, chatLeft, chatLoad } from '../ui/group-chat.js';
@@ -114,6 +114,12 @@ function demoLoop(s, p, first) {
   go(first ? rand(300, 2500) : rand(4000, 14000));
 }
 const demoAuto = { hours: 0, last: null };
+// the demo's battery, by the office clock: four hours a round, three and a third of them running down from full to
+// 12% (the e-scooters in the street follow it: street-ev.js), then charging back up
+function demoBattery() {
+  const m = (officeNow().getTime() / 60000) % 240;
+  return m < 200 ? { pct: Math.round(100 - m * 0.44), charging: false, ac: false } : { pct: Math.round(12 + (m - 200) * 2.2), charging: true, ac: true };
+}
 export function demoMac() {
   const GBb = 1024 ** 3, now = Math.round(Date.now() / 1000), list = [...sessions.values()];
   const claude = list.map((s, i) => ({ pid: 52000 + i, start: now - 3600 * (i + 1), name: s.name, dir: s.dir, busy: s.status !== 'rest', idle: s.status === 'rest' ? Math.round((Date.now() - s.lastAt) / 1000) + 3600 * i : 0, mem: (260 + i * 90) * 1024 ** 2, remote: i === 0 }));
@@ -133,6 +139,7 @@ export function demoMac() {
   ];
   return { at: Date.now(), mem: { used: 12.6 * GBb, total: 16 * GBb, pressure: 'warn', swapUsed: 3.1 * GBb, swapTotal: 6 * GBb }, cpu: { percent: 42 + Math.round(Math.random() * 10), cores: 10, load: 4.2 },
     disk: { used: 301 * GBb, total: 460 * GBb, free: 159 * GBb }, tight: true, diskTight: false, devServers: [dev, lost], claude, orphans: [],
+    battery: demoBattery(),
     apps: [{ name: 'Google Chrome', mem: 4.8 * GBb, cpu: 31, count: 22, quit: true }, { name: 'Slack', mem: 1.2 * GBb, cpu: 3, count: 6, quit: true }, { name: 'Spotify', mem: 0.6 * GBb, cpu: 2, count: 5, quit: true }, { name: 'Claude Code', mem: 2.1 * GBb, cpu: 14, count: 6, quit: false }],
     ide: { name: 'Claude Code', mem: 2.1 * GBb, windows: 2, ui: { mem: 0.9 * GBb, n: 6 }, ts: { mem: 0, n: 0 }, ext: { mem: 0.6 * GBb, n: 2 }, other: 0.6 * GBb, chats: claude.length, idleChats: claude.filter((c) => !c.busy).length },
     held: 15.2 * GBb, rules: { sessionIdle: 2700, devIdle: 7200, pressure: 'warn' }, auto: demoAuto,

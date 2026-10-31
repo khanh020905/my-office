@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseNetTcp, parseMeminfo, parseStat } from '../../server/platform/linux.mjs';
+import { parseNetTcp, parseMeminfo, parseStat, parseSupply } from '../../server/platform/linux.mjs';
+import { parsePmset } from '../../server/platform/darwin.mjs';
 import { parseReading } from '../../server/platform/win32.mjs';
 import { cpuFromDelta, parseEtime } from '../../server/platform/shared.mjs';
 
@@ -64,4 +65,15 @@ test('shared: ps times, and CPU % from two readings', () => {
   const b = new Map([[1, { pid: 1, start: 100, cpuSec: 11 }]]);
   cpuFromDelta(state, b);
   assert.equal(b.get(1).cpu, 50);
+});
+
+test('the battery: pmset on macOS, /sys/class/power_supply on Linux (the e-scooters in the street show it)', () => {
+  assert.deepEqual(parsePmset("Now drawing from 'Battery Power'\n -InternalBattery-0 (id=22413411)\t45%; discharging; 3:20 remaining present: true"), { pct: 45, charging: false, ac: false });
+  assert.deepEqual(parsePmset("Now drawing from 'AC Power'\n -InternalBattery-0 (id=22413411)\t80%; charging; 0:42 remaining present: true"), { pct: 80, charging: true, ac: true });
+  assert.deepEqual(parsePmset("Now drawing from 'AC Power'\n -InternalBattery-0 (id=22413411)\t100%; charged; 0:00 remaining present: true"), { pct: 100, charging: false, ac: true });
+  assert.deepEqual(parsePmset("Now drawing from 'AC Power'\n -InternalBattery-0 (id=1)\t93%; AC attached; not charging present: true"), { pct: 93, charging: false, ac: true });
+  assert.equal(parsePmset("Now drawing from 'AC Power'"), null);   // (a Mac mini: no battery)
+  assert.deepEqual(parseSupply('57\n', 'Discharging\n', '0'), { pct: 57, charging: false, ac: false });
+  assert.deepEqual(parseSupply('88', 'Charging', ''), { pct: 88, charging: true, ac: true });
+  assert.equal(parseSupply('', '', ''), null);
 });

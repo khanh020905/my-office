@@ -315,6 +315,17 @@ export default {
     },
     where: { going: 'Going down to the rice place', goingBd: 'Off for bún đậu mắm tôm', eating: "Having lunch at cô Ba's", eatingBd: 'Eating bún đậu mắm tôm', back: 'Lunch done, on the way back' },
   },
+  // a battery swap for an e-scooter (people/evswap.js, world/backdrops/street-ev.js)
+  ev: {
+    say: {
+      go: ['Scooter at {pct}%, off for a swap 🔋', 'To the swap cabinet ⚡'],
+      scan: ['Beep! QR scanned, 9,000 đồng', 'Scanning the code to open it 📱'],
+      wait: ['The cabinet is checking the pack…', 'Waiting for a fresh one ⏳'],
+      full: ['100% ⚡', 'Done: a brand-new 1.5 kWh 🔋'],
+      work: ['Work came in, riding back! 🏃', 'Oh, work: back first!'],
+    },
+    where: { going: 'Going down for the scooter, off to swap its battery', ride: 'Riding the e-scooter to the swap station', swap: 'Swapping the battery at the corner cabinet', back: 'Battery swapped, on the way back' },
+  },
   // a release: a strip at the photo booth across the street (people/photobooth.js, world/backdrops/street-photo.js)
   photo: {
     say: {

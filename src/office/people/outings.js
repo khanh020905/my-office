@@ -29,6 +29,7 @@ import { comNow, comPlanned, updateCom } from './comtrua.js';
 import { atmNow, updatePayday } from './payday.js';
 import { pickleNow, updatePickle } from './pickle.js';
 import { photoNow, updatePhoto } from './photobooth.js';
+import { evNow, updateEvswap } from './evswap.js';
 import { queueUi, toast } from '../ui/activity.js';
 import { t as tr } from '../../i18n/index.js';
 
@@ -313,6 +314,8 @@ const trips = new Set();
 const WAYS = ['bike', 'bike', 'bike', 'bike', 'bike', 'grab', 'grab', 'xsm', 'xsm', 'taxi'];
 const BIKE_COLORS = ['#D9534F', '#F2F2F2', '#2E86DE', '#3B3B3B', '#F2C200', '#7A1F2B', '#1E9E4A', '#C9CED6'];
 export const wayOf = (w) => WAYS[hash(w.id) % WAYS.length], bikeColor = (w) => BIKE_COLORS[(hash(w.id) >>> 5) % BIKE_COLORS.length];
+// half of those who ride their own ride an electric one (street-ev.js; its battery swapped at the cabinet: people/evswap.js)
+export const evOf = (w) => hash(`${w.id}:ev`) % 2 === 0;
 export const coatOf = (w) => w.cfg.coat || w.cfg.shirt;
 export const mainExit = (S) => { const from = indoors(); return S.exits(from.x, from.z).find((e) => e.L) || null; };
 // the row of scooters: along the building's side of the pavement from the way out, both ways, 2 m apart, clear of the corners
@@ -327,6 +330,9 @@ function bikeRow(S) {
   row = { ex, spots, side: S.pavementSide + 0.75 };
   return row;
 }
+/** the row's places (for people/evswap.js): { s, by (whose), id (the parked scooter, -1: none; 1000 and up: electric), busy } */
+export const rowSpots = (S) => bikeRow(S)?.spots || [];
+export const rowOf = (S) => bikeRow(S);
 // the row as it should be: a scooter for each one in who rides their own, none for those gone
 function syncBikes(S) {
   const R = bikeRow(S); if (!R) return;
@@ -334,12 +340,12 @@ function syncBikes(S) {
     if (!sp.by || sp.busy) continue;
     const w = workers.get(sp.by);
     // (leftBike: home by Grab after a drink, the scooter stays the night)
-    if (!w || (w.away && !w.leftBike)) { S.unparkBike(sp.id); sp.by = null; sp.id = -1; } else if (sp.id < 0) sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w));
+    if (!w || (w.away && !w.leftBike)) { S.unparkBike(sp.id); sp.by = null; sp.id = -1; } else if (sp.id < 0) sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w), evOf(w), hash(w.id));
   }
   for (const w of workers.values()) {
     if (w.sub || w.away || wayOf(w) !== 'bike' || R.spots.some((sp) => sp.by === w.id)) continue;
     const sp = R.spots.find((x) => !x.by); if (!sp) break;
-    sp.by = w.id; sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w));
+    sp.by = w.id; sp.id = S.parkBike(R.ex.L, sp.s, R.side, bikeColor(w), evOf(w), hash(w.id));
   }
 }
 // where a rider waits at the kerb: by the way out, the next one along a little further each time
@@ -364,7 +370,7 @@ function goHome(w, gone) {
   if (way === 'bike') {
     const R = bikeRow(S);
     T.spot = R.spots.find((sp) => sp.by === w.id);
-    if (!T.spot) { T.spot = R.spots.find((sp) => !sp.by); if (!T.spot) return false; T.spot.by = w.id; T.spot.id = S.parkBike(ex.L, T.spot.s, R.side, bikeColor(w)); }
+    if (!T.spot) { T.spot = R.spots.find((sp) => !sp.by); if (!T.spot) return false; T.spot.by = w.id; T.spot.id = S.parkBike(ex.L, T.spot.s, R.side, bikeColor(w), evOf(w), hash(w.id)); }
     T.spot.busy = true;
   } else if (!(T.rider = S.callRider(ex.L, kerbAt(ex), { livery: ride(way), far: 60 }))) return false;
   trips.add(T); w.outing = T; w.offstage = true;
@@ -447,7 +453,7 @@ function stepTrip(T, S) {
     let at;
     if (T.way === 'bike') {
       const R = bikeRow(S);
-      T.rider.vanish(); T.spot.id = S.parkBike(R.ex.L, T.spot.s, R.side, bikeColor(w)); T.spot.busy = false;
+      T.rider.vanish(); T.spot.id = S.parkBike(R.ex.L, T.spot.s, R.side, bikeColor(w), evOf(w), hash(w.id)); T.spot.busy = false;
       at = S.at(R.ex.L, T.spot.s, S.pavementSide);
     } else { T.rider.alight(); at = pickup(mainExit(S), m, T.way === 'taxi' ? 0.25 : 0.55); later(0.8, () => T.rider.release()); }
     T.stage = 'walk'; outside(w, S, at);
@@ -479,6 +485,7 @@ export function whereabouts(w) {
   if (R.kind === 'atm') return atmNow(R);
   if (R.kind === 'pickle') return pickleNow(R);
   if (R.kind === 'photo') return photoNow(R);
+  if (R.kind === 'evswap') return evNow(R);
   if (R.kind === 'home' && R.stage === 'shop') return { ic: 'walk', text: T('homeShop', { shop: R.shop }) };
   return { ic: R.kind === 'home' ? 'home' : 'walk', text: T(R.kind === 'home' ? 'leaving' : 'coming', { how: T(`how.${R.way}`) }) };
 }
@@ -487,7 +494,7 @@ export function whereabouts(w) {
 let bikesAt = 0, shown = '';
 export function updateOutings() {
   updateNhau();   // (an evening at the quán nhậu: people/nhau.js)
-  updateCom(); updatePayday(); updatePickle(); updatePhoto();   // (lunch at the quán cơm: people/comtrua.js; payday at the ATM: people/payday.js; pickleball: people/pickle.js; the photo booth: people/photobooth.js)
+  updateCom(); updatePayday(); updatePickle(); updatePhoto(); updateEvswap();   // (lunch at the quán cơm: people/comtrua.js; payday at the ATM: people/payday.js; pickleball: people/pickle.js; the photo booth: people/photobooth.js; a battery swap: people/evswap.js)
   const S = street(), d = officeNow(), m = d.getHours() * 60 + d.getMinutes(), day = d.toDateString();
   if (bags?.visible && (m >= 780 || bags.userData.day !== day)) bags.visible = false;
   // the comings and goings; the row of scooters; the session list when anyone's whereabouts change

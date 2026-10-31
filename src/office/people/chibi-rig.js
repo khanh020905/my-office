@@ -410,6 +410,13 @@ export function makeChibi(cfg = {}, scale = 1) {
     add(g, new THREE.BoxGeometry(0.16, 0.008, 0.016), edge, 0, 0.266, 0);
     g.traverse((o) => { o.castShadow = false; });
   }
+  {   // an e-scooter's battery pack (people/evswap.js): a dark grey case, a handle on top, a green stripe
+    const g = hold('pack');
+    add(g, new THREE.BoxGeometry(0.15, 0.17, 0.09), plainMat('#2B2F36', { roughness: 0.5 }), 0, -0.08, 0);
+    add(g, new THREE.BoxGeometry(0.152, 0.02, 0.092), plainMat('#00A651', { roughness: 0.5 }), 0, -0.04, 0);
+    add(g, new THREE.TorusGeometry(0.035, 0.008, 5, 10, Math.PI), plainMat('#1C1E22'), 0, 0.005, 0);
+    g.traverse((o) => { o.castShadow = false; });
+  }
   {   // a phone held up to film (people/pickle.js): the screen lit
     const g = hold('phone');
     add(g, new THREE.BoxGeometry(0.065, 0.12, 0.009), plainMat('#1E2125', { roughness: 0.4 }), 0, 0.06, 0);
