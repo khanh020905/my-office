@@ -63,6 +63,7 @@ export default {
       stream: 'Streamer mode (hides commands and paths)',
       zones: 'Always show area names (default: only on hover)',
       season: 'Seasonal decorations (Halloween, Christmas, Lunar New Year)',
+      coach: 'Prompt helper: tips when you write to Claude',
     },
     nightLabel: 'Night',
     nightTitle: 'Night / day',

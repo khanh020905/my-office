@@ -46,4 +46,6 @@ export default {
     note: 'A cup of coffee on each resting desk: its steam fades as the session\'s prompt cache cools, gone once it is cold. Writing to the session while it is warm is cheap; once cold, the next message reads the whole conversation again.',
     nudge: 'Tell my phone when a session waiting for my answer is 5 minutes from going cold',
   },
+  chat: 'Group chat',
+  coachNote: 'When you write to a conversation (“To”), the helper points out over the input what Claude could misread. It works on this device and sends nothing; only “✨ Rewrite it clearly” asks Claude.',
 };

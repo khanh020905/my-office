@@ -24,6 +24,7 @@ import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
 import { steerable, inboundFrom, isSocket, deliver } from './steer.mjs';
+import { createRewriter } from './rewrite.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
 import { createClaudeVersion } from './claude-version.mjs';
@@ -560,6 +561,9 @@ const tasks = createTasks({
     if (t.from?.orig && steerLater.has(t.from.orig)) setTimeout(() => sendLater(t.from.orig), 1500);   // (a note that couldn't get in: now, as a message)
   },
 });
+/* ---------- "✨ Viết lại cho rõ", the chat's prompt helper (server/rewrite.mjs): a message for Claude, made clearer by a
+   small model, on the account new sessions start on, in an empty folder of the office's ---------- */
+const rewriter = createRewriter({ claude: () => findClaude(), env: () => { const e = { ...process.env }; if (nowDir) e.CLAUDE_CONFIG_DIR = nowDir; return e; }, dir: path.join(DATA_DIR, 'rewrite') });
 /* ---------- notifications on the phones that said yes (server/push.mjs): Claude's answers, and an approval a run started
    from the office needs while nobody has the office open; none while an office page is looked at ---------- */
 const claudeVersion = createClaudeVersion({ dataDir: DATA_DIR });   // (Claude Code's version on this computer, server/claude-version.mjs)
@@ -2153,8 +2157,9 @@ const server = http.createServer((req, res) => {
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
-  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
+  // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2301,6 +2306,18 @@ const server = http.createServer((req, res) => {
       if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
       const [code, out] = await (url.pathname === '/api/tasks/steer' ? steerTo : giveWork)(b, mac ? 'mac' : `phone ${clientIp(req)}`);
       json(res, code, out);
+    });
+    return;
+  }
+  if (url.pathname === '/api/prompt/rewrite' && req.method === 'POST') {   // the chat's "✨ Viết lại cho rõ": { text, lang, photos: how many } -> { ok, text }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    // (it spends the plan's quota, as work does: from a phone only when the Mac allows work from phones)
+    if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
+    readJson(req, 40_000).then(async (b) => {
+      const r = await rewriter.rewrite({ text: b?.text, lang: pickLang(b?.lang), photos: b?.photos });
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} rewrite ${mac ? 'mac' : `phone ${clientIp(req)}`} ${r.ok ? 'ok' : r.code} ${String(b?.text || '').length} chars\n`).catch(() => {});   // (how long, never what it says)
+      json(res, r.ok ? 200 : r.code === 'busy' || r.code === 'tooMany' ? 429 : 409, r.ok ? { ok: true, text: r.text } : { ok: false, code: r.code, message: tr(`chat.coach.why.${r.code}`, { detail: r.detail || '' }) });
     });
     return;
   }

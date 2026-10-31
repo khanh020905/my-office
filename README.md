@@ -317,6 +317,13 @@ Then open <http://localhost:4310>.
   shows what Claude does (📖 reads, ✏️ edits, ▶ commands, an approval it waits for), then its answer comes, marked
   Claude, quoting you. Long messages fold with "Read more". Replying to one of Claude's answers writes to it too. Or pick **＋ a new conversation in a project** (the
   folders sessions have worked in, the latest first): Claude starts fresh there, and what you write next carries it on.
+- **Prompt helper**, over the chat's input when you write to Claude: worked out in the page (nothing is sent), it points
+  out what usually costs a round trip, one tip at a time once you stop typing: a screenshot with a word or two, "make it
+  better" with no criterion, "this one" or "item 4" pointing at nothing, several jobs in one message, a message too
+  short to act on. Its chips fix the draft (a sentence for the photo, "Criteria: ", the jobs numbered in the order
+  they should be done); a tip you close stays closed for that message, and it never stops one going. "✨ Rewrite it
+  clearly" asks Claude Code itself to rewrite it as Goal / Context / Done when (a small model, no tools, one turn, the
+  text only, 20 an hour; it uses a little of your plan), with Undo. Off in Settings → More → Group chat.
 - **Notifications on your phone** (Web Push, from `server/push.mjs` with nothing but `node:crypto`; shown by
   `public/sw.js`): Claude's answers, and an approval a phone's work needs while no office page is open, even with the
   phone locked. Turned on on each phone (⚙ → More → 📱) over the https address; on an iPhone, add My Office to the home
@@ -364,6 +371,7 @@ Then open <http://localhost:4310>.
   | GitHub CI check, through your `gh` login | while a page is open | `OFFICE_CI=0` |
   | Translation into Vietnamese | only in Vietnamese mode | `OFFICE_TRANSLATE=0` |
   | Weather | only after you pick a city | leave the city empty |
+  | Rewriting a message for Claude, through Claude Code (your plan) | only when you tap “✨ Rewrite it clearly” in the chat | Settings → More → Group chat |
 
 - **Usage numbers** ("What eats your plan") go from Claude Code to `127.0.0.1` only: the receiver refuses anything
   from a web page, the Wi-Fi or the tunnel, reads JSON only (4 MB a request at most), and keeps daily sums of cost and

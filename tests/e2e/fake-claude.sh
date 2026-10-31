@@ -66,6 +66,19 @@ if [ "$1" = --bg ]; then
   echo "  claude attach $id    open in this terminal"
   exit 0
 fi
+# `claude -p … --output-format json` ("Viết lại cho rõ", server/rewrite.mjs): one JSON answer, the same every time, in the
+# language its instruction names (printf, not echo: a POSIX sh's echo turns the \n in the JSON into new lines); each
+# argument logged in [brackets] (an empty one shows as [])
+case " $* " in *" --output-format json "*)
+  for a in "$@"; do printf '[%s]' "$a"; done >> "$HOME/.fake-claude-rewrite.log"; echo >> "$HOME/.fake-claude-rewrite.log"
+  case " $* " in *"slowly"*) sleep 5 ;; esac   # (longer than a test's timeout)
+  case " $* " in *"fail please"*) printf '%s\n' '{"type":"result","subtype":"success","is_error":true,"result":"Claude AI usage limit reached"}'; exit 1 ;; esac
+  case " $* " in
+    *"Mục tiêu"*) printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"result":"Mục tiêu: sửa lỗi đang thấy trong ảnh đính kèm.\nBối cảnh: [trang nào?]\nXong khi: trang hiện đúng, không còn lỗi.","total_cost_usd":0.0004}' ;;
+    *) printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"result":"```\nGoal: fix the error in the attached screenshot.\nContext: [which page?]\nDone when: the page shows no error.\n```","total_cost_usd":0.0004}' ;;
+  esac
+  exit 0 ;;
+esac
 # `claude -p …` (a task given from the office, server/tasks.mjs): its stream, a new session and its last words
 case " $* " in *" -p "*)
   printf '%s\n' "$*" >> "$HOME/.fake-claude.log"   # (what it was asked to resume, for the tests to read)
