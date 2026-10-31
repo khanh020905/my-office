@@ -137,6 +137,8 @@ Then open <http://localhost:4310>.
     King's statue by the window, the order counter with the soft-serve machine, the menu's light boxes at real prices
     (the 10.000đ cone, the 25.000đ milk tea), staff in black T-shirts, schoolchildren with cones after school and milk tea
     in the evening, and on weekend evenings the Snow King himself dancing out front to its tune ("Oh! Susanna").
+    Next to it a Highlands Coffee (the deep red sign with its emblem, phin sữa đá and freeze at real prices, laptops in
+    the morning).
     The streets follow the office clock: in the morning and evening rush twice the scooters, riding three abreast and
     crawling; empty streets in the small hours. Cars pull in to the kerb in front of the shops and along the park,
     indicating, and pull out again later; taxis stop for a fare with their hazard lights on. Street food across the
@@ -191,7 +193,8 @@ Then open <http://localhost:4310>.
     down in the lift for the team's lunch; now and then someone resting pops down to the convenience store across the
     street, waits for the green man, and comes back with a drink; on a really hot afternoon (the city's real weather,
     32° and up) the trip is for a 10k cone at the Mixue, and when CI goes green again someone goes for ice cream for
-    everyone. Work coming in calls them back at a run;
+    everyone. The day's first one in stops at the Highlands for a cà phê on the way up. Work coming in calls them back
+    at a run;
   - day and night by the clock;
   - real weather, if you pick a city;
   - seasonal decorations (Halloween, Christmas, Lunar New Year).
@@ -383,6 +386,7 @@ request.
 | Car models | [Kenney Car Kit](https://kenney.nl/assets/car-kit), see `public/assets/vehicles/README.md` | CC0 |
 | Shop signs and liveries (Circle K, GS25, 7-Eleven, WinMart, Xanh SM, Grab, Shopee) | Wikimedia Commons, see `public/assets/brands/README.md`; the Shopee mark from Simple Icons | public domain as text logos; trademarks of their owners, not affiliated |
 | The Mixue shop | drawn and modelled in code (`shop-mixue.js`): no artwork of the chain's; its tune is "Oh! Susanna" (Stephen Foster, 1848) | public domain melody; the name is its owner's trademark, not affiliated |
+| The Highlands Coffee shop | drawn and modelled in code (`shop-highlands.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | Weather | [Open-Meteo](https://open-meteo.com) | |
 
 ## Licence
