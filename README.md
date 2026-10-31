@@ -328,6 +328,13 @@ Then open <http://localhost:4310>.
   add up to 4 photos. The Mac runs it as `claude -p`; its commands ask for approval like any session's, and its answer
   comes back to the chat. From a phone only once "Give Claude work from a phone" is on, on the Mac; at most 3 at a
   time and 12 an hour.
+- **Phone work as background sessions** (the phone window, under "Give Claude work from a phone"; off by default): each
+  piece of work is a Claude Code background session (`claude --bg`, agent view, Claude Code 2.1.257 or newer) instead of
+  `claude -p`. Its card still shows its steps, Stop and its answer, from the session's own hooks; an approval or a
+  question waits on the phone and in the office until you answer it (no 45 s), and the card says how to carry it on at
+  the Mac (`claude attach <id>`). It edits your working copy as before (no worktree of its own, nothing pushed by
+  itself). A Claude Code without them, or a folder Claude Code doesn't trust yet (type `claude` there once in a
+  terminal), runs it the old way and the chat says why.
 - On a phone the office lays itself out like an app, upright or held sideways: a compact top bar (plan, Mac, settings),
   the office filling the screen, and a tab bar (Office · Sessions · Activity · Approve · Chat, with counts) whose tabs
   open each panel as a full-screen sheet. A waiting approval floats just above the tabs with thumb-sized buttons.

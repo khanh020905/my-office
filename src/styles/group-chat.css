@@ -327,6 +327,8 @@
 .zc-work.is-work .zc-work-steps li:last-child { color: var(--zc-ink); font-weight: 500; }
 .zc-work-ask { padding: 6px 8px; border-radius: 6px; background: #FFF4D6; color: #6B4E00; font-size: 13px; }
 .zc-work-none { color: var(--zc-grey); font-size: 12px; }
+.zc-work-attach { color: var(--zc-grey); font-size: 12px; line-height: 1.45; overflow-wrap: anywhere; }
+.zc-work-attach code { padding: 1px 5px; border-radius: 4px; background: #EEF1F6; color: var(--zc-ink); font: 12px/1.4 ui-monospace, Menlo, monospace; user-select: all; }
 .zc .zc-readmore { all: unset; color: var(--zc-blue); font-size: 13.5px; font-weight: 600; cursor: pointer; }
 .zc .zc-readmore:hover { text-decoration: underline; }
 

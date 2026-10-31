@@ -19,6 +19,7 @@ export default {
   },
   // after the session's name: "website-ielts wants to run a command"
   asks: 'has a question for you',
+  noDeadline: 'waiting',
   plan: 'wants you to approve a plan',
   wants: {
     bash: 'wants to run a command',
