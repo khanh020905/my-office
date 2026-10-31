@@ -746,6 +746,11 @@ export function chibiPose(P, anim, ph, o = {}) {
       p.armL = [0, -2.5 * k - 0.2, -0.25]; p.armR = [0, 2.5 * k + 0.2, -0.25];
       break;
     }
+    case 'shake': {   // a handshake (people/interns.js): the right hand out at the waist, pumped up and down
+      p.armR = reach(1, 0.07, shoulderY() - 0.36 + Math.sin(ph * 13) * 0.025, 0.36);
+      p.armL = [0.04, -0.08, -0.15]; p.head = [0.05, 0, 0]; p.lean = 0.03;
+      break;
+    }
     case 'phone': {   // waiting in a line (the microwave, people/comnha.js): head down over the phone in the right hand
       p.held = 'phone'; p.head = [0.42, o.look ? o.look * 0.3 : 0, 0]; p.lean = 0.04;
       p.armR = reach(1, 0.04, shoulderY() - 0.3, 0.25 + Math.sin(ph * 3) * 0.006);

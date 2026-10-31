@@ -327,6 +327,8 @@ export function updateFarewell() {
 /* ---------- the server's list, and Settings → More ---------- */
 const tq = () => (TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : '');
 const post = (body) => fetch(`/api/tenure${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => null);
+/** the server's list as it stands (people/interns.js reads it too) */
+export const tenureNow = () => T;
 /** the live stream's { k: 'tenure' } (demo/demo.js) */
 export function setTenure(d) {
   if (!d) return;

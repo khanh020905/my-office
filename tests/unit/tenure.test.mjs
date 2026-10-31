@@ -42,7 +42,7 @@ test('activity counts days and turns, persists, and a project that had its farew
   t.touch('shop-api', { at: at + DAY, turn: true });   // (a second day)
   assert.deepEqual({ days: t.get('shop-api').days, turns: t.get('shop-api').turns }, { days: 2, turns: 2 });
   at = NOW;
-  assert.deepEqual(t.list(30).map((p) => [p.name, p.due]), [['shop-api', true]]);
+  assert.deepEqual(t.list(30).filter((p) => p.due).map((p) => p.name), ['shop-api']);
   assert.equal(t.markFarewell('shop-api', 30), true);
   assert.equal(t.markFarewell('shop-api', 30), false);   // (once)
   assert.equal(t.list(30)[0].farewell, NOW);
@@ -53,7 +53,7 @@ test('activity counts days and turns, persists, and a project that had its farew
   assert.equal(again.touch('shop-api', { at: NOW + DAY }), 'back');
   const row = again.list(30)[0];
   assert.equal(row.farewell, 0); assert.equal(row.back, NOW + DAY); assert.equal(row.due, false);
-  assert.deepEqual(seen, ['new:shop-api', 'farewell:shop-api']);
+  assert.deepEqual(seen.filter((x) => !x.startsWith('intern:')), ['new:shop-api', 'farewell:shop-api']);
   fs.rmSync(d.root, { recursive: true, force: true });
 });
 
@@ -62,7 +62,7 @@ test('never-active projects get no farewell, however long they sit', () => {
   const t = make(d, () => at);
   t.touch('tried-once', { at }); t.touch('tried-once', { at: at + 3600e3 });   // (the same day)
   at = NOW;
-  assert.deepEqual(t.list(14), []);
+  assert.deepEqual(t.list(14).filter((p) => p.due || p.farewell), []);
   assert.equal(t.markFarewell('tried-once', 14), false);
   assert.equal(t.markFarewell('never-heard-of', 14), false);
   fs.rmSync(d.root, { recursive: true, force: true });
@@ -94,5 +94,52 @@ test('the list stays bounded', () => {
   assert.ok(Object.keys(saved.projects).length <= 300);
   assert.equal(saved.projects.p0, undefined);    // (the oldest went)
   assert.ok(saved.projects.p319);
+  fs.rmSync(d.root, { recursive: true, force: true });
+});
+
+const tick = () => new Promise((r) => setTimeout(r, 30));
+test('interns: a project new to the office is one until 20 finished turns on two days; projects already known are permanent', async () => {
+  const d = dirs();
+  // the office already knew one project (a ledger from before interns came in)
+  fs.writeFileSync(path.join(d.data, 'tenure.json'), JSON.stringify({ v: 1, since: NOW - 100 * DAY, seeded: true, projects: { 'old-app': { first: NOW - 90 * DAY, last: NOW - DAY, days: 20, lastDay: dayOf(NOW - DAY), turns: 400 } } }));
+  // and Claude Code had worked in another folder, unknown to the office, months ago
+  transcript(d.claude, '/Users/me/projects/side-thing', 'c1', 120);
+  let at = NOW;
+  const seen = [];
+  const t = make(d, () => at, (what, name) => seen.push(`${what}:${name}`));
+  t.touch('old-app', { at, cwd: '/Users/me/projects/old-app' });
+  t.touch('side-thing', { at, cwd: '/Users/me/projects/side-thing' });
+  t.touch('brand-new', { at, cwd: '/Users/me/projects/brand-new' });
+  await tick();
+  const row = (n) => t.list(30).find((p) => p.name === n);
+  assert.equal(row('old-app'), undefined);                       // (permanent, nothing to show)
+  assert.equal(row('side-thing'), undefined);                    // (Claude Code had been there before: permanent too)
+  assert.deepEqual([row('brand-new').intern, row('brand-new').ready], [true, false]);
+  assert.ok(seen.includes('known:side-thing') && seen.includes('intern:brand-new'));
+  // 20 turns on one day: not yet; on a second day: ready
+  for (let i = 0; i < 20; i++) t.touch('brand-new', { at: at + i * 60e3, turn: true });
+  assert.equal(row('brand-new').ready, false);
+  assert.equal(t.markOfficial('brand-new'), false);
+  at += DAY;
+  assert.equal(t.touch('brand-new', { at, turn: true }), 'ready');
+  assert.equal(row('brand-new').ready, true);
+  assert.equal(t.markOfficial('brand-new'), true);
+  assert.equal(t.markOfficial('brand-new'), false);   // (once)
+  assert.deepEqual([row('brand-new').intern, !!row('brand-new').official], [false, true]);
+  t.save();
+  const again = make(d, () => at);
+  assert.ok(again.get('brand-new').official); assert.equal(again.get('old-app').pre, true);
+  fs.rmSync(d.root, { recursive: true, force: true });
+});
+
+test('a fresh install: everything in the transcripts is permanent, only what starts after is an intern', async () => {
+  const d = dirs();
+  transcript(d.claude, '/Users/me/projects/legacy', 'l1', 10);
+  const t = make(d);
+  await t.seed();
+  t.touch('started-today', { at: NOW + 3600e3, cwd: '/Users/me/projects/started-today' });
+  await tick();
+  assert.equal(t.get('legacy').pre, true);
+  assert.deepEqual(t.list(30).filter((p) => p.intern).map((p) => p.name), ['started-today']);
   fs.rmSync(d.root, { recursive: true, force: true });
 });

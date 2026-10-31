@@ -64,6 +64,7 @@ import * as peopleGaming from './people/gaming.js';
 import * as peopleBilliards from './people/billiards.js';
 import * as peopleKaraoke from './people/karaoke.js';
 import * as peopleFarewell from './people/farewell.js';
+import * as peopleInterns from './people/interns.js';
 import * as lifeTrophies from './life/trophies.js';
 import * as lifeSeasons from './life/seasons.js';
 import * as lifeRain from './life/rain.js';
@@ -176,6 +177,7 @@ const MODULES = [
   peopleBilliards,
   peopleKaraoke,
   peopleFarewell,
+  peopleInterns,
   lifeTrophies,
   lifeSeasons,
   lifeRain,

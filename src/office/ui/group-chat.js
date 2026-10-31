@@ -132,6 +132,8 @@ export function chatLife(kind, v = {}) {
     case 'atm': if (v.id) chatSay(v.id, life('atm'), { key, answer: [{ key: 'atmAsk', chance: 0.5 }] }); break;
     // lunch at the quán cơm across the street (people/comtrua.js); Fridays bún đậu mắm tôm
     // a project's farewell, its photo, and its return (people/farewell.js)
+    // an intern made permanent at HR's desk (people/interns.js)
+    case 'official': chatSay('hr', life('official', { name: v.name }), { key, react: ['🎉', '❤️', '👍', '😆'], reacts: 7, answer: [{ key: 'officialAsk', chance: 0.95 }, { key: 'officialAsk', chance: 0.8 }, { key: 'officialAsk', chance: 0.5 }] }); break;
     case 'farewell': chatSay('hr', life('farewell', { name: v.name }), { key, pin: true, react: ['😭', '❤️'], reacts: 4, answer: [{ key: 'farewellAsk', chance: 0.9 }, { key: 'farewellAsk', chance: 0.6 }] }); break;
     case 'farewellPhoto': chatSay('hr', life('farewellPhoto', { name: v.name }), { key, photo: v.photo || null, react: ['❤️', '😭', '😆'], reacts: 6, answer: [{ key: 'farewellAsk', chance: 0.9 }, { key: 'farewellAsk', chance: 0.7 }, { key: 'farewellAsk', chance: 0.4 }] }); break;
     case 'back': chatSay(v.id || restingOne(), life('back', { name: v.name }), { key, react: ['😆', '❤️', '😮'], reacts: 5, answer: [{ key: 'backAsk', chance: 0.95 }, { key: 'backAsk', chance: 0.6 }] }); break;

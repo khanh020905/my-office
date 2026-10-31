@@ -137,6 +137,13 @@ Then open <http://localhost:4310>.
   lại hả 😆"), the box unpacked, the carpet out again. Only a scene: nothing about the project is touched; the office
   keeps each project's working life in `data/tenure.json` (on its first run it reads, once, only the dates and folders
   of Claude Code's transcripts).
+- **Interns made permanent**: a project new to the office (unknown to it and to Claude Code before this came in, so
+  nobody becomes an intern on an update) starts as an intern: its people wear an orange "Thực tập sinh" lanyard and a
+  small "Thực tập sinh" plate stands on the desk. After 20 finished turns on two different days or more, HR holds the
+  ceremony in office hours: the intern goes to her desk, signs the "Hợp đồng lao động" she lays out, the red company
+  stamp comes down, the director walks over to shake hands while the people nearby clap, and back at the desk a name
+  plate takes the intern's place; the group chat says "Chúc mừng … lên chính thức 🎉" (and someone asks for the milk
+  tea it calls for). In the small office, a cake at the meeting table instead.
 - **The midday nap**, 12:30–13:30: the blinds come down, the room dims a little, and whoever has nothing running naps
   at their desk, half leaning back under a blanket, half head down on the desk. An alarm at 13:30, and the blinds go up.
 - **The look of the place**:

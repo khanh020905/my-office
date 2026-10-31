@@ -387,4 +387,21 @@ export default {
     tease: ['Oh, you’re back? 😆', 'Couldn’t stay away, huh 😆', 'Missed us that much? 🤣'],
     backSay: ['Back at the old company 😆', 'Hello again 😆'],
   },
+  // interns made permanent at HR's desk (people/interns.js)
+  intern: {
+    card: 'INTERN',
+    plate: 'Intern',
+    official: 'Permanent staff',
+    nation: 'EMPLOYMENT',
+    contract: 'LABOUR CONTRACT',
+    going: ['Off to HR', 'HR wants me to sign something 😳'],
+    hrSign: ['{name}, read it through and sign here', 'Your permanent contract, sign here please'],
+    signing: ['Signing ✍️', 'Here you go ✍️'],
+    stamp: ['Stamp! All done, congratulations 🎉', 'Stamped: you’re one of us now 🎉'],
+    bossComing: ['Well, congratulations are in order!', 'Let me shake your hand'],
+    bossSay: ['Congratulations, keep it up 💪', 'Welcome to the team, for real 🤝'],
+    thanks: ['Thank you so much 🙇', 'Thanks, everyone 🥹'],
+    toast: '{name} signs a permanent contract at HR 🎉',
+    party: '{name} made permanent',
+  },
 };

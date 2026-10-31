@@ -373,4 +373,21 @@ export default {
     tease: ['Ủa quay lại hả 😆', 'Ơ, về rồi hả 😆', 'Nhớ team quá nên về đúng không 🤣'],
     backSay: ['Em về lại công ty cũ nè 😆', 'Lại gặp nhau rồi 😆'],
   },
+  // interns made permanent at HR's desk (people/interns.js)
+  intern: {
+    card: 'THỰC TẬP SINH',
+    plate: 'Thực tập sinh',
+    official: 'Nhân viên chính thức',
+    nation: 'CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM',
+    contract: 'HỢP ĐỒNG LAO ĐỘNG',
+    going: ['Dạ em lên phòng nhân sự ạ', 'Chị nhân sự gọi em lên ký giấy 😳'],
+    hrSign: ['{name} ơi, em đọc kỹ rồi ký vào đây nha', 'Hợp đồng chính thức của em nè, ký chỗ này nha'],
+    signing: ['Dạ em ký ạ ✍️', 'Ký đây ạ ✍️'],
+    stamp: ['Cộp! Xong rồi nha em, chúc mừng em 🎉', 'Đóng dấu đỏ rồi, chính thức là người nhà nha 🎉'],
+    bossComing: ['Đâu, chúc mừng cái nào!', 'Để anh ra bắt tay cái'],
+    bossSay: ['Chúc mừng em, cố gắng phát huy nha 💪', 'Chào mừng em chính thức về đội 🤝'],
+    thanks: ['Dạ em cảm ơn anh ạ 🙇', 'Em cảm ơn cả nhà nhiều ạ 🥹'],
+    toast: '{name} ký hợp đồng chính thức ở phòng nhân sự 🎉',
+    party: '{name} lên chính thức',
+  },
 };
