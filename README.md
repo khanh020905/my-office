@@ -42,8 +42,8 @@ Then open <http://localhost:4310>.
 
 | Command | What it does |
 | --- | --- |
-| `install [--service] [--lan] [--no-approve] [--no-status]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. |
-| `uninstall` | Removes every My Office hook and the background service, and keeps the rest of `settings.json`. |
+| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. It also turns on Claude Code's own usage numbers (OpenTelemetry) for "What eats your plan", unless you already send them somewhere: see below. `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. `--no-otel` leaves telemetry off; `--no-otel-names` keeps the names of your own MCP servers, skills and agents hidden ("custom"). |
+| `uninstall` | Removes every My Office hook, the telemetry settings install added, and the background service, and keeps the rest of `settings.json`. |
 | `doctor` | Checks each step and says what is missing and how to fix it. |
 | `start [--lan]` | Runs the server in this terminal (no launchd). |
 | `pin [--new]` | Shows the phone PIN; `--new` changes it and signs every phone out. |
@@ -289,6 +289,18 @@ Then open <http://localhost:4310>.
   session's `SessionStart`; without them it is a guess from the end of the last turn and the documented lifetime (an
   hour on a subscription, five minutes on an API key), marked "(estimated)". Settings → More can tell your phone when
   a session waiting for your answer is five minutes from going cold (off by default).
+- **What eats your plan** (the line at the bottom of the plan card, or ••• in the group chat, also on a phone): where
+  Claude Code's usage goes, today or over 7 days. Who eats the most (MCP servers, skills, plugins, subagent types: "MCP
+  github 34% · Skill pdf 12% · Subagent Explore 9%"), split by model and by source (main conversation, subagents,
+  background work), a column a day, then by project and by session. Each figure is in USD at API prices and, once the
+  plan's week is known, in ≈ % of the weekly limit. The numbers are Claude Code's own OpenTelemetry counters and
+  events (code.claude.com/docs/en/monitoring-usage), sent by Claude Code to the office on this computer
+  (`/v1/metrics`, `/v1/logs`, OTLP/HTTP JSON) and kept as daily sums in `data/otel/` for 30 days. `install` adds them
+  to the `env` of `~/.claude/settings.json`, tagged `MY_OFFICE_OTEL` so `uninstall` takes out exactly those keys, and
+  never if you already send telemetry somewhere (settings, your shell or a managed policy): it prints how to add the
+  office as a second exporter to your OpenTelemetry Collector instead. Prompts stay hidden (`OTEL_LOG_USER_PROMPTS` is
+  not set); `OTEL_LOG_TOOL_DETAILS=1` gives the real names of your own MCP servers and skills, and the tool input it
+  adds to the events is dropped unread. A new Claude Code session picks the settings up; open ones keep their old ones.
 
 ### Small things
 
@@ -340,6 +352,9 @@ Then open <http://localhost:4310>.
   | Translation into Vietnamese | only in Vietnamese mode | `OFFICE_TRANSLATE=0` |
   | Weather | only after you pick a city | leave the city empty |
 
+- **Usage numbers** ("What eats your plan") go from Claude Code to `127.0.0.1` only: the receiver refuses anything
+  from a web page, the Wi-Fi or the tunnel, reads JSON only (4 MB a request at most), and keeps daily sums of cost and
+  tokens; e-mail addresses, prompts and commands are never stored.
 - **Stop buttons** re-check the process ID **and its start time** just before acting. A new process that reused an
   old ID is never stopped by mistake. Every stop, cleanup and approval is written to `data/actions.log`.
 - **Phones**:

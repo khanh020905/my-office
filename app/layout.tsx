@@ -23,6 +23,7 @@ import '@/styles/drawers.css';
 import '@/styles/chat.css';
 import '@/styles/group-chat.css';
 import '@/styles/mac.css';
+import '@/styles/burn.css';
 import '@/styles/modal.css';
 import '@/styles/replay.css';
 import '@/styles/photo.css';

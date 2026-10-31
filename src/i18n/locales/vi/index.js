@@ -27,5 +27,6 @@ import server from './server.js';
 import cli from './cli.js';
 import tips from './tips.js';
 import chat from './chat.js';
+import burn from './burn.js';
 
-export default { common, time, ui, topbar, settings, wrapped, lite, fp, drawer, activity, perm, board, incident, events, people, timeline, replay, demo, places, props, world, life, mac, trophies, server, cli, tips, chat };
+export default { common, time, ui, topbar, settings, wrapped, lite, fp, drawer, activity, perm, board, incident, events, people, timeline, replay, demo, places, props, world, life, mac, trophies, server, cli, tips, chat, burn };

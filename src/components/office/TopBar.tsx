@@ -18,6 +18,7 @@ export default async function TopBar() {
               <div className="plan-rows" id="plan-rows"></div>
               <div className="plan-add" id="plan-add"></div>
               <p className="plan-empty" id="plan-empty">{t('ui.topBar.planEmpty')}</p>
+              <button className="plan-burn" id="plan-burn" type="button" hidden></button>
               <p className="plan-foot">{t('ui.topBar.planFoot')}</p>
             </div>
           </div>

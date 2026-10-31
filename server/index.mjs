@@ -9,6 +9,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import os from 'node:os';
 import crypto from 'node:crypto';
+import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
@@ -31,6 +32,8 @@ import { weekSummary } from './wrapped.mjs';
 import { createPrefs } from './prefs.mjs';
 import { createLoopGuard, LOOP_DEFAULTS, LOOP_MIN, LOOP_N } from './loops.mjs';
 import { cacheClock, cacheFromResume, cacheFromStatus, cacheGuess } from '../src/shared/cache-clock.js';
+import { createOtel } from './otel.mjs';
+import { managedEnvs, otelOwner } from './otel-setup.mjs';
 import { pickLang, createT } from '../src/i18n/index.js';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -612,6 +615,40 @@ async function parkForPhone(s) {
 const tasksOut = (local) => ({ ok: true, allowed: local || !!prefs.get('phoneTasks'), running: tasks.list(),
   projects: knownDirs.filter((d) => fs.existsSync(d)).map((d) => ({ dir: tilde(d), name: path.basename(d) })),
   sessions: [...sessions.values()].filter((s) => s.sid && s.cwd).map((s) => ({ id: s.id, sid: s.sid, name: s.title || s.name, dir: tilde(s.cwd), status: s.status, cache: cacheOut(s) })) });
+
+/* ---------- what eats the plan (server/otel.mjs): Claude Code's own telemetry, received at /v1/metrics and /v1/logs
+   ----------
+   A session's folder comes from the hooks while it is open, else from the start of its transcript (one read per
+   session, once a minute at most). */
+function transcriptCwd(sid) {
+  if (!/^[\w-]{8,80}$/.test(sid)) return '';
+  const root = path.join(CLAUDE_DIR, 'projects');
+  let dirs = []; try { dirs = fs.readdirSync(root); } catch { return ''; }
+  for (const d of dirs) {
+    const f = path.join(root, d, `${sid}.jsonl`);
+    if (!fs.existsSync(f)) continue;
+    const buf = Buffer.alloc(65536); let n = 0;
+    try { const fd = fs.openSync(f, 'r'); try { n = fs.readSync(fd, buf, 0, buf.length, 0); } finally { fs.closeSync(fd); } } catch { return ''; }
+    const m = /"cwd":"((?:[^"\\]|\\.)*)"/.exec(buf.toString('utf8', 0, n));
+    try { return m ? JSON.parse(`"${m[1]}"`) : ''; } catch { return ''; }
+  }
+  return '';
+}
+const otel = createOtel({ dir: path.join(DATA_DIR, 'otel'), cwdOf: (sid) => bySid(sid)?.cwd || transcriptCwd(sid) });
+// The panel's numbers: today or the last 7 days, the 40 sessions that cost most (the rest in one line, so they still add
+// up), and the plan's week as an exchange rate: the % of the weekly limit used so far over what was counted since that
+// week began (≈, whole days), when there is enough of both to mean something.
+function burnOut(range) {
+  const r = otel.report(range === '7d' ? '7d' : 'today');
+  let settings = {}; try { settings = JSON.parse(fs.readFileSync(path.join(CLAUDE_DIR, 'settings.json'), 'utf8')); } catch { /* none */ }
+  const w = (planLimits?.windows || []).find((x) => x.key === 'weekly');
+  let plan = null;
+  if (w && w.pct >= 1 && w.resetsAt > Date.now()) { const usd = otel.usdSince(w.resetsAt - 7 * 86400e3); if (usd >= 0.5) plan = { pct: w.pct, resetsAt: w.resetsAt, perUsd: w.pct / usd, name: planLimits.account?.plan || '' }; }
+  const shown = r.sessions.slice(0, 40), rest = r.sessions.slice(40);
+  const named = (x) => { const s = bySid(x.sid); return { ...x, name: s ? s.title || s.name : '', open: !!s, dir: tilde(x.cwd), cwd: undefined }; };
+  return { ok: true, ...r, sessions: shown.map(named), rest: { n: rest.length, usd: rest.reduce((a, x) => a + x.usd, 0), share: rest.reduce((a, x) => a + x.share, 0) },
+    projects: r.projects.map((p) => ({ ...p, dir: tilde(p.cwd), cwd: undefined })), setup: otelOwner({ settings, managed: managedEnvs() }).state, plan };
+}
 
 /* ---------- the project folders sessions have worked in: where "Giao việc" may start a new conversation (a phone
    picks one of these, never a path of its own); the last 30, kept in data/projects.json ---------- */
@@ -1905,9 +1942,33 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  // Claude Code's OpenTelemetry export (OTLP/HTTP, JSON only): from this computer's own Claude Code, never a page (no
+  // Origin), never the tunnel or the LAN (isLoopback); 4 MB a request at most, gzip allowed (OTEL_EXPORTER_OTLP_COMPRESSION)
+  if (req.method === 'POST' && (url.pathname === '/v1/metrics' || url.pathname === '/v1/logs')) {
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    if (!/^application\/json\b/i.test(String(req.headers['content-type'] || ''))) { req.resume(); res.writeHead(415, { 'Content-Type': 'application/json' }).end('{"error":"OTLP/HTTP JSON only: set OTEL_EXPORTER_OTLP_PROTOCOL=http/json"}'); return; }
+    const MAX = 4_000_000, chunks = []; let size = 0, over = false;
+    // (too big: answered at once and the connection closed, the rest of it never read)
+    const tooBig = () => { over = true; chunks.length = 0; res.writeHead(413, { Connection: 'close' }).end(); };
+    if (Number(req.headers['content-length']) > MAX) { tooBig(); return; }
+    req.on('data', (c) => { if (over) return; size += c.length; if (size > MAX) { tooBig(); req.destroy(); } else chunks.push(c); });
+    req.on('end', () => {
+      if (over) return;
+      let body = null;
+      try {
+        let raw = Buffer.concat(chunks);
+        if (/gzip/i.test(String(req.headers['content-encoding'] || ''))) raw = zlib.gunzipSync(raw, { maxOutputLength: 4 * MAX });
+        body = JSON.parse(raw.toString('utf8'));
+      } catch { res.writeHead(400, { 'Content-Type': 'application/json' }).end('{"error":"not OTLP JSON"}'); return; }
+      const wrong = url.pathname === '/v1/metrics' ? !body?.resourceMetrics : !body?.resourceLogs;
+      if (!wrong) otel.ingest(body);
+      res.writeHead(wrong ? 400 : 200, { 'Content-Type': 'application/json' }).end('{}');   // (an empty ExportMetricsServiceResponse / ExportLogsServiceResponse: all accepted)
+    });
+    return;
+  }
   if (req.method === 'GET' && url.pathname === '/api/doctor') {
     if (!isLoopback(req)) { res.writeHead(403).end(); return; }
-    json(res, 200, { uptime: Math.round((Date.now() - startedAt) / 1000), lastEventAt: lastHookAt, sessions: sessions.size, pending: pending.size, node: process.versions.node, statusAt, limitsAt: planLimits?.at || 0, limitsSource: planLimits?.source || null, usageNote: noteText() });
+    json(res, 200, { uptime: Math.round((Date.now() - startedAt) / 1000), lastEventAt: lastHookAt, sessions: sessions.size, pending: pending.size, node: process.versions.node, statusAt, limitsAt: planLimits?.at || 0, limitsSource: planLimits?.source || null, usageNote: noteText(), otel: otel.info() });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/hook/question') {
@@ -2389,6 +2450,7 @@ const server = http.createServer((req, res) => {
     stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
+  if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
     sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
@@ -2581,7 +2643,7 @@ function stopTunnel() {
   Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0, pid: 0 });
 }
 // (the office stopping: cloudflared keeps going for when it comes back; staying awake ends with it, caffeinate -w)
-process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } });
+process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } otel.saveSync(); });
 for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
 
 server.listen(PORT, HOST, () => {

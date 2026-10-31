@@ -16,6 +16,7 @@ import { avatar } from './chat-avatars.js';
 import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
+import { openBurn } from './burn.js';
 import { toast } from './activity.js';
 import { loopCard, loopPeek } from './stuck.js';
 import { cacheWords } from './cache-words.js';
@@ -667,7 +668,10 @@ function drawMore() {
   at.addEventListener('click', () => { moreEl.hidden = true; input.focus(); input.setRangeText(input.value && !/\s$/.test(input.value) ? ' @' : '@', input.selectionStart, input.selectionEnd, 'end'); mentions(); });
   const task = el('button', 'zc-more-o'); task.type = 'button'; task.append(icon('clipboard'), el('span', null, tr('chat.task.title')));
   task.addEventListener('click', () => { moreEl.hidden = true; openTaskSheet(root); });
-  moreEl.replaceChildren(task, at, form);
+  // what eats the plan (ui/burn.js): from the chat too, so a phone reaches it
+  const burn = el('button', 'zc-more-o'); burn.type = 'button'; burn.append(icon('chart'), el('span', null, tr('burn.open')));
+  burn.addEventListener('click', () => { moreEl.hidden = true; openBurn(); });
+  moreEl.replaceChildren(task, burn, at, form);
 }
 function drawMembers() {
   const rows = [];

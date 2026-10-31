@@ -58,9 +58,10 @@ test('no word from Claude Code (an older version): guessed from the end of the t
   const s = await restingSession(request, `cg-${Date.now() % 1e6}`);
   await page.goto('/');
   await page.locator('#rail-list .ri', { hasText: s.name }).click({ timeout: 120_000 });
-  // (no plan limits known here: an API key's five minutes)
-  await expect(page.locator('#ds-cache')).toHaveText(/^Prompt cache still warm for ~[345] minutes \(estimated\)$/);
-  await expect(page.locator('#lite .lite-card', { hasText: s.name })).toContainText(/☕ warm [345] min/);
+  // (an API key's five minutes, or a subscription's hour once the office has heard of plan limits, as it has when
+  // what-eats-your-plan's spec ran first on the same office)
+  await expect(page.locator('#ds-cache')).toHaveText(/^Prompt cache still warm for ~(?:[345]|5[5-9]|60) minutes \(estimated\)$/);
+  await expect(page.locator('#lite .lite-card', { hasText: s.name })).toContainText(/☕ warm (?:[345]|5[5-9]|60) min/);
   await s.end();
   expect(errors).toEqual([]);
 });
