@@ -372,6 +372,8 @@ export default {
       days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
       weekend: 'Weekend',
       holiday: 'Public holiday',
+      swap: 'Day off (swapped)',
+      makeup: 'Make-up day',
       noDuty: 'No duty rota today',
       nobody: 'Nobody in yet, no rota',
       doing: 'on it…',

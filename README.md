@@ -155,6 +155,15 @@ Then open <http://localhost:4310>.
   sessions keep working throughout. As Vietnam's fire law has it (Luật PCCC và CNCH 2024; Nghị định 105/2025/NĐ-CP,
   Điều 16: a facility practises its fire plan at least once a year) and the fire police's guidance (stairs only, never
   the lift). Settings → More turns it off (`?drill` for one now).
+- **Make-up Saturdays and swapped days off** (làm bù, nghỉ bù): the office keeps Vietnam's official calendar, its public
+  holidays and the Government's swaps (a weekday taken off to join a holiday to the weekend, a Saturday worked for it),
+  in a small dated table with each notice (`src/shared/workdays.js`, how to add a year in its comment). On a make-up
+  Saturday the office works as on any weekday: the receptionist at the front desk, lunch from home and the quán cơm,
+  the duty rota; in the morning someone grumbles in the group chat ("Thứ Bảy mà vẫn phải lên công ty 😩 làm bù mà").
+  The day swapped off is a day off (the front desk shut, no lunch, no rota, no Monday stand-up), as are weekends and
+  holidays; on the last afternoon before a break of three days or more someone says how long it is, and which Saturday
+  to come back on. As announced up to now: Saturday 10/1/2026 for Friday 2/1, Saturday 22/8/2026 for Monday 31/8; none
+  for 2027 (the Government chose Tết 4/2–10/2 and Quốc khánh 2/9–5/9 without one).
 - **Farewells** (tiệc chia tay): a project that really was at work (on two days or more) and has had no session for 30
   days (Settings → More: 14, 30, 60 or 90, or off) gets a last afternoon in office hours: its person comes in once more
   with the company card on a lanyard and packs the desk into a cardboard box (the little plant, the mug, the photo frame)

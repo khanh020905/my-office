@@ -3,16 +3,19 @@
 //
 // As in Vietnamese offices: more and more people bring rice from home in a plastic or glass box with a clipped lid, or a
 // stainless tin, in an insulated bag; at noon they line up at the pantry's microwaves, two or three minutes each. More of
-// them on a Monday (the weekend's cooking), nobody at the weekend.
+// them on a Monday (the weekend's cooking), nobody at the weekend or on a holiday (src/shared/workdays.js).
+
+import { dayKind } from './workdays.js';
 
 const hash = (s) => { let h = 2166136261; for (const ch of String(s)) { h ^= ch.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; };
 const dayKey = (d) => `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 
-/** the share of people who bring lunch on that day, in percent: a Monday more than half, other weekdays about a
-    third, none on Saturday and Sunday */
+/** the share of people who bring lunch on that day, in percent: a Monday more than half, other working days (a
+    make-up Saturday too) about a third, none at the weekend, on a holiday or a day off */
 export function homeShare(d) {
-  const wd = d.getDay();
-  return wd === 0 || wd === 6 ? 0 : wd === 1 ? 55 : 30;
+  const k = dayKind(d);
+  if (k !== 'work' && k !== 'makeup') return 0;
+  return d.getDay() === 1 ? 55 : 30;
 }
 /** whether the person `id` brought lunch from home on day `d` (force: everyone, for ?comnha) */
 export function bringsLunch(id, d, force = false) {

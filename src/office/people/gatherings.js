@@ -16,6 +16,7 @@ import { asleep, dist, free, later, line, people } from './errands.js';
 import { toast } from '../ui/activity.js';
 import { sfx } from '../audio/sfx.js';
 import { t as tr } from '../../i18n/index.js';
+import { isWorkday } from '../../shared/workdays.js';
 
 export let bellG;
 let bellRing = 0, cakeG = null, cakeGrow = 0, flames = [];
@@ -85,7 +86,7 @@ export function ringBell(opener = '') {
 let standupDay = '';
 export function mondayStandup(force = false) {
   const d = officeNow(), day = d.toDateString();
-  if (!force && (d.getDay() !== 1 || d.getHours() !== 9 || d.getMinutes() > 10 || standupDay === day)) return false;
+  if (!force && (d.getDay() !== 1 || d.getHours() !== 9 || d.getMinutes() > 10 || standupDay === day || !isWorkday(d))) return false;   // (no stand-up on a Monday off)
   standupDay = day;
   if (!ringBell(line('people.meet.monday'))) return false;
   toast(tr('people.meet.mondayToast'), 5000);

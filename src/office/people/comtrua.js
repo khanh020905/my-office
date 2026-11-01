@@ -13,6 +13,7 @@ import { called, goDown, goUp, here, live, mainExit, outside, resume, street, wa
 import { homeLunch } from './comnha.js';
 import { chatLife } from '../ui/group-chat.js';
 import { queueUi } from '../ui/activity.js';
+import { isWorkday } from '../../shared/workdays.js';
 import { t as tr } from '../../i18n/index.js';
 
 const P = typeof location !== 'undefined' ? new URLSearchParams(location.search) : new URLSearchParams();
@@ -26,11 +27,11 @@ const free = (w, day = officeNow().toDateString()) => { const s = sessions.get(w
 const say = (w, key) => w.say('idle', tr(key));
 
 /** whether the office goes down to the quán for lunch today (then no GrabFood is ordered): Fridays, and about one other
-    weekday in three; never at the weekend, nor with no quán on the street */
+    working day in three (a make-up Saturday too); never at the weekend nor on a holiday, nor with no quán on the street */
 export function comPlanned(d = officeNow()) {
   if (!street()?.com) return false;
   const wd = d.getDay();
-  return FORCE || (wd > 0 && wd < 6 && (wd === 5 || hash(`${d.toDateString()}:com`) % 100 < 34));
+  return FORCE || (isWorkday(d) && (wd === 5 || hash(`${d.toDateString()}:com`) % 100 < 34));
 }
 
 function start(list, Q) {
