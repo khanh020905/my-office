@@ -123,7 +123,7 @@ engine switches to demo mode and talks to no API.
 | `people/bedding.js` | 64 | Nap bedding: blanket, pillow, folding it away. |
 | `people/billiards.js` | 484 | Pool in the lounge (company floor; the table: world/props/billiards.js). |
 | `people/breaks.js` | 87 | Lunch and the afternoon coffee queue. |
-| `people/chibi-rig.js` | 879 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
+| `people/chibi-rig.js` | 888 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/comnha.js` | 195 | Cơm nhà: lunch brought from home, warmed at the pantry's two microwaves at noon (company floor; the corner: world/props/microwave.js; who brought some today, and what: src/shared/comnha.js). |
 | `people/comtrua.js` | 171 | Lunch at the quán cơm bình dân across the street (world/backdrops/eat-com.js). |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
@@ -149,7 +149,7 @@ engine switches to demo mode and talks to no API.
 | `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
 | `people/teatime.js` | 89 | Friday 16:00: afternoon tea. |
-| `people/workers.js` | 538 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/workers.js` | 539 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
@@ -168,7 +168,7 @@ engine switches to demo mode and talks to no API.
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
-| `ui/look-switch.js` | 19 | Switching the character look. |
+| `ui/look-switch.js` | 22 | Switching the character look. |
 | `ui/mac-drawer.js` | 675 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
 | `ui/permissions.js` | 149 | Approve / deny cards and Claude's questions. |
