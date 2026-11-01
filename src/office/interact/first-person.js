@@ -63,12 +63,14 @@ const street = () => (THEMES && THEME === THEMES.city && THEME.live?.street) || 
 // the way out of the building, on the pavement: the side of the block nearest the lift (or the door)
 const wayOut = (S) => { const x = lift ? LIFT_X : DOOR_OUT.x; return S.exits(x, DZ)[0] || null; };
 let fade = null;
-function through(fn) {   // a moment's black while the lift goes down (or up)
-  fade.classList.add('on'); sfx.play('ding');
-  setTimeout(() => { fn(); fade.classList.remove('on'); }, 380);
+function through(fn) {   // a moment's black while the lift goes down (or up); longer by the stairs, while it is serviced
+  const stairs = !!lift?.service;
+  fade.classList.add('on'); sfx.play(stairs ? 'click' : 'ding');
+  setTimeout(() => { fn(); fade.classList.remove('on'); }, stairs ? 1100 : 380);
 }
 export function toStreet() {
   const S = street(), ex = S && wayOut(S); if (!ex) return;
+  if (lift?.service) toast(tr('fp.stairsDown'));
   through(() => {
     fp.street = true; setNear(null);
     fp.pos.set(ex.x + ex.n[0] * 0.3, ex.z + ex.n[1] * 0.3); fp.yaw = Math.atan2(ex.n[0], ex.n[1]); fp.pitch = -0.04;
@@ -76,20 +78,20 @@ export function toStreet() {
 }
 function toOffice(now = false) {
   const go = () => { street()?.setWalker(null); street()?.shop?.feel(null); fp.street = false; fp.carry = null; fp.seat = null; setNear(null); fp.pos.set(DOOR_IN.x + 0.7, DOOR_IN.z); fp.yaw = Math.PI / 2; };
-  if (now) go(); else through(go);
+  if (now) go(); else { if (lift?.service) toast(tr('fp.stairsUp')); through(go); }
 }
 /* ---------- in a shop (shops.js): take things from the fridges and the chain's corner, pay at the till by QR, sit at the
    window counter ---------- */
 const vnd = (k) => `${(k * 1000).toLocaleString('vi-VN')}đ`;
 const itemName = (it) => tr(`fp.items.${it.id}`);
 function shopLabel(o) {
-  if (o.kind === 'seat') return tr('fp.sit');
+  if (o.kind === 'seat') return tr(o.label || 'fp.sit');   // (a shop's own words for its seat: Cộng's low stool)
   if (o.kind !== 'pay') return tr('fp.take', { item: itemName(o.item), price: vnd(o.item.price) });
   if (fp.basket.length) return tr('fp.pay', { n: fp.basket.length, total: vnd(fp.basket.reduce((a, it) => a + it.price, 0)) });
   return o.item ? tr('fp.order', { item: itemName(o.item), price: vnd(o.item.price) }) : tr('fp.payEmpty');
 }
 function shopAct(o) {
-  if (o.kind === 'seat') { fp.seat = o.seatAt; fp.pos.set(o.seatAt.x, o.seatAt.z); fp.yaw = o.seatAt.yaw; fp.pitch = -0.05; toast(tr('fp.sitDone')); return; }
+  if (o.kind === 'seat') { fp.seat = o.seatAt; fp.pos.set(o.seatAt.x, o.seatAt.z); fp.yaw = o.seatAt.yaw; fp.pitch = -0.05; toast(tr(o.done || 'fp.sitDone')); return; }
   if (o.kind !== 'pay' || (!fp.basket.length && o.item)) { fp.basket.push(o.item); toast(tr('fp.added', { item: itemName(o.item) })); sfx.play('pop'); return; }
   if (!fp.basket.length) { toast(tr('fp.emptyBasket')); return; }
   const total = fp.basket.reduce((a, it) => a + it.price, 0), last = fp.basket[fp.basket.length - 1];
@@ -136,7 +138,7 @@ function setNear(w) {
   const b = $('fp-near');
   if (!w) { b.hidden = true; return; }
   if (w.outside) { b.replaceChildren(el('kbd', '', 'E'), document.createTextNode(w.label)); b.hidden = false; return; }   // (on the street)
-  if (w.meshes && w.id === 'door' && street()) { b.replaceChildren(el('kbd', '', 'E'), document.createTextNode(tr(lift ? 'fp.toStreet' : 'fp.outside'))); b.hidden = false; return; }
+  if (w.meshes && w.id === 'door' && street()) { b.replaceChildren(el('kbd', '', 'E'), document.createTextNode(tr(!lift ? 'fp.outside' : lift.service ? 'fp.toStreetStairs' : 'fp.toStreet'))); b.hidden = false; return; }
   if (w === cat) { b.replaceChildren(el('kbd', '', 'E'), document.createTextNode(tr('fp.petCat'))); b.hidden = false; return; }
   if (w.meshes) { b.replaceChildren(el('kbd', '', 'E'), document.createTextNode(`${w.name}: ${propHint(w)}`)); b.hidden = false; return; }
   const name = w.sub ? tr('fp.subOf', { name: w.cfg.name, parent: sessions.get(w.parent?.id)?.name || tr('common.session') }) : sessions.get(w.id)?.name || w.cfg.name;

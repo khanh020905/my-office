@@ -100,8 +100,8 @@ export function chatMoved(names, to) { if (!engine) return; for (const s of sess
 const life = (key, vars) => tr(`chat.life.${key}`, vars);
 const lastLife = new Map();
 /** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, tgdd, mixue, phuclong,
- *  katinat, longchau), altar, trophy, bye (v: id, name, shop, names, photo, why, every). The morning hello, the lunch
- *  poll and the reminders come by the clock, from the engine. */
+ *  katinat, longchau, cong), the lift's servicing (stairs, liftDone), altar, trophy, bye (v: id, name, shop, names, photo,
+ *  why, every). The morning hello, the lunch poll and the reminders come by the clock, from the engine. */
 export function chatLife(kind, v = {}) {
   const every = v.every ?? 20 * 60e3, now = Date.now(), lk = `${kind}:${v.id || ''}`;
   if (replay.on || (lastLife.get(lk) || 0) > now) return;
@@ -125,6 +125,10 @@ export function chatLife(kind, v = {}) {
     case 'phuclong': if (v.id) chatSay(v.id, life('phuclongTea'), { key, react: ['❤️', '👍'], reacts: 2, answer: [{ key: 'phuclongAsk', chance: 0.8 }, { key: 'phuclongAsk', chance: 0.4 }] }); break;
     case 'katinat': if (v.id) chatSay(v.id, life(v.why === 'checkin' ? 'katinatCheckin' : 'katinatTea'), { key, react: ['❤️', '😆', '😮'], reacts: 4, answer: [{ key: 'katinatAsk', chance: 0.9 }, { key: 'katinatAsk', chance: 0.5 }] }); break;
     case 'longchau': if (v.id) chatSay(v.id, life('longchauHeadache'), { key, react: ['😭', '❤️'], reacts: 3, answer: [{ key: 'longchauAsk', chance: 0.8 }] }); break;
+    // the lift being serviced after a restart (life/lift-service.js): the stairs, then the lift back with its sticker
+    case 'stairs': if (v.id) chatSay(v.id, life('stairs'), { key, react: ['😭', '😆'], reacts: 3, answer: [{ key: 'stairsAsk', chance: 0.9 }, { key: 'stairsAsk', chance: 0.5 }] }); break;
+    case 'liftDone': chatSay('reception', life('liftDone'), { key, react: ['👍', '❤️'], reacts: 3 }); break;
+    case 'cong': if (v.id) chatSay(v.id, life(v.why === 'congWeekend' ? 'congWeekend' : 'cong'), { key, react: ['❤️', '😋'], reacts: 3, answer: [{ key: 'congAsk', chance: 0.9 }, { key: 'congAsk', chance: 0.5 }] }); break;
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;
     case 'bye': if (v.id) chatSay(v.id, tr('chat.work.bye'), { key, answer: [{ key: 'bye', chance: 0.6 }] }); break;
@@ -152,6 +156,15 @@ export function chatLife(kind, v = {}) {
     // an e-scooter under 20% (people/evswap.js): off to the battery-swap cabinet; back with a full one
     case 'evLow': if (v.id) chatSay(v.id, life('evLow', { pct: v.pct }), { key, react: ['🔋', '⚡'], reacts: 2, answer: [{ key: 'evLow', chance: 0.6 }] }); break;
     case 'evDone': if (v.id) chatSay(v.id, life('evDone'), { key, react: ['⚡', '👍'], reacts: 2, answer: [{ key: 'evDone', chance: 0.4 }] }); break;
+    // the Government's swapped days (life/day-swaps.js): a make-up Saturday's grumble; the afternoon before a long break
+    case 'makeup': chatSay(v.id || restingOne(), life('makeup', { off: v.off }), { key, react: ['😩', '😆', '😭'], reacts: 4, answer: [{ key: 'makeup', chance: 0.95 }, { key: 'makeup', chance: 0.6 }] }); break;
+    case 'breakEve': chatSay(v.id || restingOne(), life(v.makeup ? 'breakEveMakeup' : 'breakEve', { n: v.n, makeup: v.makeup }), { key, react: ['🥳', '❤️', '😆'], reacts: 5, answer: [{ key: 'breakEve', chance: 0.95 }, { key: 'breakEve', chance: 0.7 }] }); break;
+    // the quarterly fire drill (life/drill.js): HR's notice in the morning, pinned; her report after
+    case 'drillNotice': chatSay('hr', life('drillNotice', { q: v.q }), { key, pin: true, react: ['👍', '🧯', '😭'], reacts: 4, answer: [{ key: 'drillNotice', chance: 0.9 }, { key: 'drillNotice', chance: 0.6 }] }); break;
+    case 'drillDone': chatSay('hr', life('drillDone', { q: v.q, n: v.n, time: v.time }), { key, react: ['👏', '❤️', '😆'], reacts: 5, answer: [{ key: 'drillDone', chance: 0.9 }, { key: 'drillDone', chance: 0.6 }] }); break;
+    // trực nhật (people/duty.js): HR's list in the morning; the morning after a chore was left undone, a grumble and a sorry
+    case 'dutyRoster': chatSay('hr', life('dutyRoster', { list: v.list }), { key, react: ['👍', '🙏'], reacts: 3, answer: [{ key: 'dutyRoster', chance: 0.6 }] }); break;
+    case 'dutyGrumble': chatSay(v.id || restingOne(), life(`duty_${v.chore}`), { key, react: ['😤', '😆', '😭'], reacts: 3 }); if (v.who) chatSay(v.who, tr('chat.reply.dutySorry'), { key: `${key}:sorry`, delay: 5000 }); break;
     case 'pickleDone': if (v.id) chatSay(v.id, life('pickleDone', { share: v.share }), { key, photo: v.photo || null, react: ['🏓', '😆', '❤️'], reacts: 4, answer: [{ key: 'pickleDone', chance: 0.8 }, { key: 'pickleDone', chance: 0.5 }] }); break;
   }
 }

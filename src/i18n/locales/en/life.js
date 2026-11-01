@@ -47,6 +47,40 @@ export default {
     backOther: '🔔 {name} is back, to the desks!',
     cheer: ['We are back, to the desk!', 'Back to it!', 'Off to my desk.'],
   },
+  // the lift being serviced after the office's server restarts (life/lift-service.js): the barrier's sign, the
+  // inspection sticker put in the car after a new build, the technician
+  // the quarterly fire drill (life/drill.js)
+  drill: {
+    quarters: ['1', '2', '3', '4'],
+    where: 'In the fire drill',
+    toast: '🔔 Q{q} fire drill: only a drill, every session keeps working',
+    call: 'Fire drill! Stay calm, take the stairs, not the lift!',
+    go: ['Drill time, let’s go 🏃', 'Stairs it is', 'Twelve floors 😭', 'Phone in hand'],
+    name: '{name}?',
+    here: ['Here!', 'Present!', 'Yes!'],
+    count: 'All {n} of {total} out ✅ in {time}',
+    sign: 'ASSEMBLY POINT',
+    signSub: 'Điểm tập kết',
+    liftSign: 'FIRE',
+    guard: {
+      light: 'I’ll light the tray for practice, stand back please',
+      shake: 'A powder one: shake it well first',
+      pin: 'Pull the pin!',
+      aim: 'Upwind, aim at the base of the fire',
+      spray: 'Squeeze and sweep!',
+      done: 'Out! With a CO2 one, never hold the horn: it freezes your hand',
+    },
+  },
+  liftService: {
+    sign: 'UNDER MAINTENANCE',
+    sorry: 'Sorry for the inconvenience',
+    stickerHead: 'INSPECTED',
+    stickerWhat: 'My Office v{version}',
+    stickerDate: 'Date {date}',
+    stickerNo: 'No. {no}',
+    tech: 'Lift technician',
+    techSay: ['Stairs for now, please 🙏', 'Nearly done, bear with me 🔧', 'Just the routine service, running again in a few minutes 🔧'],
+  },
   altar: {
     header: 'THẦN TÀI · THỔ ĐỊA',
     left: 'Thổ năng sinh bạch ngọc',

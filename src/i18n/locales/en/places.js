@@ -84,6 +84,7 @@ export default {
     titleLift: 'Elevator',
     sub: 'Every new session walks in through this door, and walks out when it closes',
     subLift: 'New sessions ride the elevator up; when a session closes, it puts on its coat and backpack and rides back down',
+    subService: 'Being serviced for a few minutes after the office restarts: everyone takes the stairs beside it',
     came: '{name} came in',
     went: '{name} went home',
     empty: 'Nobody has come or gone since the office opened.',

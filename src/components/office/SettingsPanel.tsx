@@ -123,7 +123,7 @@ export default async function SettingsPanel() {
           <div className="pop-toggles">{toggle('coach', true)}</div>
           <p className="pop-note">{t('settings.coachNote')}</p>
           <h3>{t('settings.behaviour')}</h3>
-          <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}</div>
+          <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}{toggle('drill', true)}</div>
           <div className="pop-acts"><button id="btn-tips" className="tb-btn" type="button"><span data-icon="sparkle"></span><span className="lbl">{t('tips.again')}</span></button></div>
           {/* the stuck-loop breaker (src/office/ui/stuck.js fills it in from the server; hidden in the demo) */}
           <div className="st-loop" id="st-loop" hidden>

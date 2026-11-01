@@ -6,8 +6,8 @@ import { PRO, nowMs, officeNow, rand, reduceMotion, replay } from '../core/env.j
 import { scene } from '../scene/renderer.js';
 import { canvasTex, fitText, mat, put, rbox } from '../scene/blocks.js';
 import { officeChair } from '../world/desks.js';
-import { liftArrive } from '../world/entrance.js';
-import { DESK_SPOTS, DOOR_IN, DOOR_OUT, faceTo } from './navigation.js';
+import { liftArrive, liftDown } from '../world/entrance.js';
+import { DESK_SPOTS, DOOR_IN, faceTo } from './navigation.js';
 import { Worker, nearBoss, npcs, sessions, workers } from './workers.js';
 import { director } from './director.js';
 import { quip } from './errands.js';
@@ -127,7 +127,7 @@ function arrive(p, then) {
 function depart(p, then) {
   const gone = () => { p.offstage = true; p.spot = null; p.leavingNow = false; then?.(); };
   p.leavingNow = true;
-  p.goTo(DOOR_IN, () => { p.anim = 'idle'; p.faceTarget = DOOR_IN.face; p.liftWait = () => p.goTo(DOOR_OUT, () => { p.faceTarget = Math.PI / 2; p.liftRide = gone; }); });
+  p.goTo(DOOR_IN, () => liftDown(p, gone));
 }
 const atDesk = (p) => !p.offstage && !p.coming && !p.leavingNow && !p.job && p.phase !== 'walk' && p.spot === SEAT;
 // to her desk and back to typing

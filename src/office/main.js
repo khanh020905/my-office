@@ -42,6 +42,7 @@ import * as worldPropsCups from './world/props/cups.js';
 import * as worldPropsDevServers from './world/props/dev-servers.js';
 import * as worldPropsSwitches from './world/props/switches.js';
 import * as worldPropsMicrowave from './world/props/microwave.js';
+import * as worldPropsDutyBoard from './world/props/duty-board.js';
 import * as interactRings from './interact/rings.js';
 import * as peopleNavigation from './people/navigation.js';
 import * as peopleBreaks from './people/breaks.js';
@@ -53,6 +54,7 @@ import * as peopleErrands from './people/errands.js';
 import * as peopleGatherings from './people/gatherings.js';
 import * as peopleOutings from './people/outings.js';
 import * as peopleComnha from './people/comnha.js';
+import * as peopleDuty from './people/duty.js';
 import * as peopleStaff from './people/staff.js';
 import * as peopleTeatime from './people/teatime.js';
 import * as peopleAccountant from './people/accountant.js';
@@ -72,6 +74,9 @@ import * as lifeWeather from './life/weather.js';
 import * as lifeNap from './life/nap.js';
 import * as lifeQuota from './life/quota.js';
 import * as lifeAltar from './life/altar.js';
+import * as lifeLiftService from './life/lift-service.js';
+import * as lifeDrill from './life/drill.js';
+import * as lifeDaySwaps from './life/day-swaps.js';
 import * as lifeTests from './life/tests.js';
 import * as lifePhotostrips from './life/photostrips.js';
 import * as lifePost from './life/post.js';
@@ -155,6 +160,7 @@ const MODULES = [
   worldPropsDevServers,
   worldPropsSwitches,
   worldPropsMicrowave,
+  worldPropsDutyBoard,
   interactRings,
   peopleNavigation,
   peopleBreaks,
@@ -167,6 +173,7 @@ const MODULES = [
   peopleOutings,
   peopleComnha,
   peopleStaff,
+  peopleDuty,
   peopleTeatime,
   peopleAccountant,
   peopleRounds,
@@ -185,6 +192,9 @@ const MODULES = [
   lifeNap,
   lifeQuota,
   lifeAltar,
+  lifeLiftService,
+  lifeDrill,
+  lifeDaySwaps,
   lifeTests,
   lifePhotostrips,
   lifePost,

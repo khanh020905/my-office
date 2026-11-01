@@ -29,7 +29,7 @@ import { t as tr } from '../../i18n/index.js';
 const FROM = 480, TO = 1050, LATE = 510, PARTY_AT = 930;   // her day 8:00 to 17:30; late after 8:30; the party at 15:30
 const minutes = () => { const d = officeNow(); return d.getHours() * 60 + d.getMinutes(); };
 const hhmm = (d) => `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
-const projOf = (s) => s?.git?.repo || String(s?.dir || '').split('/').filter(Boolean).pop() || s?.name || '';
+export const projOf = (s) => s?.git?.repo || String(s?.dir || '').split('/').filter(Boolean).pop() || s?.name || '';
 function say(w, text, ms = 4500) { if (!text) return; w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, ms); }
 const FONT = '"Be Vietnam Pro", system-ui, sans-serif';
 

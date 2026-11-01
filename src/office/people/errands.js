@@ -4,7 +4,7 @@
 // are in gatherings.js and use the helpers exported here.)
 import * as THREE from 'three';
 import { state } from '../core/state.js';
-import { LAYOUT, PRO, rand, replay } from '../core/env.js';
+import { LAYOUT, PRO, rand, reduceMotion, replay } from '../core/env.js';
 import { scene } from '../scene/renderer.js';
 import { ROOM_LAMPS } from '../scene/lights.js';
 import { mat } from '../scene/blocks.js';
@@ -234,6 +234,16 @@ export function waterPlant(i) {
     at: () => { P.wet = Date.now(); savePlants(); P.perk = { from: P.k, t: 0 }; return line('people.plant.done'); },
     done: () => { can?.removeFromParent(); } });
   return true;
+}
+/* for the rota's morning watering (people/duty.js): the thirstiest plants first, where to stand for one, and the
+   pouring itself (the can, the water, the plant perking up; then()) */
+export const plantsToWater = (n) => plantList().slice().sort((a, b) => dryness(b) - dryness(a) || a.i - b.i).slice(0, n).map((P) => P.i);
+export function plantSpot(i, w) { const P = plantList()[i]; return P && (wayTo(w, P.g.position.x, P.g.position.z) || standBy(P.g.position.x, P.g.position.z)); }
+export function pour(i, w, then) {
+  const P = plantList()[i]; if (!P) { then(); return; }
+  w.faceTarget = Math.atan2(P.g.position.x - w.pos.x, P.g.position.z - w.pos.y);
+  const can = hold(w, 'can'); can.rotation.x = 0.5; sfx.play('water'); P.pour = { w, until: state.sim + 1.8 };
+  later(reduceMotion ? 0.4 : 1.9, () => { can.removeFromParent(); P.wet = Date.now(); savePlants(); P.perk = { from: P.k, t: 0 }; then(); });
 }
 const _hand = new THREE.Vector3();
 function updatePlants(dt) {

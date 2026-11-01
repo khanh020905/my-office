@@ -39,6 +39,7 @@ import { cacheClock, cacheFromResume, cacheFromStatus, cacheGuess } from '../src
 import { createOtel } from './otel.mjs';
 import { managedEnvs, otelOwner } from './otel-setup.mjs';
 import { pickLang, createT } from '../src/i18n/index.js';
+import { createLiftService } from './lift-service.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.OFFICE_PORT) || 4310;
@@ -2563,7 +2564,7 @@ const server = http.createServer((req, res) => {
     const lanOn = lanIsOn();
     return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), trophies: trophies.pub(),
       lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
-      ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD };
+      ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD, lift: liftService.pub() };
   };
   if (url.pathname === '/stream') {
     res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-store, no-transform', Connection: 'keep-alive', 'X-Accel-Buffering': 'no' });
@@ -2651,6 +2652,8 @@ const server = http.createServer((req, res) => {
 const DEV = process.argv.includes('--dev');
 // this build's id: a page from an older one (the office was updated and restarted) loads the new one by itself
 const BUILD = (() => { try { return fs.readFileSync(path.join(ROOT, process.env.OFFICE_DIST_DIR || '.next', 'BUILD_ID'), 'utf8').trim(); } catch { return ''; } })();
+// the lift's servicing for the first minutes after a start, longer on a new build (server/lift-service.mjs: a scene)
+const liftService = createLiftService({ dataDir: DATA_DIR, build: BUILD, version: (() => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version || ''; } catch { return ''; } })() });
 const nextApp = next({ dev: DEV, dir: ROOT, hostname: HOST, port: PORT, httpServer: server });
 const nextHandle = nextApp.getRequestHandler();
 try { await nextApp.prepare(); }

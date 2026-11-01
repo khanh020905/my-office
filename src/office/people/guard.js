@@ -142,7 +142,43 @@ function trips() {
   if (seenTrips.size > 60) seenTrips = new Set([...seenTrips].slice(-20));
 }
 function pose(t, f) { crowd.pose(me, { hat: true, ...f }); }
+
+/* ---------- the quarterly fire drill (life/drill.js): he is the other marshal, in a red armband ----------
+   on: out of the booth; at: where to stand ({ x, z }; null: back to the booth); look: what to face; act: what his arms
+   do (walk, light, shake, pin, aim, spray, talk); say(text); hold(mesh): the extinguisher in his right hand, pointing
+   where he faces (at the base of the fire when aiming) */
+export const marshal = { on: false, at: null, look: null, act: 'walk', yaw: 0, say: (text) => { if (G) speak(text); }, hold: (mesh) => holdOut(mesh) };
+let mPos = null, band = null;
+const MA = new THREE.Matrix4(), BAND = new THREE.Matrix4().compose(new THREE.Vector3(0, -0.15, 0), new THREE.Quaternion(), new THREE.Vector3(0.07, 0.07, 0.07)), C = new THREE.Vector3();
+const ARMS = {
+  light: () => [[1.0, -0.25], [1.15, -0.15]], pin: () => [[1.0, 0.2], [0.85, -0.1]], aim: () => [[1.2, 0.15], [1.05, -0.05]], spray: (t) => [[1.2, 0.15 + Math.sin(t * 3) * 0.08], [1.05, -0.05 + Math.sin(t * 3) * 0.08]],
+  shake: (t) => [[0.2, 0], [0.7 + Math.sin(t * 13) * 0.45, -0.1]], talk: (t) => [[0.3, 0], [1.3 + Math.sin(t * 2.5) * 0.35, 0.05]],
+};
+function stepMarshal(dt, t) {
+  const p = post;
+  mPos ||= new THREE.Vector3(p.stand.x, p.stand.y, p.stand.z);
+  const tx = marshal.on && marshal.at ? marshal.at.x : p.stand.x, tz = marshal.on && marshal.at ? marshal.at.z : p.stand.z;
+  const d = Math.hypot(tx - mPos.x, tz - mPos.z), walking = d > 0.05;
+  if (walking) { const k = Math.min(1, (1.35 * dt) / d); mPos.x += (tx - mPos.x) * k; mPos.z += (tz - mPos.z) * k; }
+  const look = walking ? C.set(tx, mPos.y, tz) : marshal.on && marshal.look ? C.set(marshal.look.x, mPos.y, marshal.look.z) : p.look;
+  const yaw = yawTo(mPos, look), act = walking ? 'walk' : marshal.act;
+  marshal.yaw = yaw;
+  pose(t, { x: mPos.x, y: mPos.y, z: mPos.z, yaw, lean: act === 'light' ? 0.35 : act === 'aim' || act === 'spray' ? 0.12 : 0,
+    arms: ARMS[act]?.(t) || (walking ? [[Math.sin(t * 7) * 0.4, 0], [-Math.sin(t * 7) * 0.4, 0]] : [[0.15, 0], [0.15, 0]]),
+    legs: walking ? [Math.sin(t * 7) * 0.5, -Math.sin(t * 7) * 0.5] : [0, 0] });
+  // the armband, on the left upper arm, while he is out
+  if (!band) { band = new THREE.Mesh(new THREE.CylinderGeometry(1, 1, 1, 10, 1, true), new THREE.MeshStandardMaterial({ color: '#D21F1F', roughness: 0.6, side: THREE.DoubleSide })); band.matrixAutoUpdate = false; G.add(band); }
+  band.visible = true; band.matrix.multiplyMatrices(crowd.arm(me, 0, MA), BAND); band.matrixWorldNeedsUpdate = true;
+  if (!marshal.on && !walking) { mPos = null; band.visible = false; }   // (back at the booth: his day as before)
+}
+function holdOut(mesh) {
+  if (!crowd) return;
+  const h = crowd.hand(me, V); mesh.position.copy(h);
+  mesh.rotation.set(0, marshal.yaw + Math.PI / 2, 0);
+  if (marshal.act === 'aim' || marshal.act === 'spray') mesh.rotateX(0.55);
+}
 function step(dt, t, m) {
+  if (marshal.on || mPos) { stepMarshal(dt, t); return; }
   const p = post, night = shift(m), walkLegs = (k) => [Math.sin(t * 7) * 0.5 * k, -Math.sin(t * 7) * 0.5 * k];
   // 22:00 the gate drawn across, 6:30 folded back: he walks it along from its end
   const want = night ? GATE : 0;
@@ -208,7 +244,7 @@ export function updateGuard(dt) {
   if (say?.visible) { const h = crowd.hand(me, V); say.position.set(h.x, post.F.elements[13] + 2.15, h.z); }
   // the gate keeps to the hours even out of view (no one there to see him pull it)
   if (!vis && (!task || task.kind === 'gate')) { const want = nightAt(m) ? GATE : 0; if (gateK !== want) { gateK = want; placeGate(gateK); task = null; } }
-  if (!vis && task?.kind !== 'round') return;
+  if (!vis && task?.kind !== 'round' && !marshal.on && !mPos) return;
   step(dt, t, m);
   crowd.flush();
 }

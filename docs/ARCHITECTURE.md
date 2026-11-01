@@ -35,6 +35,7 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `steer.mjs` | "Chen lời giữa chừng": a note into a working session through its inbox socket (the line it takes, whether it can take one now: permission mode and `crossSessionInbound`), else kept for when it is done. |
 | `rewrite.mjs` | The chat's "✨ Viết lại cho rõ": a message for Claude rewritten as goal / context / done-when by `claude -p` on a small model, with no tools, one turn, no session saved and the hooks off; text only, one at a time, 20 an hour. The rest of the prompt helper is in the page (`src/shared/prompt-coach.js`). |
 | `tenure.mjs` | Each project's working life (`data/tenure.json`): first and last session, on how many days, how many turns; which are due a farewell (Settings → More), which came back, which are still interns and which are ready to be made permanent. The first run reads, once, the dates and folders of Claude Code's transcripts (the projects already there). |
+| `lift-service.mjs` | The lift's servicing after a start (a scene the office draws, `life/lift-service.js`): three minutes, five when the server starts on a build it has not run before (`data/lift.json` keeps the last one); the inspection sticker that build gets. In the live snapshot as `lift`. |
 | `prefs.mjs` | The office's language (`data/prefs.json`, `OFFICE_LANG`) and the server's translator `tr()`. |
 
 `bin/cli.mjs` installs the hooks (curl on macOS and Linux, `hooks/send.mjs` on Windows) and, through `bin/service.mjs`, the
@@ -99,25 +100,28 @@ engine switches to demo mode and talks to no API.
 
 | Module | Lines | What it is |
 | --- | ---: | --- |
-| `audio/sfx.js` | 73 | Sounds, synthesized in the browser. |
-| `core/env.js` | 72 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
-| `core/loop.js` | 229 | The render loop and its frame budget. |
+| `audio/sfx.js` | 75 | Sounds, synthesized in the browser. |
+| `core/env.js` | 73 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
+| `core/loop.js` | 235 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo-log.js` | 17 | The demo's conversation logs (a session's, shown in its drawer, and each subagent's steps), kept to what the drawer can show. |
-| `demo/demo.js` | 325 | Demo mode: fictional projects and a fictional Mac. |
-| `interact/first-person.js` | 261 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
+| `demo/demo.js` | 327 | Demo mode: fictional projects and a fictional Mac. |
+| `interact/first-person.js` | 263 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
-| `interact/props.js` | 279 | Furniture you can point at: highlight, tooltip, click actions. |
+| `interact/props.js` | 284 | Furniture you can point at: highlight, tooltip, click actions. |
 | `interact/rings.js` | 16 | Selection and hover rings on the floor. |
 | `life/altar.js` | 172 | The Thần Tài – Thổ Địa altar in the lobby (company floor), and the offerings on the lunar 1st and 15th. |
+| `life/day-swaps.js` | 39 | Làm bù, nghỉ bù: the office on the Government's swapped days (the dates and their notices: src/shared/workdays.js). |
+| `life/drill.js` | 368 | Diễn tập PCCC: the quarterly fire drill (company floor). |
 | `life/incidents.js` | 94 | Incidents: repeated failures turn the office red. |
+| `life/lift-service.js` | 226 | The lift being serviced, right after the office's server starts (server/lift-service.mjs says for how long: three minutes, five on a new build). |
 | `life/nap.js` | 63 | The midday nap, 12:30–13:30: blinds down, the room a little dimmer, everyone resting naps at their desk. |
 | `life/photostrips.js` | 135 | The release history on the whiteboard: each version tag sends four people to the photo booth across the street (people/photobooth.js) and the strip they bring back, four frames of silly poses with the version written under them, is pinned along the bottom of the board's right half. |
 | `life/post.js` | 113 | The post box: every commit is a letter in it. |
 | `life/quota.js` | 139 | Out of Claude: an account's plan limit used up, its people on a break until it resets. |
-| `life/rain.js` | 77 | Umbrellas and a wet-floor sign when it rains. |
+| `life/rain.js` | 78 | Umbrellas and a wet-floor sign when it rains. |
 | `life/seasons.js` | 234 | Seasonal decorations: Halloween, Christmas, Tết. |
 | `life/tests.js` | 116 | The test board: a screen on a stand in the server room (in the small office, on the wall by the racks) with a row for each session at a desk. |
 | `life/trophies.js` | 119 | The trophy cabinet and the opening plaque. |
@@ -130,15 +134,16 @@ engine switches to demo mode and talks to no API.
 | `people/breaks.js` | 87 | Lunch and the afternoon coffee queue. |
 | `people/chibi-rig.js` | 902 | Office characters, two looks on one rig:   toy   (A) designer-toy chibi, ~2 heads: big round head, low wide-set bean eyes, stubby legs, chunky sneakers, matte vinyl. |
 | `people/comnha.js` | 195 | Cơm nhà: lunch brought from home, warmed at the pantry's two microwaves at noon (company floor; the corner: world/props/microwave.js; who brought some today, and what: src/shared/comnha.js). |
-| `people/comtrua.js` | 171 | Lunch at the quán cơm bình dân across the street (world/backdrops/eat-com.js). |
+| `people/comtrua.js` | 172 | Lunch at the quán cơm bình dân across the street (world/backdrops/eat-com.js). |
 | `people/director.js` | 129 | The director: brings each prompt to its desk, receives reports. |
-| `people/errands.js` | 284 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
+| `people/duty.js` | 240 | Trực nhật: the pantry's daily chores, a turn each (company floor; the board and the cups at the sink: world/props/duty-board.js; the rota itself: src/shared/duty.js). |
+| `people/errands.js` | 294 | People reacting to what you do in the office: switch off the lamp someone is working by and they get up and switch it back on; print a page and someone fetches it; make a coffee and someone comes for it; the cat on a keyboard gets lifted down; a thirsty plant gets watered; click someone at work and they look up. |
 | `people/evswap.js` | 186 | A battery swap (world/backdrops/street-ev.js). |
 | `people/farewell.js` | 380 | The farewell (tiệc chia tay): a project the office remembers that has had no session for a month (Settings → More: 14, 30, 60 or 90 days, or never; server/tenure.mjs keeps each project's working life and says which are due) gets a last afternoon. |
 | `people/foosball.js` | 166 | Foosball in the lounge (the company floor): now and then two people who are resting play a game at the table (one asks, the other comes over), rods spinning, the ball rattling up and down the pitch, the goals counted out loud, the winner pleased with themselves. |
 | `people/gaming.js` | 277 | Video games on the lounge TV (company floor). |
-| `people/gatherings.js` | 155 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
-| `people/guard.js` | 217 | The building's security guard (bảo vệ) at the office's street door, with the city outside. |
+| `people/gatherings.js` | 156 | Gatherings round the meeting table: the bell on it calls a quick meeting (everyone free comes, each says what they are on, the director wraps up), a new trophy brings a cake (everyone comes and claps), and a deploy gets a round of applause from the people sitting nearby. |
+| `people/guard.js` | 253 | The building's security guard (bảo vệ) at the office's street door, with the city outside. |
 | `people/hr.js` | 362 | HR and the attendance terminal (company floor). |
 | `people/interns.js` | 196 | Interns made permanent (thực tập sinh lên chính thức). |
 | `people/karaoke-songs.js` | 51 | The karaoke box's songs (people/karaoke.js): words written for the office, nobody else's. |
@@ -146,15 +151,15 @@ engine switches to demo mode and talks to no API.
 | `people/look.js` | 9 | Which character look (A / B) this viewer chose. |
 | `people/navigation.js` | 255 | The walking graph, desk spots and stations people go to. |
 | `people/nhau.js` | 231 | An evening at the quán nhậu across the street (world/backdrops/street-nhau.js). |
-| `people/outings.js` | 592 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
+| `people/outings.js` | 600 | Going out: before lunch a GrabFood rider brings the team's lunch to the kerb and whoever is resting goes down for it; now and then someone resting pops down to the convenience store across the street and comes back with what that chain is known for (Circle K's mì ly, GS25's tokbokki, 7-Eleven's onigiri…); late at night, whoever is still there goes down to the Circle K for a cup of noodles. |
 | `people/payday.js` | 124 | Payday (the 5th, the 10th or the month's last day: world/backdrops/street-atm.js isPayday). |
 | `people/photobooth.js` | 223 | A strip from the photo booth for every release (world/backdrops/street-photo.js; the release: a new version tag in a session's repository or a GitHub release, server/git.mjs). |
 | `people/pickle.js` | 193 | Pickleball after work (world/backdrops/street-pickle.js). |
 | `people/rounds.js` | 130 | The director's rounds (company floor): twice a day out of the corner office and round the desks. |
-| `people/staff.js` | 383 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
+| `people/staff.js` | 394 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
-| `people/teatime.js` | 89 | Friday 16:00: afternoon tea. |
-| `people/workers.js` | 548 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/teatime.js` | 91 | Friday 16:00: afternoon tea. |
+| `people/workers.js` | 547 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
@@ -169,7 +174,7 @@ engine switches to demo mode and talks to no API.
 | `ui/clip-music.js` | 122 | The clip's music: an original lo-fi loop made right here, nothing borrowed (no samples, no files): a Rhodes-like FM electric piano on Fmaj9 – Em7 – Dm9 – G13, a round bass, a swung boom-bap kit, a soft pentatonic lead, vinyl crackle and a small Schroeder reverb. |
 | `ui/event-text.js` | 125 | How events read on screen: actions per event type, verbs, bubble text, streamer mode. |
 | `ui/group-chat-view.js` | 891 | The group chat's window (the conversation: group-chat.js), drawn after the Vietnamese messenger's group chat on a phone (its own web CSS and string table, and a 2026 screenshot of the app, for the colours, sizes and words): the blue gradient bar with the back chevron, the group's name and "👥 N thành viên", call, video and ☰; the pinned message under it; the conversation on a lavender-grey ground, gathered at the bottom like the app's, the others' white bubbles on the left (the name at the top inside the first of a run, the face beside it, the time inside the last), yours pale blue on the right with who has seen it; dark pills for the time lines, white ones for what the group does; "Tin nhắn mới" where you stopped reading; replies quoting what they answer; a recalled message's "Tin nhắn đã được thu hồi"; the ♡ on a bubble's corner and a small pill once someone reacts (hover a bubble for the six, a reply and, on yours, recall); polls and reminders as cards in the middle; "… đang soạn tin"; the input bar: stickers and emoji, "Tin nhắn", ••• (a poll, @ someone), the mic and a photo, or send once you type; writing to Claude, a prompt helper over it. |
-| `ui/group-chat.js` | 197 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
+| `ui/group-chat.js` | 210 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
@@ -182,7 +187,7 @@ engine switches to demo mode and talks to no API.
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
 | `ui/session-drawer.js` | 384 | The session drawer: chat, steps, subagents. |
-| `ui/settings.js` | 123 | Settings popover: backdrop, floor plan, look, time, toggles. |
+| `ui/settings.js` | 124 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stranded.js` | 159 | "Việc bỏ quên" in the Mac drawer: the worktrees and checkouts of the repositories the office knows that still hold work (files not committed, commits not pushed, stashes), and worktrees with nothing left in them that could go. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |
 | `ui/task-sheet.js` | 98 | "Giao việc": giving Claude work from the group chat (server/tasks.mjs runs it on the Mac). |
@@ -197,6 +202,7 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/eat-com.js` | 304 | … |
 | `world/backdrops/index.js` | 49 | Choosing the backdrop: city, countryside or beach. |
 | `world/backdrops/shared.js` | 82 | Pieces shared by the countryside and beach backdrops. |
+| `world/backdrops/shop-cong.js` | 339 | Cộng Cà Phê (Hà Nội, 2007: the first one on Triệu Việt Vương; 75 in Vietnam in 2026, most in Hà Nội and Ho Chi Minh City), as its street shops look: an army-green front with the name in warm white letters on it, CỘNG big and CÀ PHÊ small beside it, olive window frames, wooden slats behind the glass, a little roof of terracotta tiles over the door, a plank over it painted "Ở ĐÂY CÓ BÁN CÀ PHÊ", the round wooden board with the hours (7:00–23:00), and out on its bracket the white box with the logo: CỘNG in olive over a red bar. |
 | `world/backdrops/shop-dmx.js` | 379 | Điện Máy Xanh (dienmayxanh.com), the appliance chain of the Thế Giới Di Động group, as its shops look in Vietnam in 2026: the long sky-blue sign with the mark in a yellow circle (a runner made of slanted squares, a round head) and "Điện máy" then "XANH" in yellow, leaning forward, the second word heavy capitals; posters on the glass (máy lạnh for the hot season, trả góp 0%); inside, the TV wall at the back with the screens lit, front-loading washing machines on an island, a row of fridges, split air conditioners along the wall with yellow price cards, stand fans turning by the window, rice cookers and air fryers on a table, two massage chairs someone is always trying, and the till in blue and yellow; staff in blue; open 8:00–22:00. |
 | `world/backdrops/shop-highlands.js` | 285 | Highlands Coffee, as its street-front shops look in Vietnam in 2026: the deep red ("đỏ đô") sign with the name in white raised letters and the emblem beside it (the 2022 one: an oval, like a coffee bean, with its mountain, river and plain), warm wood inside with red set on the counters and a wall, the black and red of the staff; the order counter with the espresso machine, the phin filters and a case of cakes; the menu board over it at the official prices (Phin Sữa Đá 29.000đ, Freeze Trà Xanh 55.000đ, Trà Sen Vàng and Phindi Hạnh Nhân 45.000đ); wooden tables and a bar along the window, a table on the pavement; open 7:00–23:00. |
 | `world/backdrops/shop-katinat.js` | 269 | Katinat (KATINAT Coffee & Tea House: the Saigon Kafé of 2016, named after rue Catinat, today's Đồng Khởi), as its shops look in 2026: the navy sign with KATINAT in warm-lit raised letters the colour of milk coffee (the brand's #BF9369), heavy narrow capitals whose foot bows (the outer letters longer), COFFEE & TEA HOUSE spaced out under them; glass all along the front, plants by the door; inside, navy and warm wood, globe lamps hung low, the counter with its row of layered cups (the "rainbow cup" that made the name), the menu lightbox at the official prices (Trà Sữa Oolong Nướng 42.000đ, Oolong Nướng Huyền Châu 55.000đ, Bơ Già Dừa Non 55.000đ, size S), and the navy wall with the name on it that everyone takes their picture against. |
@@ -205,12 +211,12 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/shop-paint.js` | 37 | A shop seen from across the street, painted: for the fronts too far from the office to be rooms you walk into (shops.js keeps the nearest few as rooms, the rest as their sign and a picture of the inside behind the glass). |
 | `world/backdrops/shop-phuclong.js` | 274 | Phúc Long Coffee & Tea (a tea house from Bảo Lộc's hills, since 1968), as its street shops look in 2026: the deep green sign (the brand's #006F3C) with its crest in white (the domed badge, a cup with a tea leaf over it: the leaf of the 2025 "Ủ Vị Tâm Giao" identity, the band across, SINCE 1968 under it) and PHÚC LONG in heavy white capitals, COFFEE & TEA spaced out under them; inside, wood and green, the wall of tea tins and packets (it still sells its teas by the packet), the counter with its menu at the official prices (Trà Sữa Phúc Long and Hồng Trà Sữa 55.000đ, Trà Đào 60.000đ, size M), a long table for groups; staff in black with the dark green apron; open 7:00–22:30, as most of its street shops. |
 | `world/backdrops/shop-tgdd.js` | 277 | Thế Giới Di Động (thegioididong.com), as its shops look in Vietnam in 2026: the long yellow sign with the name in black, all lower case and leaning forward a little, and the mark beside it (a figure on the move in a circle: "the world" and "on the move"), yellow and black the chain's two colours; the glass front with the promotions on it (trả góp 0%, thu cũ đổi mới); inside, long white tables of phones on their stands with yellow price tags, the wall of accessories, the till in black and yellow at the back; staff in yellow shirts and black trousers; open 8:00–22:00. |
-| `world/backdrops/shops.js` | 939 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
+| `world/backdrops/shops.js` | 957 | Shops near the office: the long street fronts nearest to it (one to a building) become shops, as in the city you picked for the weather. |
 | `world/backdrops/street-atm.js` | 234 | … |
 | `world/backdrops/street-corner.js` | 143 | … |
 | `world/backdrops/street-csgt.js` | 738 | … |
 | `world/backdrops/street-ev.js` | 287 | Electric scooters and the battery-swap cabinet on the corner (city backdrop). |
-| `world/backdrops/street-folk.js` | 154 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
+| `world/backdrops/street-folk.js` | 156 | People for the street's set pieces (the park's mornings and evenings, the chess game at the trà đá stall, a wedding): figures like the pavement's walkers, but whose arms and legs move on their own, standing or sitting on a seat. |
 | `world/backdrops/street-life.js` | 1187 | Life on the city's streets: cars, taxis (Xanh SM's cyan VinFasts among them), SUVs, vans, buses and scooters (Grab and Xanh SM riders in their jackets, GrabFood with the green box) that keep their distance and stop at the lights, a bus that calls at the stop near the office, and people on the pavements who wait for the green and cross on the zebras (a few in conical hats; umbrellas when it rains). |
 | `world/backdrops/street-lunar.js` | 84 | … |
 | `world/backdrops/street-morning.js` | 103 | … |
@@ -228,7 +234,7 @@ engine switches to demo mode and talks to no API.
 | `world/backdrops/street-wires.js` | 76 | … |
 | `world/cozy-room.js` | 54 | The cozy plan's room: floor and walls. |
 | `world/desks.js` | 183 | Desks and office chairs, and each person's coat and backpack at their desk. |
-| `world/entrance.js` | 113 | The cozy plan's door and the company floor's lift. |
+| `world/entrance.js` | 277 | The cozy plan's door; the company floor's lift and, beside it, the stairs. |
 | `world/furniture/board.js` | 25 | The whiteboard's frame (its drawing lives in ui/whiteboard.js). |
 | `world/furniture/coffee.js` | 33 | The coffee corner (the pantry counter on the company floor). |
 | `world/furniture/meeting.js` | 44 | The meeting table and its chairs. |
@@ -237,7 +243,7 @@ engine switches to demo mode and talks to no API.
 | `world/furniture/room-pieces.js` | 107 | Wall clock, framed art, bookshelf, sofa corner and the globe. |
 | `world/furniture/server-racks.js` | 65 | Server racks with LEDs and fans that follow the Mac's CPU. |
 | `world/layout.js` | 43 | The floor plans (cozy, pro, hq): where the shared furniture stands, and the headquarters wing. |
-| `world/pro/floor.js` | 341 | The company floor: rooms, partitions and furniture. |
+| `world/pro/floor.js` | 347 | The company floor: rooms, partitions and furniture. |
 | `world/pro/pieces.js` | 142 | Company floor building pieces: floor finishes, walls, glass, chairs, dining sets. |
 | `world/pro/wing.js` | 134 | Headquarters' wing: in front of the company floor, a corridor along it, a corridor down the middle and four department rooms of two pods each (the desks, pods' screens and carpets come from the shared code). |
 | `world/props/aquarium.js` | 44 | The aquarium. |
@@ -247,6 +253,7 @@ engine switches to demo mode and talks to no API.
 | `world/props/cat.js` | 103 | The office cat. |
 | `world/props/cups.js` | 103 | A cup of coffee on each resting desk ("Đồng hồ bộ nhớ đệm"): its steam fades as the session's prompt cache cools (src/shared/cache-clock.js) and is gone once the cache is cold, when writing to the session again means it reads the whole conversation back. |
 | `world/props/dev-servers.js` | 85 | Mini servers for each running dev server, and forgotten ones. |
+| `world/props/duty-board.js` | 109 | The pantry's duty board and the cups at its sink (company floor; who does what today: people/duty.js). |
 | `world/props/game-tv.js` | 94 | The lounge TV (company floor): a 55" TV on a low walnut media unit against the back wall, facing the sofa, with a games console standing beside it, two controllers lying on top, a soundbar, a plant, and a glow on the wall behind it that takes the colour of the picture. |
 | `world/props/karaoke.js` | 109 | The karaoke box (company floor), where the front phone booth was, like the coin-op booths in Vietnamese malls: a soundproof cabin on a dark base, black frame, purple acoustic felt at the back and on the side toward the phone booth, glass toward the room so you can watch the singers, a lit KARAOKE band over the glass and over the door, an LED strip round the roof and the base. |
 | `world/props/microwave.js` | 231 | The pantry's microwave corner (company floor): two microwaves side by side on a low cabinet against the library's wall, where everyone who brought lunch from home warms it at noon (people/comnha.js). |
@@ -260,7 +267,7 @@ engine switches to demo mode and talks to no API.
 | `world/props/tv.js` | 59 | The TV with live machine stats. |
 | `world/props/update.js` | 44 | Per-frame updates for the props. |
 | `world/props/vacuum.js` | 33 | The robot vacuum. |
-| `world/room-update.js` | 176 | Room lights, particles, the rocket, the clock and day / night. |
+| `world/room-update.js` | 177 | Room lights, particles, the rocket, the clock and day / night. |
 | `world/screens.js` | 100 | What each desk's screens show: the editor while it edits, a terminal for commands, a browser for the web, code with the match highlighted while it reads or searches, a chat while it thinks, a permission dialog while it waits for you, a screensaver while it naps. |
 | `world/terrace.js` | 114 | The terrace around the office: tiles, glass railing, bollards, planters, potted plants, seating. |
 | `world/windows.js` | 96 | Windows on the outer walls and the views they show. |

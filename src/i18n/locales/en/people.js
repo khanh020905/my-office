@@ -138,6 +138,8 @@ export default {
     tea: { go: ['Off to {shop} for a milk tea 🧋', 'Popping to {shop}, want anything? 🧋'], got: ['Milk tea, back to work 🧋', 'Got my {shop}, heading back 🧋'] },
     checkin: { go: ['Off to {shop} for the photo 📸', 'Going to {shop}, picture time 📸'], got: ['Got the shot 📸', 'That queue, but worth it 🧋'] },
     headache: { go: ['My head! Off to {shop} for painkillers 😵', 'Going to {shop} for something for the headache 💊'], got: ['Got the pills, back at it 💊', 'The pharmacist says rest a bit 😅'] },
+    cong: { go: ['Off to Cộng for a coconut coffee 🥥', 'Popping to Cộng, anyone want anything? ☕'], got: ['Coconut coffee, ice cold 🥥', 'Got my Cộng, back to it ☕'] },
+    congWeekend: { go: ['A weekend needs a Cộng coffee ☕', 'Getting a coconut coffee at Cộng first 🥥'], got: ['Coconut coffee: that’ll do for a Saturday 🥥', 'Got my Cộng, back to it ☕'] },
     go: {
       cup: ['Popping down to {shop} for a drink 🥤', 'Off to {shop} for a peach tea 🥤', 'Running to {shop}, want anything? 🛒'],
       noodle: ['Getting cup noodles at {shop} 🍜', "Hungry, I'll make a cup of noodles at {shop} 🍜"],
@@ -167,6 +169,11 @@ export default {
   },
   // woken up in first person (E next to someone asleep): stirring, what they say (or one of the poke lines), the second
   // and third time within two minutes, the fourth (they don't wake), dozing off again
+  // the stairs, while the lift is being serviced (world/entrance.js): a sigh at the sign, out of breath at the top
+  stairs: {
+    sigh: ['The lift’s being serviced? 😩', 'Serviced again 😩 stairs then', 'Sigh, the stairs it is'],
+    puff: ['Phew… {n} floors 😮‍💨', '{n} floors on foot, my legs 🥵', 'Huff… made it 😮‍💨'],
+  },
   rouse: {
     stir: ['Hm…? 😪', 'Wha… who is it? 🥱', 'Mmh… what…'],
     hi: ['Oh, boss! Just recharging 🔋', 'Hi! All done here, anything new? 😳'],
@@ -212,6 +219,7 @@ export default {
     shipper: 'Shopee courier',
     cleanHi: ['Mopping now, careful, it is slippery!', 'Floor is getting a wash, mind the wet bits.'],
     cleanBin: ['Emptying the bin first.', 'Bin is full, out it goes.'],
+    cleanLeave: ['The pantry bin is for whoever is on duty, I just do the floors.', 'Today’s rubbish is the duty rota’s, I only mop.'],
     cleanBye: ['All done, see you tomorrow!', 'Spotless. Good night!'],
     slippery: ['Oops, wet floor, going round.', 'Slippery there, the other way.'],
     shipperHi: ['Shopee delivery!', 'Shopee parcel, I will leave it at the desk!'],
@@ -356,6 +364,35 @@ export default {
     where: { going: 'Off to the pickleball court', playing: 'Playing pickleball', filming: 'Filming at the pickleball court', back: 'Pickleball done, on the way back' },
   },
   // lunch from home, warmed at the pantry's microwaves (people/comnha.js)
+  // the duty rota: the pantry's daily chores (people/duty.js, world/props/duty-board.js)
+  duty: {
+    chores: { cups: 'Wash the cups', trash: 'Take out the bin', plants: 'Water the plants', table: 'Wipe the tables' },
+    board: {
+      title: 'ON DUTY',
+      days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      weekend: 'Weekend',
+      holiday: 'Public holiday',
+      swap: 'Day off (swapped)',
+      makeup: 'Make-up day',
+      noDuty: 'No duty rota today',
+      nobody: 'Nobody in yet, no rota',
+      doing: 'on it…',
+      owe: 'Left from yesterday: {list}',
+    },
+    say: {
+      cupsGo: ['My turn on the cups 🧽', 'Cups are piling up, washing them now 🧽'],
+      cupsDone: ['Cups all clean ✨', 'Washed and on the rack ✨'],
+      trashGo: ['Taking the bin out 🗑️', 'Nearly five, rubbish time 🗑️'],
+      trashDone: ['Bin’s done 👍', 'New bag in 👍'],
+      plantsGo: ['Morning watering 🌱', 'The plants look thirsty, on it 🌱'],
+      plantsDone: ['Plants are happy 🌿', 'All watered 🌿'],
+      tableGo: ['Wiping the pantry tables 🧻', 'Tables next 🧻'],
+      tableDone: ['Tables are clean ✨', 'All four wiped ✨'],
+      owe: ['Forgot yesterday, doing it now 🙏', 'Yesterday’s, doing it right away 🙏'],
+      called: ['Work’s in, I’ll finish this later!', 'Oh, work, back in a bit for this!'],
+    },
+    where: 'On duty: {what}',
+  },
   micro: {
     say: {
       go: ['Off to warm my lunch 🍱', 'Microwave time 🍱', 'Brought rice from home, just needs warming 🍱'],

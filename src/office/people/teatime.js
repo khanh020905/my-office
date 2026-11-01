@@ -10,7 +10,9 @@ import { MEET } from '../world/furniture/meeting.js';
 import { sessions, workers } from './workers.js';
 import { asleep, free, quip } from './errands.js';
 import { toast } from '../ui/activity.js';
+import { isWorkday } from '../../shared/workdays.js';
 import { t as tr } from '../../i18n/index.js';
+
 
 /* As in many young Vietnamese offices: on Friday afternoon someone orders milk tea for everyone, with a bag or two of
    bánh tráng trộn (rice-paper salad: orange strips, herbs, quail eggs, peanuts). The tables in the pantry (the meeting
@@ -52,7 +54,7 @@ function who() {
 export function teatime(force = false) {
   const d = officeNow(), day = d.toDateString();
   if (tea || replay.on) return false;
-  if (!force && (d.getDay() !== 5 || d.getHours() !== 16 || d.getMinutes() > 20 || teaDay === day)) return false;
+  if (!force && (d.getDay() !== 5 || d.getHours() !== 16 || d.getMinutes() > 20 || teaDay === day || !isWorkday(d))) return false;   // (no tea on a Friday off)
   teaDay = day;
   const people = who(); if (!people.length) return false;
   const end = state.sim + LEN;

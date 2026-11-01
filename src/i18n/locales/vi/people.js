@@ -128,6 +128,8 @@ export default {
     tea: { go: ['Ra {shop} làm ly trà sữa đây 🧋', 'Đi {shop} chút, ai uống gì không 🧋'], got: ['Trà sữa đây, làm tiếp thôi 🧋', 'Có ly {shop} rồi, về thôi 🧋'] },
     checkin: { go: ['Ra {shop} check-in chút 📸', 'Đi {shop} sống ảo đây 📸'], got: ['Chụp xong rồi, đẹp lắm 📸', 'Xếp hàng mệt nghỉ, mà đáng 🧋'] },
     headache: { go: ['Nhức đầu quá, ra {shop} mua thuốc 😵', 'Đi {shop} mua vỉ thuốc đau đầu 💊'], got: ['Mua thuốc rồi, uống xong làm tiếp 💊', 'Dược sĩ dặn nghỉ ngơi xíu 😅'] },
+    cong: { go: ['Ra Cộng làm ly cốt dừa đây 🥥', 'Đi Cộng chút, ai uống gì không ☕'], got: ['Cốt dừa cà phê đây, mát lạnh 🥥', 'Có ly Cộng rồi, về làm tiếp ☕'] },
+    congWeekend: { go: ['Cuối tuần phải có ly Cộng mới làm nổi ☕', 'Ra Cộng mua ly cốt dừa đã 🥥'], got: ['Cốt dừa cà phê, cuối tuần vậy là đủ 🥥', 'Có ly Cộng rồi, làm tiếp thôi ☕'] },
     go: {
       cup: ['Xuống {shop} mua chai nước chút 🥤', 'Ra {shop} mua ly trà đào 🥤', 'Qua {shop} xíu, ai mua gì không? 🛒'],
       noodle: ['Xuống {shop} làm ly mì cho ấm bụng 🍜', 'Đói rồi, ra {shop} úp ly mì đây 🍜'],
@@ -154,6 +156,11 @@ export default {
       got: ['Mì ly nóng, ăn xong làm tiếp 🍜', 'Có mì rồi, lên chạy nốt việc thôi 🍜'],
     },
     recall: ['Ơ có việc, về liền! 🏃', 'Có việc rồi, chạy về đây!'],
+  },
+  // thang bộ khi thang máy bảo trì (world/entrance.js): thở dài trước tấm biển, lên tới nơi thì hụt hơi
+  stairs: {
+    sigh: ['Thang máy bảo trì à 😩', 'Lại bảo trì 😩 đi bộ vậy', 'Haizz, thang bộ thôi'],
+    puff: ['Hộc hộc… {n} tầng 😮‍💨', 'Leo {n} tầng, rụng rời cả chân 🥵', 'Phù… tới rồi 😮‍💨'],
   },
   rouse: {
     stir: ['Hửm…? 😪', 'Ơ… ai đấy? 🥱', 'Ưm… gì thế…'],
@@ -198,6 +205,7 @@ export default {
     shipper: 'Shipper Shopee',
     cleanHi: ['Cô lau nhà chút nhé, đi cẩn thận kẻo trơn!', 'Lau nhà đây, mấy đứa tránh chỗ ướt nha.'],
     cleanBin: ['Đổ rác cái đã.', 'Thùng rác đầy rồi, cô đổ nhé.'],
+    cleanLeave: ['Thùng rác pantry để bạn trực nhật đổ nha, cô lau sàn thôi.', 'Rác hôm nay của bạn trực nhật nha, cô chỉ lau nhà.'],
     cleanBye: ['Xong rồi, cô về nhé!', 'Sạch bong rồi, mai gặp nha!'],
     slippery: ['Ối, sàn ướt, đi vòng thôi.', 'Trơn đấy, vòng bên kia.'],
     shipperHi: ['Shopee giao hàng ạ!', 'Giao hàng Shopee ạ, để ở quầy nhé!'],
@@ -342,6 +350,35 @@ export default {
     where: { going: 'Đang ra sân pickleball', playing: 'Đang đánh pickleball', filming: 'Đang quay clip ở sân pickleball', back: 'Đánh pick xong, đang về' },
   },
   // cơm nhà: lunch from home warmed at the pantry's microwaves (people/comnha.js)
+  // trực nhật: the pantry's daily chores (people/duty.js, world/props/duty-board.js)
+  duty: {
+    chores: { cups: 'Rửa ly', trash: 'Đổ rác', plants: 'Tưới cây', table: 'Lau bàn pantry' },
+    board: {
+      title: 'TRỰC NHẬT',
+      days: ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'],
+      weekend: 'Cuối tuần',
+      holiday: 'Nghỉ lễ',
+      swap: 'Nghỉ bù',
+      makeup: 'Làm bù',
+      noDuty: 'Hôm nay không phân công trực nhật',
+      nobody: 'Chưa ai tới, chưa phân công',
+      doing: 'đang làm…',
+      owe: 'Nợ hôm qua: {list}',
+    },
+    say: {
+      cupsGo: ['Tới lượt em rửa ly 🧽', 'Đi rửa ly thôi, chất đống rồi 🧽'],
+      cupsDone: ['Ly sạch bong ✨', 'Rửa xong, úp lên giá rồi nha ✨'],
+      trashGo: ['Em đi đổ rác nha 🗑️', 'Gần 5 giờ rồi, đổ rác thôi 🗑️'],
+      trashDone: ['Đổ rác xong rồi 👍', 'Thay túi rác mới rồi nha 👍'],
+      plantsGo: ['Tưới cây buổi sáng nè 🌱', 'Cây khát nước rồi, em tưới nha 🌱'],
+      plantsDone: ['Cây tươi rói rồi 🌿', 'Tưới xong rồi 🌿'],
+      tableGo: ['Lau bàn pantry thôi 🧻', 'Em lau bàn ăn nha 🧻'],
+      tableDone: ['Bàn sạch rồi nha ✨', 'Lau xong 4 bàn rồi ✨'],
+      owe: ['Hôm qua em quên, làm liền đây 🙏', 'Nợ hôm qua, em làm ngay 🙏'],
+      called: ['Có việc rồi, lát em làm tiếp!', 'Ơ có việc, để đó em quay lại làm!'],
+    },
+    where: 'Đang trực nhật: {what}',
+  },
   micro: {
     say: {
       go: ['Đi hâm cơm cái 🍱', 'Ra pantry hâm cơm nè 🍱', 'Cơm nhà mang theo, hâm cái là ăn 🍱'],

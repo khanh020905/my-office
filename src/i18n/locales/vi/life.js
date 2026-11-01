@@ -44,6 +44,40 @@ export default {
     backOther: '🔔 {name} có lượt lại rồi, về chỗ thôi!',
     cheer: ['Có lượt rồi, về chỗ!', 'Làm tiếp thôi!', 'Về bàn nào.'],
   },
+  // thang máy bảo trì khi server văn phòng vừa khởi động lại (life/lift-service.js): biển trên rào chắn, tem kiểm định
+  // dán trong cabin sau khi lên bản mới, anh kỹ thuật
+  // the quarterly fire drill (life/drill.js)
+  drill: {
+    quarters: ['I', 'II', 'III', 'IV'],
+    where: 'Đang diễn tập PCCC',
+    toast: '🔔 Diễn tập PCCC quý {q}: chỉ là diễn tập, các phiên vẫn chạy bình thường',
+    call: 'Diễn tập PCCC! Mọi người bình tĩnh đi thang bộ, không đi thang máy!',
+    go: ['Diễn tập rồi, đi thôi 🏃', 'Xuống thang bộ nha', '12 tầng lận 😭', 'Cầm điện thoại theo nè'],
+    name: '{name}?',
+    here: ['Có!', 'Có ạ!', 'Em đây!'],
+    count: 'Đủ {n}/{total} người ✅ Thoát nạn hết {time}',
+    sign: 'ĐIỂM TẬP KẾT',
+    signSub: 'Assembly point',
+    liftSign: 'PCCC',
+    guard: {
+      light: 'Giờ anh đốt khay để tập nha, mọi người đứng xa ra',
+      shake: 'Bình bột thì lắc kỹ cho bột tơi ra',
+      pin: 'Giật chốt an toàn!',
+      aim: 'Đứng đầu gió, hướng loa phun vào gốc lửa',
+      spray: 'Bóp van, quét qua lại!',
+      done: 'Tắt rồi! Bình CO2 thì đừng cầm vào loa phun kẻo bỏng lạnh nha',
+    },
+  },
+  liftService: {
+    sign: 'ĐANG BẢO TRÌ',
+    sorry: 'Xin lỗi quý khách vì sự bất tiện',
+    stickerHead: 'ĐÃ KIỂM ĐỊNH',
+    stickerWhat: 'My Office v{version}',
+    stickerDate: 'Ngày {date}',
+    stickerNo: 'Số tem: {no}',
+    tech: 'Kỹ thuật thang máy',
+    techSay: ['Anh chị đi thang bộ giúp em nha 🙏', 'Sắp xong rồi, chịu khó xíu nha 🔧', 'Bảo trì định kỳ thôi ạ, mấy phút là chạy lại 🔧'],
+  },
   altar: {
     header: 'THẦN TÀI · THỔ ĐỊA',
     left: 'Thổ năng sinh bạch ngọc',

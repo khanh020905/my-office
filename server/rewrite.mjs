@@ -67,7 +67,9 @@ export function createRewriter({ claude, env, dir, perHour = 20, timeout = 45_00
         proc.stdout.on('data', (c) => { if (out.length < 1e6) out += c; });
         proc.stderr.on('data', (c) => { err = String(c).trim().split('\n').pop().slice(0, 200); });
         proc.on('error', () => finish({ ok: false, code: 'noClaude' }));
-        proc.on('exit', (code) => {
+        // 'close', not 'exit': a process can be gone before the last of what it printed has been read (its answer). It
+        // runs with no tools, so nothing it starts holds the pipe open after it; the timeout covers the rest
+        proc.on('close', (code) => {
           // its one JSON answer (the last line that is one, should anything be printed before it)
           let j = null;
           for (const line of [out.trim(), ...out.trim().split('\n').reverse()]) { try { j = JSON.parse(line); break; } catch { /* not it */ } }

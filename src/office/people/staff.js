@@ -7,15 +7,17 @@ import { canvasTex, cyl, mat, put, rbox } from '../scene/blocks.js';
 import { DOOR_IN, DOOR_OUT, NODES, wet } from './navigation.js';
 import { Worker, dn, hash, npcs, sessions, workers } from './workers.js';
 import { asleep, free, quip } from './errands.js';
-import { liftArrive } from '../world/entrance.js';
+import { liftArrive, liftDown } from '../world/entrance.js';
 import { wetSign } from '../life/rain.js';
 import { night } from '../world/room-update.js';
 import { altar, arrange, arranged, lightIncense, offeringDay } from '../life/altar.js';
 import { sfx } from '../audio/sfx.js';
 import { chatLife } from '../ui/group-chat.js';
+import { isWorkday } from '../../shared/workdays.js';
 import { t as tr } from '../../i18n/index.js';
 
-/* - The receptionist (company floor) stands behind the lobby counter from 7:45 to 18:15, up and down by the lift.
+/* - The receptionist (company floor) stands behind the lobby counter from 7:45 to 18:15 on working days (src/shared/
+     workdays.js: not at the weekend nor on a holiday; on a make-up Saturday, yes), up and down by the lift.
    - A Shopee courier comes twice a day (late morning, mid afternoon) with a parcel for someone who is resting. On the
      company floor he leaves it on the counter and the receptionist calls out the name; in the small office he calls
      from the door. The one it is for walks over, takes the box back to the desk and opens it.
@@ -26,6 +28,9 @@ import { t as tr } from '../../i18n/index.js';
 const SHOPEE = 'M15.9414 17.9633c.229-1.879-.981-3.077-4.1758-4.0969-1.548-.528-2.277-1.22-2.26-2.1719.065-1.056 1.048-1.825 2.352-1.85a5.2898 5.2898 0 0 1 2.8838.89c.116.072.197.06.263-.039.09-.145.315-.494.39-.62.051-.081.061-.187-.068-.281-.185-.1369-.704-.4149-.983-.5319a6.4697 6.4697 0 0 0-2.5118-.514c-1.909.008-3.4129 1.215-3.5389 2.826-.082 1.1629.494 2.1078 1.73 2.8278.262.152 1.6799.716 2.2438.892 1.774.552 2.695 1.5419 2.478 2.6969-.197 1.047-1.299 1.7239-2.818 1.7439-1.2039-.046-2.2878-.537-3.1278-1.19l-.141-.11c-.104-.08-.218-.075-.287.03-.05.077-.376.547-.458.67-.077.108-.035.168.045.234.35.293.817.613 1.134.775a6.7097 6.7097 0 0 0 2.8289.727 4.9048 4.9048 0 0 0 2.0759-.354c1.095-.465 1.8029-1.394 1.9449-2.554zM11.9986 1.4009c-2.068 0-3.7539 1.95-3.8329 4.3899h7.6657c-.08-2.44-1.765-4.3899-3.8328-4.3899zm7.8516 22.5981-.08.001-15.7843-.002c-1.074-.04-1.863-.91-1.971-1.991l-.01-.195L1.298 6.2858a.459.459 0 0 1 .45-.494h4.9748C6.8448 2.568 9.1607 0 11.9996 0c2.8388 0 5.1537 2.5689 5.2757 5.7898h4.9678a.459.459 0 0 1 .458.483l-.773 15.5883-.007.131c-.094 1.094-.979 1.9769-2.0709 2.0059z';
 const minutes = () => { const d = officeNow(); return d.getHours() * 60 + d.getMinutes(); };
 const today = () => officeNow().toDateString();
+// the front desk is open on working days only (a make-up Saturday too; not at the weekend, on a holiday or a day off for a swap)
+let wdKey = '', wdOn = true;
+const workday = () => { const d = officeNow(), k = d.toDateString(); if (k !== wdKey) { wdKey = k; wdOn = isWorkday(d); } return wdOn; };
 function say(w, key, vars, ms = 4500) { const text = tr(key, vars); w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, ms); }
 
 let Staff;   // (a class once Worker exists)
@@ -42,8 +47,7 @@ function depart(p, then) {
   p.leavingNow = true;
   p.goTo(DOOR_IN, () => {
     if (!PRO) { p.goTo(DOOR_OUT, gone); return; }
-    p.anim = 'idle'; p.faceTarget = DOOR_IN.face;
-    p.liftWait = () => p.goTo(DOOR_OUT, () => { p.faceTarget = Math.PI / 2; p.liftRide = gone; });
+    liftDown(p, gone);
   });
 }
 
@@ -194,6 +198,10 @@ function nextChore() {
   }
   if (!c.binned) {   // the big bin, then home
     c.binned = true;
+    if (binHooks.leave?.()) {   // (a working day: the bin is the duty rota's (people/duty.js); she mops, and says so if it is still full)
+      if (heap.scale.y > 0.5) say(c, 'people.staff.cleanLeave', null, 4500);
+      nextChore(); return;
+    }
     c.goTo(BIN_SPOT, () => {
       c.faceTarget = BIN_SPOT.face; c.anim = 'tidy'; say(c, 'people.staff.cleanBin');
       c.afterAt = state.sim + (reduceMotion ? 0.5 : 1.8);
@@ -262,10 +270,13 @@ function buildCleaningKit() {
       for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.4})`; g.fillRect(10 + Math.random() * (w - 20), Math.random() * h, 1.5 + Math.random() * 2.5, 12 + Math.random() * 40); }
     }) });
 }
-function updateBin() {   // fuller as the day goes on; emptied by the cleaner
+function updateBin() {   // fuller as the day goes on; emptied by the cleaner (or by the duty rota: binHooks.level)
   const m = minutes(), emptied = cleanDay === today() && cleanedAt >= 0 && m >= CLEAN_FROM;
-  heap.scale.y = emptied ? 0.05 : Math.min(1, Math.max(0.1, (m - 480) / 600));
+  heap.scale.y = binHooks.level?.(m) ?? (emptied ? 0.05 : Math.min(1, Math.max(0.1, (m - 480) / 600)));
 }
+/** the duty rota's say over the big bin (people/duty.js): level(m) its fill, or null for the usual; leave() true when
+    the cleaner should leave it to the rota */
+export const binHooks = { level: null, leave: null };
 
 let slowAt = 0;
 export function updateStaff(dt) {
@@ -324,7 +335,7 @@ export function setup() {
     const DESK = { x: -4.9, z: 1.05, face: 0, node: 'I', sit: true, via: [[-6.07, 2.45], [-6.07, 1.18], [-5.6, 1.18]] };   // (her chair behind the reception, in round its open west end)
     receptionist = new (class extends Staff {
       step() {
-        const m = minutes(), on = !replay.on && m >= 465 && m < 1095;
+        const m = minutes(), on = !replay.on && m >= 465 && m < 1095 && workday();
         if (on && this.offstage && !this.coming) {
           if (!this.seen) { this.offstage = false; this.pos.set(DESK.x, DESK.z); this.face = this.faceTarget = 0; this.spot = DESK; this.pose = 'sit'; this.anim = 'type'; }
           else { this.coming = true; arrive(this, () => this.goTo(DESK, () => { this.coming = false; this.anim = 'type'; })); }
@@ -378,6 +389,6 @@ export function setup() {
   })({ name: tr('people.staff.cleaner'), shirt: '#6FA8D6', hair: '#2B2B2B', style: 'bun', acc: null, outfit: 'shirt', pants: '#3B5F86', shoes: '#3A3A40' }, '__cleaner');
   cleaner.root.add(mopHand);
 }
-export const staff = () => ({ receptionist, cleaner, courier, delivery, strips });
+export const staff = () => ({ receptionist, cleaner, courier, delivery, strips, bin: { spot: BIN_SPOT, level: heap?.scale.y ?? 0 } });
 // for the other visitors (the postman, life/post.js): the class, the way up and back down, a line said
 export const staffKit = () => ({ Staff, arrive, depart, say });

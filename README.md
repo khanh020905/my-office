@@ -84,6 +84,13 @@ Then open <http://localhost:4310>.
   come back as soon as there is work, or in the morning. With the city outside they go by the street, each their own way:
   their own scooter from the row parked on the pavement in front of the building, a GrabBike or Xanh SM bike (on the
   back), or a Xanh SM taxi. The session list says where anyone out is ("In Circle K", "Heading home (GrabBike)").
+- **The lift after a restart** (company floor): for the first three minutes after the office's server starts (five when
+  it starts on a new build) the lift is being serviced: doors half open behind a yellow-and-black barrier ("UNDER
+  MAINTENANCE · Sorry for the inconvenience"), the call panel open, the car's light flickering, a technician in blue at
+  work with his toolbox and multimeter. Everyone takes the stairs beside it, slower down and out of breath at the top,
+  and the group chat grumbles. At the end he takes the barrier away and rides the lift down; after a new build he first
+  puts an inspection sticker with the version and the date in the car, which stays there. Nothing waits for it.
+  (`?liftservice`, or `?liftservice=new`, shows it.)
 - **Out of Claude**: when an account's plan limit (the 5 hours or the week) is used up, the people on that account leave
   their desks for a break: a tea at the pantry tables, a book, a chat. A board on the wall counts down to when it can be
   used again; when it resets the bell rings and they go back to their desks. Anyone whose session is still working keeps
@@ -127,6 +134,36 @@ Then open <http://localhost:4310>.
   turns in the light, two or three minutes, "tít tít tít" (with the sound on), the next one steps up. Cá kho or mắm leaves
   smell lines over the corner and a grumble in the group chat; a lid left clipped shut pops. Then lunch at a pantry table
   or at the desk. They don't fetch the GrabFood or go down to the quán cơm (`?comnha` to see it now).
+- **Daily duty rota** (trực nhật, company floor): a whiteboard on the pantry wall names today's four chores and who does
+  them, the turn moving on each working day among the people of the projects here (HR posts the list in the group chat
+  in the morning): wash the cups, which pile up at the sink through the day (the morning coffee, a glass at lunch, the
+  afternoon cà phê) and are washed one by one after the nap; take the bin bag out to the bin room on the stairs' landing
+  at about five; water the plants in the morning; wipe the pantry's tables. Each does it while resting, never in the
+  middle of work. A chore never got to is owed the next morning: the group chat grumbles ("Hôm qua ai trực mà ly chất
+  đống vậy 😤"), the one whose turn it was says sorry and does it first thing (the board says so in red; the bin spills
+  over meanwhile). The 18:30 cleaner mops the floors and leaves the bin to the rota. No duty at the weekend or on public
+  holidays (the official Vietnamese holidays, Tết and Ngày Văn hóa Việt Nam included). Kept in the browser, per day
+  (`?duty` to see every chore now).
+- **Quarterly fire drill** (diễn tập PCCC, company floor): on the first working day of each quarter HR pins the notice
+  in the group chat, and at 15:00 the fire alarm rings (with the sound on) and the horn-strobes on the walls flash. The
+  lift goes down to the ground floor and parks; HR, the floor's fire marshal in a red armband, calls everyone out, and
+  every person on the floor (working or not, the receptionist, the director) walks down the stairs, never the lift,
+  HR last. With the city outside they gather at an assembly point on the pavement by a green "ĐIỂM TẬP KẾT" standee;
+  HR takes the roll on her clipboard ("Có!") and reports the count and the time it took; the guard, the other marshal,
+  lights a practice fire in a steel tray and shows the powder extinguisher (shake, pull the pin, aim at the base,
+  squeeze), the fire goes out, a round of applause, and everyone goes back up in the lift. Purely for show: the
+  sessions keep working throughout. As Vietnam's fire law has it (Luật PCCC và CNCH 2024; Nghị định 105/2025/NĐ-CP,
+  Điều 16: a facility practises its fire plan at least once a year) and the fire police's guidance (stairs only, never
+  the lift). Settings → More turns it off (`?drill` for one now).
+- **Make-up Saturdays and swapped days off** (làm bù, nghỉ bù): the office keeps Vietnam's official calendar, its public
+  holidays and the Government's swaps (a weekday taken off to join a holiday to the weekend, a Saturday worked for it),
+  in a small dated table with each notice (`src/shared/workdays.js`, how to add a year in its comment). On a make-up
+  Saturday the office works as on any weekday: the receptionist at the front desk, lunch from home and the quán cơm,
+  the duty rota; in the morning someone grumbles in the group chat ("Thứ Bảy mà vẫn phải lên công ty 😩 làm bù mà").
+  The day swapped off is a day off (the front desk shut, no lunch, no rota, no Monday stand-up), as are weekends and
+  holidays; on the last afternoon before a break of three days or more someone says how long it is, and which Saturday
+  to come back on. As announced up to now: Saturday 10/1/2026 for Friday 2/1, Saturday 22/8/2026 for Monday 31/8; none
+  for 2027 (the Government chose Tết 4/2–10/2 and Quốc khánh 2/9–5/9 without one).
 - **Farewells** (tiệc chia tay): a project that really was at work (on two days or more) and has had no session for 30
   days (Settings → More: 14, 30, 60 or 90, or off) gets a last afternoon in office hours: its person comes in once more
   with the company card on a lanyard and packs the desk into a cardboard box (the little plant, the mug, the photo frame)
@@ -162,7 +199,16 @@ Then open <http://localhost:4310>.
     in the evening, and on weekend evenings the Snow King himself dancing out front to its tune ("Oh! Susanna").
     Next to it a Highlands Coffee (the deep red sign with its emblem, phin sữa đá and freeze at real prices, laptops in
     the morning) and a Thế Giới Di Động (the long yellow sign with "thegioididong.com" in black, the promotions on the
-    glass, phones on the display tables, staff in yellow, a tube man dancing at the door, 8:00–22:00).
+    glass, phones on the display tables, staff in yellow, a tube man dancing at the door, 8:00–22:00). Where the chain
+    really has shops (Hanoi, Ho Chi Minh City, Đà Nẵng, Nha Trang; painted further down the street in Hải Phòng, Huế and
+    Đà Lạt) a Cộng Cà Phê: the army-green front with CỘNG CÀ PHÊ in warm white letters, the white box with its logo out
+    on a bracket, a little roof of terracotta tiles, a plank painted "Ở ĐÂY CÓ BÁN CÀ PHÊ"; inside the retro look of
+    1980s Hanoi (olive walls, worn wooden floor, low wooden stools, a bench with cushions in the red "chăn con công"
+    print, enamel mugs and thermos flasks, an old radio and a wooden-cased TV, faded photographs and a tear-off calendar),
+    the menu printed like ration coupons at the real prices (cốt dừa cà phê 59.000đ, bạc xỉu 45.000đ), staff in olive,
+    folding metal chairs out front and an old bicycle with a basket of flowers, 7:00–23:00. On weekday afternoons and
+    weekend mornings someone resting goes for a cốt dừa ("Đi Cộng làm ly cốt dừa không?"); walking in, you can order at
+    the counter or sit on the low stool by the window.
     The streets follow the office clock: in the morning and evening rush twice the scooters, riding three abreast and
     crawling; empty streets in the small hours. Cars pull in to the kerb in front of the shops and along the park,
     indicating, and pull out again later; taxis stop for a fare with their hazard lights on. Street food across the
@@ -497,6 +543,7 @@ request.
 | The Thế Giới Di Động shop | drawn and modelled in code (`shop-tgdd.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Katinat shop | drawn and modelled in code (`shop-katinat.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Phúc Long shop | drawn and modelled in code (`shop-phuclong.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
+| The Cộng Cà Phê shop | drawn and modelled in code (`shop-cong.js`): no artwork of the chain's, only its generic retro look | the name and its logo are its owner's trademarks, not affiliated |
 | The Long Châu pharmacy | drawn and modelled in code (`shop-longchau.js`): no artwork of the chain's | the names (Long Châu, FPT Retail) are their owner's trademarks, not affiliated |
 | The Điện Máy Xanh shop | drawn and modelled in code (`shop-dmx.js`): no artwork of the chain's | the name is its owner's trademark, not affiliated |
 | The Vietcombank ATM booth | drawn and modelled in code (`street-atm.js`): no artwork of the bank's | the name is its owner's trademark, not affiliated |
