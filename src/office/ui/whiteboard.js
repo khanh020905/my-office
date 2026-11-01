@@ -7,7 +7,7 @@ import { BASE_ZOOM, camera, composer, fpCam, renderer, scene } from '../scene/re
 import { mat } from '../scene/blocks.js';
 import { STICKY_COLORS, STICKY_SLOTS, board, boardFace } from '../world/furniture/board.js';
 import { ADJ, DESK_SPOTS, NODES, STATIONS, route, standBy, wayTo } from '../people/navigation.js';
-import { colorOf, dn, sessions, subs, workers } from '../people/workers.js';
+import { colorOf, dn, leaving, sessions, subs, workers } from '../people/workers.js';
 import { director } from '../people/director.js';
 import { applyWeather, wx } from '../life/weather.js';
 import { toast } from './activity.js';
@@ -234,9 +234,9 @@ export function setup() {
   buildProps();
   const deskSession = (i) => [...sessions.values()].filter((s) => s.desk >= 0).sort((a, b) => a.desk - b.desk)[i];
   const fake = (s, type, label, extra = {}) => onEvent({ id: Date.now() + Math.random(), ts: Date.now(), sess: s.id, name: s.name, type, label, ...extra });
-  if (new URLSearchParams(location.search).has('debug')) window.__office = { THREE, PROPS, PLACES, camera, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get workers() { return workers; }, get sessions() { return sessions; }, get subs() { return subs; }, upsert: (x) => upsertSession(x, true), emit: (m) => applyMsg(m), get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id), get feed() { return state.feed; },
+  if (new URLSearchParams(location.search).has('debug')) window.__office = { THREE, PROPS, PLACES, camera, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get workers() { return workers; }, get sessions() { return sessions; }, get subs() { return subs; }, get leaving() { return leaving; }, upsert: (x) => upsertSession(x, true), emit: (m) => applyMsg(m), get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id), get feed() { return state.feed; },
     view: (x, y, z, zoom) => { focusTarget.set(x, y, z); state.zoomGoal = zoom * BASE_ZOOM; state.lastUserCam = performance.now(); }, renderer, composer, get director() { return director; }, STATIONS, nav: { route, NODES, ADJ, DESK_SPOTS, blocked, standBy, wayTo }, floorLamps, errands, gatherings,
-    goOut, get outing() { return outing(); }, get street() { return THEME?.live?.street; }, fpToStreet: () => toStreet(), speed: (n) => { state.speed = n; }, pauseDemo: () => { demoTimers.forEach(clearTimeout); demoTimers.length = 0; },
+    goOut, get outing() { return outing(); }, get street() { return THEME?.live?.street; }, fpToStreet: () => toStreet(), speed: (n) => { state.speed = n; }, pauseDemo: () => { demoTimers.forEach(clearTimeout); demoTimers.clear(); },
     limitOut: (min) => { state.quotaTest = min > 0 ? Date.now() + min * 60e3 : 0; }, get napOn() { return napOn; },
     parcel: () => sendParcel(), clean: () => startCleaner(), get staff() { return staff(); },
     standup: () => mondayStandup(true), teatime: () => teatime(true),

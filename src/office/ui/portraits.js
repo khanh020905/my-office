@@ -4,7 +4,7 @@
 import * as THREE from 'three';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { renderer, envDay } from '../scene/renderer.js';
-import { makeChibi } from '../people/chibi-rig.js';
+import { disposeChibi, makeChibi } from '../people/chibi-rig.js';
 
 const W = 360, H = 260;   // twice the card's size, for sharp edges on Retina screens
 const CAST = [
@@ -20,11 +20,12 @@ function draw(look) {
   const key = new THREE.DirectionalLight('#FFF0D6', 1.6); key.position.set(-2, 4, 5); scene.add(key);
   const group = new THREE.Group(); scene.add(group);
   const shadowM = new THREE.MeshBasicMaterial({ color: '#000000', transparent: true, opacity: 0.16, depthWrite: false });
+  const rigs = [], circle = new THREE.CircleGeometry(0.3, 32);
   for (const c of CAST) {
-    const { root } = makeChibi({ ...c, look });
+    const { root, P } = makeChibi({ ...c, look }); rigs.push(P);
     const x = c.x * (look === 'toy' ? 1.28 : 1);   // the toy look's heads are wider
     root.position.x = x; root.rotation.y = c.ry; group.add(root);
-    const sh = new THREE.Mesh(new THREE.CircleGeometry(0.3, 32), shadowM); sh.rotation.x = -Math.PI / 2; sh.position.set(x, 0.002, 0); group.add(sh);
+    const sh = new THREE.Mesh(circle, shadowM); sh.rotation.x = -Math.PI / 2; sh.position.set(x, 0.002, 0); group.add(sh);
   }
   // frame the pair: their bounding box, a little air above the heads
   const box = new THREE.Box3().setFromObject(group), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
@@ -43,7 +44,8 @@ function draw(look) {
     renderer.readRenderTargetPixels(ldr, 0, 0, W, H, px);
   } finally {
     renderer.setRenderTarget(null); renderer.setClearColor(clear, alpha);
-    hdr.dispose(); ldr.dispose(); out.dispose(); shadowM.dispose();   // the chibis' geometry may be shared with the office's people: left alone
+    hdr.dispose(); ldr.dispose(); out.dispose(); shadowM.dispose(); circle.dispose();
+    for (const P of rigs) disposeChibi(P);   // (the two rigs were made for this picture only)
   }
   const c = document.createElement('canvas'); c.width = W; c.height = H;
   const img = new ImageData(W, H);

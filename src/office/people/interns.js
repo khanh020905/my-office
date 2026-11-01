@@ -153,7 +153,7 @@ function finish() {
   if (C.host && C.hostFace != null && !C.host.job) C.host.faceTarget = C.hostFace;   // (HR back to her screen)
   w.wearCard(null);
   chatLife('official', { id: w.id, name, every: 60e3 });
-  if (!DEMO && state.isLocal) fetch(`/api/tenure${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'official', name: project }) }).catch(() => {});
+  if (!DEMO && state.isLocal) fetch(`/api/tenure${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ op: 'official', name: project }) }).then((r) => r.body?.cancel()).catch(() => {});   // (unread, an answer stays in memory)
   const p = listOf().find((x) => x.name === project); if (p) { p.intern = false; p.ready = false; p.official = Date.now(); }
   sync();
   last = { name: project, who: name, stage: 'done', shook: !!C.shook };

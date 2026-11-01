@@ -41,15 +41,6 @@ function getShadowTex() {
 }
 const lighten = (c, k) => new THREE.Color(c).lerp(new THREE.Color('#ffffff'), k);
 const darken = (c, k) => new THREE.Color(c).multiplyScalar(k);
-// What a rig made by makeChibi holds on the GPU (its own geometries and materials: a set per character), given back
-// when the rig is replaced, as on a look change. The textures it uses are shared (the shadow, the steam) and stay.
-export function disposeRig(root) {
-  root.traverse((o) => {
-    if (!o.isMesh && !o.isLine && !o.isPoints) return;
-    o.geometry?.dispose();
-    for (const m of [].concat(o.material || [])) m.dispose();
-  });
-}
 const plainMat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
 // a wisp of steam over a hot mì ly (one, shared)
 let steam = null;
@@ -491,7 +482,27 @@ export function makeChibi(cfg = {}, scale = 1) {
   drop.scale.set(0.8, 1.3, 0.8); drop.position.set(R * 1.0, D.hipY + D.headY + R * 0.5, 0.2); drop.visible = false; root.add(drop); P.drop = drop;
   mergeRig(root, new Set([sh, drop, P.mouthSmile, P.mouthO, band, grocBand, P.homeLid]));
   standIns(root, P);
+  P.own = owned(root);
   return { root, P };
+}
+
+/* A rig's geometries stay on the GPU until disposed: three.js keeps the buffers of every geometry it has drawn, and
+   the arrays behind them, for as long as the page lives. A character is about 4 MB of vertices, and every subagent
+   that came and went left its whole body behind (an office left open grew by 7 to 20 MB a minute). */
+// the geometries a rig made for itself: not a sprite's (three.js shares one for every sprite)
+function owned(root, into = new Set()) {
+  root.traverse((o) => { if (o.geometry && !o.isSprite) into.add(o.geometry); });
+  return into;
+}
+/** Gives back the geometries of a rig gone for good (a person who left, a rig a change of look replaced, a portrait
+ *  drawn once). Its materials are left to the garbage collector: three.js keeps nothing of a material but its compiled
+ *  shader, one per kind, which the next person (or the look switched back) uses again instead of compiling it anew.
+ *  Whatever other modules hung on the rig (a cup, a parcel, the director's paper) is theirs and stays. Safe twice. */
+export function disposeChibi(P) {
+  if (!P?.own) return;
+  for (const g of P.own) g.dispose();
+  P.own = null;
+  standInSets.delete(P.standIns);   // (a portrait's rig still has a parent, and with shadows off nothing prunes the list)
 }
 
 /* The sun's shadow of a character comes from a handful of low-poly stand-ins on the same joints (head, body, arms,
@@ -509,7 +520,7 @@ function standIns(root, P) {
   part(P.spine, cyl(D.torso[5][0], D.torso[1][0], H + 0.06), 0, H / 2 - 0.03, 0, 0.82);
   for (const L of [P.legL, P.legR]) { part(L.hip, cyl(D.legR, D.legR, D.thigh), 0, -D.thigh / 2, 0); part(L.knee, cyl(D.legR, D.legR * 1.1, D.shin + 0.05), 0, -D.shin / 2 - 0.02, 0.02); }
   for (const A of [P.armL, P.armR]) { part(A.sh, cyl(D.armR, D.armR, D.upper), 0, -D.upper / 2, 0); part(A.el, cyl(D.armR, D.handR, D.fore + D.handR), 0, -D.fore / 2 - 0.02, 0); }
-  standInSets.add([root, meshes]);
+  standInSets.add((P.standIns = [root, meshes]));
 }
 /** Once, with the renderer: the stand-ins show for the shadow pass only (and a rig thrown away is forgotten). */
 export function shadowStandIns(renderer) {
@@ -610,6 +621,7 @@ export function wearOuter(P, on, o = {}) {
   }
   for (const m of out) m.traverse?.((x) => { if (x.isMesh) x.castShadow = false; });   // (the stand-ins cast the shadow)
   P.outer = out;
+  if (P.own) for (const m of out) owned(m, P.own);
 }
 
 // A Santa hat for the Christmas weeks: a soft red cone that flops to one side, a white fur band and a pom-pom.
@@ -627,6 +639,7 @@ export function wearLanyard(P, on, o = {}) {
     const face = new THREE.Mesh(new THREE.PlaneGeometry(0.079, 0.103), new THREE.MeshBasicMaterial({ color: '#FFFFFF' })); face.position.set(0, cy, zc + 0.0065); g.add(face);
     g.traverse((x) => { x.castShadow = false; });
     P.spine.add(g); P.lanyard = g; P.lanyardStrap = strap; P.lanyardFace = face;
+    if (P.own) owned(g, P.own);
   }
   P.lanyard.visible = true; P.lanyardStrap.color.set(o.color || '#2F6FB5');
   if (o.tex && P.lanyardFace.material.map !== o.tex) { P.lanyardFace.material.map = o.tex; P.lanyardFace.material.needsUpdate = true; }
@@ -643,6 +656,7 @@ export function wearHat(P) {
   const pom = new THREE.Mesh(new THREE.SphereGeometry(R * 0.15, 14, 10), fur); pom.position.y = R * 0.62; tip.add(pom);
   const band = new THREE.Mesh(new THREE.TorusGeometry(R * 0.86, R * 0.12, 10, 32), fur); band.rotation.x = Math.PI / 2; band.castShadow = true; g.add(band);
   P.hat = g;
+  if (P.own) owned(g, P.own);
 }
 
 // Two-bone IK in the sagittal plane: rotations [shoulderX, shoulderZ, elbowX] that put the hand on a point

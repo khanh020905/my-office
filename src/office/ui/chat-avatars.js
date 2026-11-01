@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { renderer, envDay } from '../scene/renderer.js';
-import { makeChibi } from '../people/chibi-rig.js';
+import { disposeChibi, makeChibi } from '../people/chibi-rig.js';
 import { state } from '../core/state.js';
 import { hash } from '../people/workers.js';
 
@@ -20,7 +20,7 @@ function draw(look) {
   const scene = new THREE.Scene(); scene.environment = envDay;
   scene.add(new THREE.HemisphereLight('#FFF4DC', '#8E9A7C', 1.25));
   const key = new THREE.DirectionalLight('#FFF0D6', 1.7); key.position.set(-2, 4, 5); scene.add(key);
-  const { root } = makeChibi({ name: '', ...look, look: state.LOOK }); root.rotation.y = 0.18; scene.add(root);
+  const { root, P } = makeChibi({ name: '', ...look, look: state.LOOK }); root.rotation.y = 0.18; scene.add(root);
   // the head and the shoulders, like a profile photo: the top 64% of the figure, with the backdrop showing round it
   const box = new THREE.Box3().setFromObject(root), size = box.getSize(new THREE.Vector3()), mid = box.getCenter(new THREE.Vector3());
   const cam = new THREE.PerspectiveCamera(24, 1, 0.05, 50), top = box.max.y, h = size.y * 0.64, cy = top - h * 0.47;
@@ -31,7 +31,7 @@ function draw(look) {
   try {
     renderer.setRenderTarget(hdr); renderer.setClearColor(0x000000, 0); renderer.clear(); renderer.render(scene, cam);
     out.render(renderer, ldr, hdr); renderer.readRenderTargetPixels(ldr, 0, 0, S, S, px);
-  } finally { renderer.setRenderTarget(null); renderer.setClearColor(clear, alpha); hdr.dispose(); ldr.dispose(); out.dispose(); }
+  } finally { renderer.setRenderTarget(null); renderer.setClearColor(clear, alpha); hdr.dispose(); ldr.dispose(); out.dispose(); disposeChibi(P); }
   // a soft backdrop like a profile photo's, then the figure over it
   const c = document.createElement('canvas'); c.width = c.height = S;
   const g = c.getContext('2d'), [a, b] = BG[hash(look.shirt + look.hair) % BG.length], grad = g.createLinearGradient(0, 0, 0, S);
