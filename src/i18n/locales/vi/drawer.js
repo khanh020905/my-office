@@ -82,4 +82,13 @@ export default {
   groupDone: 'Vừa xong',
   noActivity: 'Phiên này chưa có hoạt động nào từ khi My Office chạy.',
   latest: 'Mới nhất',
+  pins: {
+    tab: 'Ghi nhớ', tabN: 'Ghi nhớ ({n})',
+    intro: 'Điều bạn muốn cuộc này luôn nhớ. Khi Claude Code nén bộ nhớ (cuộc dài), những gì dặn giữa chừng có thể bị tóm mất; văn phòng nhắc lại các điều ở đây ngay sau mỗi lần nén.',
+    placeholder: 'Ví dụ: commit message bằng tiếng Việt · đừng push khi chưa hỏi',
+    add: 'Ghim', remove: 'Bỏ ghim',
+    empty: 'Chưa ghim điều gì.',
+    said: 'Nhắc lại lần gần nhất lúc {time}.',
+    hook: 'Cần chạy lại node bin/cli.mjs install một lần để thêm hook nhắc lại.',
+  },
 };

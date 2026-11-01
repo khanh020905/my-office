@@ -25,6 +25,7 @@ export default async function SessionDrawer() {
         <button className="tab" role="tab" id="tab-chat" aria-selected="true" type="button">{t('ui.sessionDrawer.chat')}</button>
         <button className="tab" role="tab" id="tab-subs" aria-selected="false" type="button">{t('ui.sessionDrawer.subs')}</button>
         <button className="tab" role="tab" id="tab-act" aria-selected="false" type="button">{t('ui.sessionDrawer.activity')}</button>
+        <button className="tab" role="tab" id="tab-pins" aria-selected="false" type="button">{t('drawer.pins.tab')}</button>
       </div>
       <div className="dr-body" id="ds-body"></div>
     </aside>

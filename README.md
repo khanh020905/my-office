@@ -348,6 +348,11 @@ Then open <http://localhost:4310>.
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
   chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
   the stuck-loop hook, so they need nothing more installed.
+- **Pinned notes that survive compaction**: a session's drawer has a **Pinned** tab for what that conversation should
+  always keep in mind ("commit messages in Vietnamese", "never push without asking"). When Claude Code compacts a long
+  conversation, what you said along the way can be summed up away; right after each compaction the office says the
+  pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
+  `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 - **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
   team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
   failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note
