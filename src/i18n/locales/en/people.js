@@ -138,6 +138,8 @@ export default {
     tea: { go: ['Off to {shop} for a milk tea 🧋', 'Popping to {shop}, want anything? 🧋'], got: ['Milk tea, back to work 🧋', 'Got my {shop}, heading back 🧋'] },
     checkin: { go: ['Off to {shop} for the photo 📸', 'Going to {shop}, picture time 📸'], got: ['Got the shot 📸', 'That queue, but worth it 🧋'] },
     headache: { go: ['My head! Off to {shop} for painkillers 😵', 'Going to {shop} for something for the headache 💊'], got: ['Got the pills, back at it 💊', 'The pharmacist says rest a bit 😅'] },
+    cong: { go: ['Off to Cộng for a coconut coffee 🥥', 'Popping to Cộng, anyone want anything? ☕'], got: ['Coconut coffee, ice cold 🥥', 'Got my Cộng, back to it ☕'] },
+    congWeekend: { go: ['A weekend needs a Cộng coffee ☕', 'Getting a coconut coffee at Cộng first 🥥'], got: ['Coconut coffee: that’ll do for a Saturday 🥥', 'Got my Cộng, back to it ☕'] },
     go: {
       cup: ['Popping down to {shop} for a drink 🥤', 'Off to {shop} for a peach tea 🥤', 'Running to {shop}, want anything? 🛒'],
       noodle: ['Getting cup noodles at {shop} 🍜', "Hungry, I'll make a cup of noodles at {shop} 🍜"],

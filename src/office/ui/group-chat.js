@@ -100,8 +100,8 @@ export function chatMoved(names, to) { if (!engine) return; for (const s of sess
 const life = (key, vars) => tr(`chat.life.${key}`, vars);
 const lastLife = new Map();
 /** kind: standup, lunchOrder, nap, wake, parcel, tea, birthday, store, the chains' (highlands, tgdd, mixue, phuclong,
- *  katinat, longchau), the lift's servicing (stairs, liftDone), altar, trophy, bye (v: id, name, shop, names, photo, why,
- *  every). The morning hello, the lunch poll and the reminders come by the clock, from the engine. */
+ *  katinat, longchau, cong), the lift's servicing (stairs, liftDone), altar, trophy, bye (v: id, name, shop, names, photo,
+ *  why, every). The morning hello, the lunch poll and the reminders come by the clock, from the engine. */
 export function chatLife(kind, v = {}) {
   const every = v.every ?? 20 * 60e3, now = Date.now(), lk = `${kind}:${v.id || ''}`;
   if (replay.on || (lastLife.get(lk) || 0) > now) return;
@@ -127,6 +127,7 @@ export function chatLife(kind, v = {}) {
     // the lift being serviced after a restart (life/lift-service.js): the stairs, then the lift back with its sticker
     case 'stairs': if (v.id) chatSay(v.id, life('stairs'), { key, react: ['😭', '😆'], reacts: 3, answer: [{ key: 'stairsAsk', chance: 0.9 }, { key: 'stairsAsk', chance: 0.5 }] }); break;
     case 'liftDone': chatSay('reception', life('liftDone'), { key, react: ['👍', '❤️'], reacts: 3 }); break;
+    case 'cong': if (v.id) chatSay(v.id, life(v.why === 'congWeekend' ? 'congWeekend' : 'cong'), { key, react: ['❤️', '😋'], reacts: 3, answer: [{ key: 'congAsk', chance: 0.9 }, { key: 'congAsk', chance: 0.5 }] }); break;
     case 'altar': chatSay('reception', life('altar'), { key, react: ['❤️'], reacts: 3 }); break;
     case 'trophy': chatSay('hr', life('trophy', { name: v.name }), { key, react: ['❤️', '😮'], reacts: 5, answer: [{ key: 'deploy', chance: 0.7 }] }); break;
     case 'bye': if (v.id) chatSay(v.id, tr('chat.work.bye'), { key, answer: [{ key: 'bye', chance: 0.6 }] }); break;

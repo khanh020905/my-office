@@ -125,10 +125,10 @@ function begin(R, w) {
 // the length of a walk from P along pts
 const lengthOf = (P, pts) => pts.reduce((a, p, k) => a + Math.hypot(p.x - (k ? pts[k - 1].x : P.x), p.z - (k ? pts[k - 1].z : P.z)), 0);
 // the chain behind a door (shops.js gives it; by the name on the sign otherwise)
-const CHAIN = { 'Circle K': 'circlek', GS25: 'gs25', '7-Eleven': 'seven', 'WinMart+': 'winmart', Ministop: 'ministop', 'Bách Hóa Xanh': 'bhx', Mixue: 'mixue', 'Highlands Coffee': 'highlands', 'Thế Giới Di Động': 'tgdd', 'Điện Máy Xanh': 'dmx', Katinat: 'katinat', 'Phúc Long': 'phuclong', 'Long Châu': 'longchau' };
+const CHAIN = { 'Circle K': 'circlek', GS25: 'gs25', '7-Eleven': 'seven', 'WinMart+': 'winmart', Ministop: 'ministop', 'Bách Hóa Xanh': 'bhx', Mixue: 'mixue', 'Highlands Coffee': 'highlands', 'Thế Giới Di Động': 'tgdd', 'Điện Máy Xanh': 'dmx', Katinat: 'katinat', 'Phúc Long': 'phuclong', 'Long Châu': 'longchau', 'Cộng Cà Phê': 'cong' };
 const keyOf = (d) => d.key || CHAIN[d.name] || '';
 // what each one sends you back with (twice in the list: twice as likely): the chain's own food more often than a drink
-const TAKE = { circlek: ['noodle', 'noodle', 'cup'], gs25: ['tok', 'tok', 'cup'], seven: ['onigiri', 'bun', 'cup'], ministop: ['cone', 'chicken'], winmart: ['cup', 'cup', 'grocery'], bhx: ['cup', 'grocery'], mixue: ['cone', 'cone', 'cup'], highlands: ['cup'], tgdd: ['grocery'], dmx: ['grocery'], katinat: ['cup'], phuclong: ['cup'], longchau: ['grocery'] };
+const TAKE = { circlek: ['noodle', 'noodle', 'cup'], gs25: ['tok', 'tok', 'cup'], seven: ['onigiri', 'bun', 'cup'], ministop: ['cone', 'chicken'], winmart: ['cup', 'cup', 'grocery'], bhx: ['cup', 'grocery'], mixue: ['cone', 'cone', 'cup'], highlands: ['cup'], tgdd: ['grocery'], dmx: ['grocery'], katinat: ['cup'], phuclong: ['cup'], longchau: ['grocery'], cong: ['cup'] };
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 // the drink's band (and the shopping bag) in the shop's colour
 function tint(w, item, d) {
@@ -157,20 +157,21 @@ function outOfStore(w, S, R, stage, d, then) {
   });
 }
 // what they say on the way, and on the way back: the chain's food, the late-night noodles
-const OWN_LINES = new Set(['treat', 'morning', 'upgrade', 'coffee', 'tea', 'checkin', 'headache']);   // (trips with words of their own)
+const OWN_LINES = new Set(['treat', 'morning', 'upgrade', 'coffee', 'tea', 'checkin', 'headache', 'cong', 'congWeekend']);   // (trips with words of their own)
 const line = (R, when) => tr(OWN_LINES.has(R.why) ? `people.out.${R.why}.${when}` : R.night ? `people.out.night.${when}` : `people.out.${when}.${R.item}`, { shop: R.shop, version: R.version || '' });
 /** o: { key: one chain only, night: late-night noodles (a 24-hour store, Circle K if there is one near), why: 'hot' (the
     real weather, a hot afternoon: a 10k cone at the Mixue), 'treat' (the CI green again: ice cream for everyone),
     'morning' (the day's first cà phê at the Highlands), 'coffee' (an afternoon one there), 'upgrade' (Claude Code
     moved to a new version: someone goes to Thế Giới Di Động to "lên đời"; version: the new one), 'tea' (the afternoon
-    trà sữa at Phúc Long, or Katinat), 'checkin' (Katinat on a Friday or weekend evening, for the drink and the picture)
-    or 'headache' (the work keeps failing: something for the headache from Long Châu) } */
+    trà sữa at Phúc Long, or Katinat), 'checkin' (Katinat on a Friday or weekend evening, for the drink and the picture),
+    'headache' (the work keeps failing: something for the headache from Long Châu), 'cong' (a weekday afternoon's cốt dừa
+    cà phê at Cộng) or 'congWeekend' (a weekend morning's) } */
 function shopTrip(w, S, { key = '', night = false, why = '', version = '' } = {}) {
   // the nearest open convenience store as you would walk it, from whichever side of the building is best
   let best = null;
   const from = indoors();
   for (const door of S.doors()) {
-    if (door.open === false || (key && keyOf(door) !== key) || (!key && ['tgdd', 'highlands', 'dmx', 'katinat', 'phuclong', 'longchau'].includes(keyOf(door))) || (night && door.h24 === false)) continue;   // (the phone shop and the café only when meant)
+    if (door.open === false || (key && keyOf(door) !== key) || (!key && ['tgdd', 'highlands', 'dmx', 'katinat', 'phuclong', 'longchau', 'cong'].includes(keyOf(door))) || (night && door.h24 === false)) continue;   // (the phone shop and the café only when meant)
     for (const ex of S.exits(from.x, from.z)) {
       const r = S.route(ex, door), len = r && lengthOf(ex, r) + ex.d, score = len + (night && keyOf(door) !== 'circlek' ? 30 : 0);
       if (r && len < 80 && (!best || score < best.score)) best = { door, ex, r, score };
@@ -185,6 +186,7 @@ function shopTrip(w, S, { key = '', night = false, why = '', version = '' } = {}
   else if (why === 'upgrade') chatLife('tgdd', { id: w.id, version, every: 60e3 });
   else if (why === 'tea' || why === 'checkin') chatLife(keyOf(d), { id: w.id, why, every: 3 * 3600e3 });   // (Phúc Long's, or Katinat's)
   else if (why === 'headache') chatLife('longchau', { id: w.id, every: 3600e3 });
+  else if (why === 'cong' || why === 'congWeekend') chatLife('cong', { id: w.id, why, every: 3 * 3600e3 });
   else chatLife('store', { id: w.id, shop: d.name, every: 90 * 60e3 });
   w.hush(); w.anim = 'wake'; w.afterAt = state.sim + 1.6;   // a stretch first
   w.after = () => {
@@ -531,6 +533,10 @@ export function updateOutings() {
   // off than the stores, so not every trip)
   const tea = teaDay !== day && m >= 930 && m < 1020 && Math.random() < 0.3 && ['phuclong', 'katinat'].find((k) => S.doors().some((x) => keyOf(x) === k && x.open));
   if (tea && list.length && shopTrip(pick(list), S, { key: tea, why: 'tea' })) { teaDay = day; return; }
+  // a weekday afternoon, once, 14:00–17:00, and a weekend morning, once, 8:30–11:30: a cốt dừa cà phê at Cộng ("Đi Cộng làm
+  // ly cốt dừa không?"), where there is one near
+  const wkend = [6, 0].includes(d.getDay()), congWhy = congDay !== day && (wkend ? m >= 510 && m < 690 : m >= 840 && m < 1020) && Math.random() < 0.3 && S.doors().some((x) => keyOf(x) === 'cong' && x.open) && (wkend ? 'congWeekend' : 'cong');
+  if (congWhy && list.length && shopTrip(pick(list), S, { key: 'cong', why: congWhy })) { congDay = day; return; }
   // Friday and weekend evenings, once, 18:00–21:00: Katinat, for the drink and the picture of it
   if (checkinDay !== day && [5, 6, 0].includes(d.getDay()) && m >= 1080 && m < 1260 && Math.random() < 0.3 && list.length && shopTrip(pick(list), S, { key: 'katinat', why: 'checkin' })) { checkinDay = day; return; }
   // a hot afternoon outside (the city's real weather, 32° and up, dry): the trip is for a 10k cone at the Mixue
@@ -539,7 +545,7 @@ export function updateOutings() {
 }
 /* ---------- Claude Code's version on this computer (server: GET /api/claude-version): a new one sends someone to Thế
    Giới Di Động to "lên đời", once per version per page (the chat line is posted once, by the Mac's page) ---------- */
-let upgradeDue = '', coffeeDay = '', teaDay = '', checkinDay = '';
+let upgradeDue = '', coffeeDay = '', teaDay = '', checkinDay = '', congDay = '';
 const SEEN = 'office-claude-version';
 async function lookForUpgrade() {
   const r = await fetch(`/api/claude-version${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`).then((x) => x.json()).catch(() => null);
@@ -571,7 +577,8 @@ export function treat() {
 }
 
 /* for tests and screenshots (?debug): send someone resting out now ('shop', to one chain if `key` says: 'gs25'…; 'night':
-   the late-night noodles; 'tea', 'checkin', 'headache': to Phúc Long, Katinat, Long Châu), or order the lunch ('lunch') */
+   the late-night noodles; 'tea', 'checkin', 'headache': to Phúc Long, Katinat, Long Châu; 'cong', 'congWeekend': to Cộng),
+   or order the lunch ('lunch') */
 export function goOut(kind = 'shop', key = '') {
   const S = street(); if (!S || run) return false;
   if (kind === 'lunch') return orderLunch(S, officeNow().toDateString());
@@ -579,6 +586,7 @@ export function goOut(kind = 'shop', key = '') {
   if (kind === 'upgrade') return upgrade(key || '9.9.9');
   if (kind === 'morning') { const w = [...workers.values()].find(resting); return !!w && shopTrip(w, S, { key: 'highlands', why: 'morning' }); }
   if (kind === 'headache') return headache();
+  if (kind === 'cong' || kind === 'congWeekend') { const w = [...workers.values()].find(resting); return !!w && shopTrip(w, S, { key: 'cong', why: kind }); }
   if (kind === 'tea' || kind === 'checkin') { const w = [...workers.values()].find(resting); return !!w && shopTrip(w, S, { key: kind === 'tea' ? key || 'phuclong' : 'katinat', why: kind }); }
   const w = [...workers.values()].find(resting);
   return !!w && shopTrip(w, S, { key, night: kind === 'night' });
