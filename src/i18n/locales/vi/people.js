@@ -358,6 +358,8 @@ export default {
       days: ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'],
       weekend: 'Cuối tuần',
       holiday: 'Nghỉ lễ',
+      swap: 'Nghỉ bù',
+      makeup: 'Làm bù',
       noDuty: 'Hôm nay không phân công trực nhật',
       nobody: 'Chưa ai tới, chưa phân công',
       doing: 'đang làm…',

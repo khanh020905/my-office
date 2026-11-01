@@ -25,6 +25,7 @@ import { updateMicro } from '../people/comnha.js';
 import { updateStaff } from '../people/staff.js';
 import { updateDuty } from '../people/duty.js';
 import { updateDrill } from '../life/drill.js';
+import { updateDaySwaps } from '../life/day-swaps.js';
 import { updateTeatime } from '../people/teatime.js';
 import { updateAccountant } from '../people/accountant.js';
 import { updateRounds } from '../people/rounds.js';
@@ -159,6 +160,7 @@ export function loop(now = 0) {
   updateStaff(dt);
   updateDuty();
   updateDrill();
+  updateDaySwaps();
   updateTeatime();
   updateAccountant();
   updateRounds();

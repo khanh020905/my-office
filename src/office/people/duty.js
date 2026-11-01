@@ -152,12 +152,12 @@ function abort(J, why) {
 /* ---------- the board, the sink, the bin: what they show ---------- */
 function show() {
   const d = officeNow(), m = minutes(d), kind = dayKind(d);
-  if (kind !== 'work') { drawBoard({ date: dateLabel(d), off: kind, rows: [], owe: [] }); setPile(0); return; }
+  if (!isWorkday(d)) { drawBoard({ date: dateLabel(d), off: kind, rows: [], owe: [] }); setPile(0); return; }
   const rows = Object.keys(st.who).length ? CHORES.map((c) => ({ chore: c, name: st.names[st.who[c]] || '', at: st.done[c] != null ? hm(st.done[c]) : '', busy: job?.chore === c && !job.owed })) : [];
   drawBoard({ date: dateLabel(d), off: '', rows, owe: st.owe.map((o) => ({ chore: o.chore, name: o.name })) });
   setPile(job?.chore === 'cups' && job.stage === 'wash' ? job.left : pile(st, m));
 }
-const dateLabel = (d) => `${tr('people.duty.board.days', null, 'list')[d.getDay()]} ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
+const dateLabel = (d) => `${dayKind(d) === 'makeup' ? `${tr('people.duty.board.makeup')} · ` : ''}${tr('people.duty.board.days', null, 'list')[d.getDay()]} ${pad2(d.getDate())}/${pad2(d.getMonth() + 1)}`;
 // the pantry's big bin (people/staff.js): emptied by the rota today; still full from yesterday, spilling over
 function binLevel() {
   if (!isWorkday(officeNow())) return null;
@@ -169,7 +169,7 @@ function binLevel() {
 /** today's rota in a line (the board's tooltip, and a toast when it is tapped) */
 export function dutyText() {
   const d = officeNow(), kind = dayKind(d);
-  if (kind !== 'work') return `${tr(`people.duty.board.${kind}`)}: ${tr('people.duty.board.noDuty')}`;
+  if (!isWorkday(d)) return `${tr(`people.duty.board.${kind}`)}: ${tr('people.duty.board.noDuty')}`;
   if (!Object.keys(st.who).length) return tr('people.duty.board.nobody');
   const list = CHORES.map((c) => `${tr(`people.duty.chores.${c}`)}: ${st.names[st.who[c]] || '—'}${st.done[c] != null ? ' ✓' : ''}`).join(' · ');
   return st.owe.length ? `${list} · ${tr('people.duty.board.owe', { list: st.owe.map((o) => tr(`people.duty.chores.${o.chore}`)).join(', ') })}` : list;
@@ -223,9 +223,9 @@ function next(list, m) {
   }
 }
 
-/* ---------- for tests (?debug) ---------- */
+/* ---------- for tests (?debug): today's rota (on a day off, the last working day's is kept for the next) ---------- */
 const debug = {
-  state: () => ({ day: st.day, who: { ...st.who }, names: { ...st.names }, done: { ...st.done }, owe: st.owe.map((o) => ({ ...o })), pile: pile(st, minutes()), kind: dayKind(officeNow()), job: job && { chore: job.chore, id: job.w.id, stage: job.stage, owed: job.owed, left: job.left }, bin: binLevel() }),
+  state: () => ({ day: st.day, who: st.day === dayKey(officeNow()) ? { ...st.who } : {}, names: { ...st.names }, done: { ...st.done }, owe: st.owe.map((o) => ({ ...o })), pile: pile(st, minutes()), kind: dayKind(officeNow()), job: job && { chore: job.chore, id: job.w.id, stage: job.stage, owed: job.owed, left: job.left }, bin: binLevel() }),
   go: (chore) => { const list = here(), o = st.owe.find((x) => x.chore === chore), w = personOf(o?.who || st.who[chore], list); if (job || !w || w.chore) return false; start(chore, w, !!o); return true; },
   look: () => { checkAt = 0; },
 };

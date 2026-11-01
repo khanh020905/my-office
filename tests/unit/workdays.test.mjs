@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayKey, dayKind, holidayOf, isWorkday, prevWorkday, quarterStart } from '../../src/shared/workdays.js';
+import { SWAPS, breakAfter, dayKey, dayKind, holidayOf, isWorkday, prevWorkday, quarterStart, swapOf } from '../../src/shared/workdays.js';
 
 const D = (s) => new Date(`${s}T09:00:00`);
 const kinds = (from, to) => { const out = {}; for (let d = D(from); d <= D(to); d.setDate(d.getDate() + 1)) out[dayKey(d)] = dayKind(d); return out; };
@@ -47,4 +47,25 @@ test('the first working day of each quarter (when the fire drill is): past 1/1, 
   assert.equal(first('2027-07-01'), '2027-07-01');
   assert.equal(first('2026-04-30'), '2026-04-01');
   assert.equal(first('2028-01-10'), '2028-01-04');   // (1/1/2028 a Saturday, so taken on Monday 3/1)
+});
+
+test('the Government swaps: a weekday off (nghỉ bù) and a Saturday worked for it (làm bù), as announced', () => {
+  assert.equal(dayKind(D('2026-01-02')), 'swap'); assert.equal(dayKind(D('2026-01-10')), 'makeup');
+  assert.equal(dayKind(D('2026-08-31')), 'swap'); assert.equal(dayKind(D('2026-08-22')), 'makeup');
+  assert.ok(isWorkday(D('2026-01-10')) && !isWorkday(D('2026-01-02')));
+  assert.ok(!isWorkday(D('2026-01-17')));   // (any other Saturday: off)
+  assert.deepEqual(swapOf(D('2026-01-10')), swapOf(D('2026-01-02')));
+  assert.equal(swapOf(D('2026-01-10')).off, '2026-01-02'); assert.equal(swapOf(D('2026-11-07')), null);
+  for (const [off, work] of SWAPS) { assert.equal(new Date(`${work}T12:00:00`).getDay(), 6, work); assert.ok(![0, 6].includes(new Date(`${off}T12:00:00`).getDay()), off); }
+  // none announced for 2027 (Tết and 2/9 chose the options without one); 28/11/2026 was not taken
+  assert.ok(SWAPS.every(([off]) => off < '2027-01-01'));
+  assert.equal(dayKind(D('2026-11-28')), 'weekend');
+});
+
+test('the break after a day: its length, and the Saturday to make it up', () => {
+  assert.deepEqual(breakAfter(D('2025-12-31')), { days: 4, makeup: '2026-01-10' });   // (1/1–4/1/2026)
+  assert.deepEqual(breakAfter(D('2026-08-28')), { days: 5, makeup: '2026-08-22' });   // (29/8–2/9: made up before)
+  assert.deepEqual(breakAfter(D('2026-02-13')), { days: 9, makeup: '' });             // (Tết Bính Ngọ)
+  assert.deepEqual(breakAfter(D('2026-11-06')), { days: 2, makeup: '' });
+  assert.equal(dayKey(prevWorkday(D('2026-01-12'))), '2026-01-10');   // (the Monday after a make-up Saturday)
 });

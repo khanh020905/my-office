@@ -76,6 +76,7 @@ import * as lifeQuota from './life/quota.js';
 import * as lifeAltar from './life/altar.js';
 import * as lifeLiftService from './life/lift-service.js';
 import * as lifeDrill from './life/drill.js';
+import * as lifeDaySwaps from './life/day-swaps.js';
 import * as lifeTests from './life/tests.js';
 import * as lifePhotostrips from './life/photostrips.js';
 import * as lifePost from './life/post.js';
@@ -193,6 +194,7 @@ const MODULES = [
   lifeAltar,
   lifeLiftService,
   lifeDrill,
+  lifeDaySwaps,
   lifeTests,
   lifePhotostrips,
   lifePost,
