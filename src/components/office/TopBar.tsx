@@ -8,6 +8,10 @@ export default async function TopBar() {
   return (
     <header className="topbar">
       <div className="tb-brand"><span className="logo" data-icon="logo"></span><span>My Office</span><span className="tb-clock" id="clock">--:--</span><span className="demo-chip" id="demo-chip" hidden>DEMO<span className="demo-more"> · {t('ui.topBar.sampleData')}</span></span><span className="demo-chip replay-chip" id="replay-chip" hidden></span></div>
+      <div className="tb-view" role="group" aria-label={t('ui.topBar.view')}>
+        <button type="button" data-view="3d" aria-pressed="true" title={t('ui.topBar.view3d')}>3D</button>
+        <button type="button" data-view="2d" aria-pressed="false" title={t('ui.topBar.view2d')}>2D</button>
+      </div>
       <div className="tb-actions">
         <div className="pop-wrap">
           <button id="btn-plan" className="tb-btn mac-pill plan-pill" type="button" data-level="normal" aria-expanded="false" aria-controls="pop-plan" hidden><i className="lvl"></i><span className="mp-label">{t('ui.topBar.plan')}</span><span className="mp-val" id="plan-mini">{t('ui.topBar.reading')}</span><span className="mp-bar"><b id="plan-bar"></b></span></button>

@@ -88,4 +88,13 @@ export default {
   groupDone: 'Just finished',
   noActivity: 'No activity in this session since My Office started.',
   latest: 'Latest',
+  pins: {
+    tab: 'Pinned', tabN: 'Pinned ({n})',
+    intro: 'What this conversation should always keep in mind. When Claude Code compacts its memory (long conversations), what you said along the way can be summed up away; the office says these again right after each compaction.',
+    placeholder: 'e.g. commit messages in Vietnamese · never push without asking',
+    add: 'Pin', remove: 'Unpin',
+    empty: 'Nothing pinned yet.',
+    said: 'Last said again at {time}.',
+    hook: 'Run node bin/cli.mjs install once more to add the hook that says them again.',
+  },
 };

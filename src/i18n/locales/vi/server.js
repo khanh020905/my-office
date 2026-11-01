@@ -95,6 +95,11 @@ export default {
     holderOf: '{label} của {owner} (chạy {up})',
     someone: 'một tiến trình khác',
   },
+  pins: {
+    context: '[My Office] Cuộc trò chuyện vừa được nén. Người dùng đã ghim những điều sau cho cuộc này; hãy tiếp tục làm theo:',
+    noSid: 'Chưa biết mã của cuộc trò chuyện này: nhắn cho nó một câu trước đã.',
+    full: 'Đã đủ {n} điều ghim: xoá bớt một điều đã.',
+  },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',

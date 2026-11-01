@@ -55,6 +55,7 @@ export default {
     file: '⚠️ {a} sắp sửa {file}, file mà {b} vừa sửa. Claude của {a} đã được nhắc đọc lại trước khi sửa.',
     port: '⚠️ {name} cần cổng {port} nhưng {holder} đang giữ. Không cần nữa thì dừng nó ở bảng Máy Mac.',
   },
+  pins: { said: '📌 {name} vừa nén bộ nhớ: đã nhắc lại {n} điều bạn ghim.' },
   report: { monday: '📝 Phiếu điểm prompt tuần qua: {pct}% rõ ràng ({delta} so với tuần trước), {n} prompt. Xem ở ••• → Kho lịch sử → Phiếu điểm tuần.' },
   card: { stopped: 'Đã dừng', allow: 'Cho phép', deny: 'Từ chối', stop: '⏹ Dừng', askHere: '⏳ {what}', risky: 'Lệnh nguy hiểm: chỉ cho phép được trên Mac.', work: 'Đang làm', wait: 'Chờ bạn duyệt', done: 'Xong', fail: 'Gặp lỗi', meta: '{n} bước · {took}', ask: '⏳ {what} · thẻ duyệt hiện ở dưới (45 giây)', all: 'Xem cả {n} bước', show: 'Xem {n} bước đã làm', none: 'Không cần làm bước nào',
     attach: 'Về Mac gõ {cmd} để làm tiếp', waitMac: { perm: 'Đang chờ bạn duyệt ngay trên Mac', input: 'Đang chờ bạn trả lời ngay trên Mac', other: 'Đang chờ bạn trên Mac' } },

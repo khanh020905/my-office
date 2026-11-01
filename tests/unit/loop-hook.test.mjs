@@ -78,3 +78,14 @@ test('Windows\' hook script (--fast): nothing from an office that is down or slo
   const o = await office('{"continue":false}', 2000);
   try { const slow = await send(o.port); assert.equal(slow.code, 0); assert.equal(slow.out, ''); assert.ok(slow.ms < 1500, `took ${Math.round(slow.ms)} ms`); } finally { await o.close(); }
 });
+
+test('install also adds the hook that says pinned notes again after a compaction: synchronous, only on "compact", short', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-hook-')), file = path.join(dir, 'settings.json');
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', file, '--no-status'], { env: { ...process.env, HOME: dir, USERPROFILE: dir, CLAUDE_CONFIG_DIR: path.join(dir, '.claude'), OFFICE_PORT: '4310', OFFICE_DATA_DIR: dir }, stdio: 'ignore' });
+  const entries = JSON.parse(fs.readFileSync(file, 'utf8')).hooks.SessionStart.filter((e) => e.hooks.some((h) => h.command.includes('/hook/start')));
+  fs.rmSync(dir, { recursive: true, force: true });
+  assert.equal(entries.length, 1);
+  assert.equal(entries[0].matcher, 'compact');
+  assert.ok(!entries[0].hooks[0].async);
+  assert.ok(entries[0].hooks[0].timeout <= 5);
+});

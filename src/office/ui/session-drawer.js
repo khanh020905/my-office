@@ -13,6 +13,7 @@ import { unseenDone } from '../life/your-turn.js';
 import { DEMO, demoLog } from '../demo/demo.js';
 import { acctActions } from './session-account.js';
 import { drawDrawerCache } from './cache-words.js';
+import { pinsLabel, renderPins } from './pins.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 /* ---------- session drawer ---------- */
@@ -53,6 +54,7 @@ export function renderSessionHead() {
   $('ds-cost').textContent = u ? fmtUsd(u.cost) : '–'; $('ds-cost').parentElement.title = tr('drawer.priceNote');
   const n = s.subs?.length || 0;
   $('tab-subs').textContent = n ? tr('drawer.tabSubsN', { n }) : tr('drawer.tabSubs');
+  pinsLabel(s);
   if (actionsSig(s) !== drawnSig) renderActions();   // (it came to rest, went to work, or moved to another account)
 }
 export async function openWindowOf(s) {
@@ -115,9 +117,10 @@ function closeSessionButton(s) {
 }
 function setTab(t) {
   tab = t;
-  for (const [id, name] of [['tab-chat', 'chat'], ['tab-subs', 'subs'], ['tab-act', 'act']]) $(id).setAttribute('aria-selected', String(t === name));
+  for (const [id, name] of [['tab-chat', 'chat'], ['tab-subs', 'subs'], ['tab-act', 'act'], ['tab-pins', 'pins']]) $(id).setAttribute('aria-selected', String(t === name));
   if (t === 'chat') { if (logItems.length) renderChat(true); else $('ds-body').replaceChildren(el('p', 'chat-empty', tr('drawer.loadingChat'))); }
   else if (t === 'subs') renderSubs(true);
+  else if (t === 'pins') renderPins();   // (what you pinned for it: ui/pins.js)
   else renderActivity();
   queueMicrotask(syncJump);
 }
@@ -373,6 +376,7 @@ export function setup() {
   $('tab-chat').addEventListener('click', () => { setTab('chat'); loadLog(true); });
   $('tab-subs').addEventListener('click', () => { state.subView = null; setTab('subs'); });
   $('tab-act').addEventListener('click', () => setTab('act'));
+  $('tab-pins').addEventListener('click', () => setTab('pins'));
   // "Latest" button: shows when you have scrolled up in a conversation.
   jumpBtn = el('button', 'chat-jump');
    jumpBtn.type = 'button';
