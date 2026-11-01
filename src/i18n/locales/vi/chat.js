@@ -41,6 +41,16 @@ export default {
     hintLost: 'Lượt đã xong trước khi Claude đọc gợi ý. Gửi lại để nhắn tiếp cuộc trò chuyện.',
     hintRest: 'Đã nhắn tiếp cuộc trò chuyện',
   },
+  ci: {
+    title: 'CI đỏ',
+    line: '{wf} hỏng trên nhánh {branch} của {repo}',
+    open: 'Xem lần chạy',
+    fix: '🛠 Sửa luôn',
+    sent: 'Đã giao cho Claude sửa',
+    note: 'Đã chen lời: Claude sửa ngay sau bước đang làm',
+    green: '✓ CI xanh lại rồi',
+    over: 'Có lần chạy mới hơn: xem thẻ bên dưới',
+  },
   card: { stopped: 'Đã dừng', allow: 'Cho phép', deny: 'Từ chối', stop: '⏹ Dừng', askHere: '⏳ {what}', risky: 'Lệnh nguy hiểm: chỉ cho phép được trên Mac.', work: 'Đang làm', wait: 'Chờ bạn duyệt', done: 'Xong', fail: 'Gặp lỗi', meta: '{n} bước · {took}', ask: '⏳ {what} · thẻ duyệt hiện ở dưới (45 giây)', all: 'Xem cả {n} bước', show: 'Xem {n} bước đã làm', none: 'Không cần làm bước nào',
     attach: 'Về Mac gõ {cmd} để làm tiếp', waitMac: { perm: 'Đang chờ bạn duyệt ngay trên Mac', input: 'Đang chờ bạn trả lời ngay trên Mac', other: 'Đang chờ bạn trên Mac' } },
   steer: {
