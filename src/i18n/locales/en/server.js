@@ -101,6 +101,12 @@ export default {
     holderOf: '{label} from {owner} (running {up})',
     someone: 'another process',
   },
+  // "Hoàn tác lượt cuối": the last turn's files put back
+  undo: {
+    busy: '{name} is working: wait until it is done to undo.',
+    nothing: 'Nothing left to undo.',
+    tell: "[My Office] The user just undid the previous turn's file changes; these files are back as they were before it: {files}. Read them again before going on, and don't redo those changes unless asked.",
+  },
   // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
   cache: {
     nudgeTitle: { one: '☕ {name} goes cold in {n} minute', other: '☕ {name} goes cold in {n} minutes' },

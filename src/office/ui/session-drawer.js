@@ -13,6 +13,7 @@ import { unseenDone } from '../life/your-turn.js';
 import { DEMO, demoLog } from '../demo/demo.js';
 import { acctActions } from './session-account.js';
 import { drawDrawerCache } from './cache-words.js';
+import { openUndo } from './undo-view.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 /* ---------- session drawer ---------- */
@@ -64,7 +65,7 @@ export async function openWindowOf(s) {
 }
 // what the buttons below depend on
 let drawnSig = '', qrFor = null;   // (qrFor: the session whose Remote Control QR code is shown)
-const actionsSig = (s) => [s.id, s.status === 'rest', s.pid, s.moved?.to, s.acct, state.limits?.others?.length].join('|');
+const actionsSig = (s) => [s.id, s.status === 'rest', s.pid, s.moved?.to, s.acct, state.limits?.others?.length, s.undo?.at, s.undo?.undone, s.undo?.done].join('|');
 function renderActions() {
   const s = sessions.get(state.selectedId); if (!s) return;
   const box = $('ds-actions'); box.replaceChildren(); drawnSig = actionsSig(s);
@@ -73,6 +74,11 @@ function renderActions() {
     b.title = tr('drawer.openWindowTitle'); b.addEventListener('click', () => openWindowOf(s)); box.append(b);
   }
   if (state.isLocal && s.pid && s.status === 'rest') box.append(closeSessionButton(s));
+  // the last turn's file changes, put back (server/undo.mjs): once it is over, while it rests
+  if (s.status === 'rest' && s.undo?.done && !s.undo.undone) {
+    const u = el('button', 'btn btn--sm'); u.type = 'button'; u.textContent = tr('drawer.undo.btn'); u.title = tr('drawer.undo.title');
+    u.addEventListener('click', () => openUndo(s, () => setTab(tab))); box.append(u);
+  }
   box.append(...acctActions(s, renderActions));
   if (s.link) {
     const a = el('a', 'btn btn--primary btn--sm', tr('drawer.openOnClaude')); a.href = s.link; a.target = '_blank'; a.rel = 'noopener';

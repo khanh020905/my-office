@@ -348,6 +348,13 @@ Then open <http://localhost:4310>.
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
   chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
   the stuck-loop hook, so they need nothing more installed.
+- **Undo the last turn**: a resting session's drawer has **↶ Undo last turn**: the files Claude changed with its file
+  tools (Edit, Write…) in its last turn, put back as they were before it, a file it created removed. The office keeps
+  its own copies (the stuck-loop hook, which runs before every call, copies a file the first time a turn touches it,
+  before Claude Code writes it), so it needs nothing from Claude Code's internals. What a terminal command changed
+  (git, sed, a build) is not undone; a file changed again after the turn is left alone; what was there is kept in
+  `data/undo/`. You see each file and what will happen first, two clicks to do it, then **Tell Claude**. From a phone
+  only when work from phones is allowed.
 - **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
   team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
   failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note

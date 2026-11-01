@@ -30,6 +30,7 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `wrapped.mjs` | The weekly recap: totals over the last seven replay logs. |
 | `loops.mjs` | "Ngắt vòng lặp kẹt": a session going round in circles (the same call failing the same way N times, compaction after compaction, cost rising with nothing edited), from the hooks and the status line; the synchronous PreToolUse hook (`/hook/loop`) gets a deny, your hint or Stop back from it. |
 | `overlap.mjs` | "Chặn ghi đè và giành cổng": what each session edited, so another session about to edit the same file within 20 minutes is told first (with its next call, through the synchronous `/hook/loop`); the port a command says it couldn't have (EADDRINUSE, "Port 3000 is in use"), and a word kept for a session until its next call. Memory only. |
+| `undo.mjs` | "Hoàn tác lượt cuối": the office's own copy of each file a turn's file tools touch (made by /hook/loop before the write), per turn, the last 3; the plan (restore, delete, same, changed after, too big) and putting them back, what was there kept aside. |
 | `otel.mjs` | "What eats your plan": an OpenTelemetry receiver for Claude Code's own cost and token counters and api_request events (OTLP/HTTP JSON at `/v1/metrics` and `/v1/logs`, loopback only). Delta and cumulative counters each counted once; a session is read from its counters, or from its events when it sent none; daily sums per session and attribution in `data/otel/`, 30 days. `src/shared/burn.js` sums them for `/api/burn` and the demo. |
 | `otel-setup.mjs` | The telemetry block `install` adds to `~/.claude/settings.json` (only when there is none of yours, tagged so `uninstall` removes exactly it), and how to tell whose telemetry it is. |
 | `tasks.mjs` | "Give work": a `claude -p` run on this Mac from the chat or a phone, carrying on a tagged conversation (`--resume --fork-session`) or new in a known folder; caps, photos, its answer back to the chat. |
@@ -189,7 +190,7 @@ engine switches to demo mode and talks to no API.
 | `ui/photo.js` | 138 | Photo mode: the office alone over the whole window, the camera free (any angle, closer or further, pan with the right button), then a PNG at the screen's size, Full HD or 4K. |
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
-| `ui/session-drawer.js` | 384 | The session drawer: chat, steps, subagents. |
+| `ui/session-drawer.js` | 390 | The session drawer: chat, steps, subagents. |
 | `ui/settings.js` | 124 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stranded.js` | 159 | "Việc bỏ quên" in the Mac drawer: the worktrees and checkouts of the repositories the office knows that still hold work (files not committed, commits not pushed, stashes), and worktrees with nothing left in them that could go. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |
@@ -197,6 +198,7 @@ engine switches to demo mode and talks to no API.
 | `ui/timelapse.js` | 156 | A 15-second clip of the office to share: square (1080 × 1080) for a feed or vertical (1080 × 1920) for Reels, TikTok and Shorts, the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds, with an original lo-fi tune under it (clip-music.js; it can be turned off). |
 | `ui/tips.js` | 115 | The first visit: a short tour of what you can click. |
 | `ui/topbar.js` | 232 | Phone modal, notifications, the night switch. |
+| `ui/undo-view.js` | 55 | "Hoàn tác lượt cuối" (server/undo.mjs): in the session drawer, what undoing the last turn would do to each file, two clicks to do it, then what was done and "Tell Claude" (it doesn't know its files were put back otherwise). |
 | `ui/vault.js` | 119 | "Kho lịch sử" (server/vault.mjs): every conversation's words, kept after Claude Code deletes its transcript (30 days by default). |
 | `ui/whiteboard.js` | 282 | The whiteboard: agents' tasks and your own sticky notes. |
 | `ui/wrapped.js` | 107 | The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as a PNG or copy, for sharing. |

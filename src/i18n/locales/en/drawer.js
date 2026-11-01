@@ -88,4 +88,14 @@ export default {
   groupDone: 'Just finished',
   noActivity: 'No activity in this session since My Office started.',
   latest: 'Latest',
+  undo: {
+    btn: '↶ Undo last turn', title: "Put the files the last turn changed back as they were before it",
+    intro: 'The turn “{prompt}” at {time}. Only files Claude changed with its file tools; what a terminal command changed (git, sed, a build…) can\'t be undone.',
+    act: { restore: 'back as it was', delete: 'removed (new in that turn)', same: 'already as it was', changedAfter: 'changed after that turn: left alone', big: 'too big to have been copied: left alone' },
+    go: { one: '↶ Undo {n} file', other: '↶ Undo {n} files' }, sure: 'Click again to undo', cancel: 'Cancel',
+    none: 'Nothing to undo: the files are as they were, or were changed after that turn.',
+    done: { one: '{n} file is back as it was before that turn. The one there before is kept in {dir}.', other: '{n} files are back as they were before that turn. The ones there before are kept in {dir}.' },
+    tell: 'Tell Claude', told: 'Claude was told.',
+    tellNote: "Claude doesn't know its files were put back: tell it, so it reads them again before going on.",
+  },
 };
