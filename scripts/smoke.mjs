@@ -38,7 +38,7 @@ try {
   const settings = path.join(data, 'settings.json');
   execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', settings], { env, stdio: 'ignore' });
   const cfg = JSON.parse(fs.readFileSync(settings, 'utf8'));
-  assert.equal(Object.keys(cfg.hooks).length, 13);
+  assert.equal(Object.keys(cfg.hooks).length, 14);   // (13 events, and PermissionDenied for calls auto mode refuses)
   assert.ok(JSON.stringify(cfg.hooks).includes(`127.0.0.1:${PORT}/event`));
   step('installer writes the hooks');
   console.log('\nAll good.');

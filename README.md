@@ -353,6 +353,11 @@ Then open <http://localhost:4310>.
   conversation, what you said along the way can be summed up away; right after each compaction the office says the
   pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
   `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
+  card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
+  **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
+  otherwise the refusal stands at once and the card keeps it on record. **Copy command** to run it yourself. Phones
+  answer only when the Mac lets them approve. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 - **Undo the last turn**: a resting session's drawer has **↶ Undo last turn**: the files Claude changed with its file
   tools (Edit, Write…) in its last turn, put back as they were before it, a file it created removed. The office keeps
   its own copies (the stuck-loop hook, which runs before every call, copies a file the first time a turn touches it,
@@ -452,6 +457,11 @@ Then open <http://localhost:4310>.
   The chat's ••• → **History vault**: search everything that was said (with or without Vietnamese accents), read a
   conversation laid out, and copy `claude --resume <id>` while its transcript is still there. `OFFICE_VAULT=0` turns
   it off.
+- **Weekly prompt report** (the vault's second tab, `?vault=report`): the last 7 days of what you wrote to Claude,
+  looked at with the chat's prompt-helper rules: how many were clear enough for Claude to act at once (against the
+  week before), the habits that cost a round trip (a screenshot with a word or two, "this one" with nothing to point
+  at, "make it different" with no criterion, several jobs in one message, too short) with a tip for each, and real
+  examples from the week. Worked out on this computer, no model involved; a line in the chat on Monday morning.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and

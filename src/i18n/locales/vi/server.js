@@ -105,6 +105,7 @@ export default {
     nothing: 'Không còn gì để hoàn tác.',
     tell: '[My Office] Người dùng vừa hoàn tác các thay đổi file của lượt trước; các file sau đã trở lại như trước lượt đó: {files}. Đọc lại chúng trước khi làm tiếp, và đừng làm lại những thay đổi đó trừ khi được bảo.',
   },
+  deny: { over: 'Lệnh này không còn chờ nữa: Claude đã làm tiếp.' },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',

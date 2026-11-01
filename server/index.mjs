@@ -18,6 +18,7 @@ import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
 import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
+import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
@@ -1418,6 +1419,34 @@ async function onStart(p) {
   return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${tr('server.pins.context')}\n${list.map((x) => `- ${x.text}`).join('\n')}` } };
 }
 
+/* ---------- "Hộp lệnh bị chặn": a call auto mode refused (the synchronous PermissionDenied hook). A card in the chat
+   says what was refused and why. While an office page has focus, Claude Code waits up to 40 s for "Cho Claude thử
+   lại" (retry: Claude is told it may try the call again, which goes through auto mode again) or "Giữ chặn"; with none,
+   or when auto mode gave no verdict (a retry would be ignored), the refusal stands at once and the card keeps it on
+   record, the command ready to copy. Phones answer only when the Mac lets them approve. ---------- */
+const DENY_HOLD_MS = 40_000;
+const deniedHeld = new Map();   // card id -> settle(retry)
+const NO_VERDICT = /^(Auto mode could not evaluate|Classifier unavailable)/i;
+async function onDenied(p, res) {
+  let s = p?.session_id ? bySid(p.session_id) : null; if (p?.session_id && !s) { await scanSessions(); s = bySid(p.session_id); }
+  const reason = clip(oneLine(String(p?.reason || '')), 300), canRetry = !NO_VERDICT.test(reason), hold = !!s && canRetry && officeFocused();
+  const shell = p?.tool_name === 'Bash' || p?.tool_name === 'PowerShell';
+  const cmd = clip(redact(String(shell ? p.tool_input?.command || '' : JSON.stringify(p?.tool_input || {}))), 2000);
+  const m = s ? chat.denyCard(s.id, { sess: s.id, tool: p.tool_name || '', label: loopLabel(p.tool_name, p.tool_input), cmd, shell, reason, retry: canRetry, state: hold ? 'held' : 'kept', until: hold ? Date.now() + DENY_HOLD_MS : 0 }) : null;
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${p?.session_id || '?'} ${clip(oneLine(cmd), 100)} ${reason}${hold ? ' (held)' : ''}\n`).catch(() => {});
+  if (!hold || !m) { res.writeHead(200).end(''); return; }
+  let timer = 0;
+  const settle = (retry) => {
+    if (deniedHeld.get(m.id) !== settle) return;
+    deniedHeld.delete(m.id); clearTimeout(timer);
+    chat.setDeny(m.id, { state: retry ? 'retry' : 'kept', until: 0 });
+    try { res.writeHead(200, { 'Content-Type': 'application/json' }).end(retry ? JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionDenied', retry: true } }) : ''); } catch { /* gone */ }
+  };
+  deniedHeld.set(m.id, settle);
+  timer = setTimeout(() => settle(false), DENY_HOLD_MS);
+  res.on('close', () => { if (deniedHeld.get(m.id) === settle) { deniedHeld.delete(m.id); clearTimeout(timer); chat.setDeny(m.id, { state: 'kept', until: 0 }); } });   // (Claude Code gave up waiting)
+}
+
 /* ---------- "Hoàn tác lượt cuối" (server/undo.mjs): the files Claude's file tools changed in a conversation's last
    turn, put back from the office's own copies (made by /hook/loop before each write). Only once the turn is over and
    the session rests; what is there now is kept in data/undo/<session>/<turn>/after. Phones may only when the Mac lets
@@ -1793,6 +1822,25 @@ async function vaultOut(q, mac) {
   const items = (await vault.search(String(q.get('q') || '').slice(0, 200))).map(vaultItem);
   return { ok: true, stats: vault.stats(), items };
 }
+/* ---------- "Phiếu điểm prompt" (server/prompt-report.mjs): the last 7 days of what you wrote, against the 7 before,
+   with the chat's prompt-helper rules; the vault drawer's second tab, and a line in the chat on Monday morning ---------- */
+let reportCache = null;
+async function reportOut() {
+  if (!vault) return { ok: false, off: true };
+  if (reportCache && Date.now() - reportCache.at < 10 * 60e3) return reportCache.out;
+  const now = Date.now(), D = 864e5;
+  const out = { ok: true, now: promptReport(await vault.prompts(now - 7 * D, now)), prev: promptReport(await vault.prompts(now - 14 * D, now - 7 * D)) };
+  reportCache = { at: now, out };
+  return out;
+}
+const delta = (a, b) => (a == null || b == null ? '' : `${a - b >= 0 ? '+' : '−'}${Math.abs(a - b)}`);
+setInterval(async () => {
+  const d = new Date(), week = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toLocaleDateString('sv');
+  if (!vault || d.getDay() !== 1 || d.getHours() < 9 || prefs.get('reportWeek') === week) return;
+  prefs.set('reportWeek', week);
+  const r = await reportOut().catch(() => null);
+  if (r?.ok && r.now.n >= 10) chat.system(tr('chat.report.monday', { pct: r.now.pct, delta: delta(r.now.pct, r.prev.pct) || '–', n: r.now.n }));
+}, 30 * 60e3).unref();
 function othersOut() {
   return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
     return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
@@ -2334,6 +2382,11 @@ const server = http.createServer((req, res) => {
       .catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/hook/denied') {   // a call auto mode refused: held a while when an office page has focus
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    readJson(req, 4_000_000).then((p) => onDenied(p, res)).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
@@ -2343,7 +2396,7 @@ const server = http.createServer((req, res) => {
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
   // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2661,6 +2714,19 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/denied') {   // a refused call's card: { id, op: 'retry' | 'keep' }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then((b) => {
+      if (!mac && !prefs.get('phoneApprove')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+      const settle = deniedHeld.get(String(b?.id || ''));
+      if (!settle) { json(res, 409, { ok: false, message: tr('server.deny.over') }); return; }
+      settle(b?.op === 'retry');
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${b?.op === 'retry' ? 'retry' : 'keep'} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/pins') {   // the session drawer's "Ghi nhớ": { id (the session), op 'add' | 'del', text | pin }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -2829,6 +2895,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/pins') { json(res, 200, pinsOut([...sessions.values()].find((x) => x.id === String(url.searchParams.get('id') || '')))); return; }
+  if (url.pathname === '/api/vault/report') { reportOut().then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the prompt report (server/prompt-report.mjs)
   if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what "Hoàn tác lượt cuối" would do
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)

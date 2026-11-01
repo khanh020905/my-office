@@ -80,3 +80,31 @@ test('the online demo has a few made-up ones, from the chat\'s ••• too', a
   await v.locator('.vl-row').first().click();
   await expect(v.locator('.vl-msg')).toHaveCount(2);
 });
+
+test('the weekly prompt report: how many were clear, the habits that cost a round trip, examples from the week', async ({ page, request }) => {
+  test.setTimeout(150_000);
+  const C = 'cccccccc-1111-2222-3333-444444444444', at = new Date(Date.now() - 864e5).toISOString();
+  fs.mkdirSync(PROJ, { recursive: true });
+  fs.writeFileSync(path.join(PROJ, `${C}.jsonl`), [
+    line({ type: 'user', cwd: '/e2e/shop', timestamp: at, message: { role: 'user', content: [{ type: 'image', source: { type: 'base64', data: 'AAAA' } }, { type: 'text', text: 'sao' }] } }),
+    line({ type: 'user', timestamp: at, message: { role: 'user', content: 'thêm trang giới thiệu cho dự án landing page, dùng ảnh trong thư mục public/hero' } }),
+    line({ type: 'user', timestamp: at, message: { role: 'user', content: 'làm khác đi' } }),
+    line({ type: 'user', timestamp: at, message: { role: 'user', content: 'ok' } }),
+    line({ type: 'custom-title', customTitle: 'Landing page' }),
+  ].join(''));
+  await request.get('/api/vault?fresh=1');
+  const r = await (await request.get('/api/vault/report')).json();
+  expect([r.now.n, r.now.clear, r.now.by.photoBare, r.now.by.vague]).toEqual([3, 1, 1, 1]);   // ("ok" is not judged)
+  await page.goto('/?vault=report');
+  const v = page.locator('#dr-vault');
+  await expect(v.locator('.vr-pct')).toHaveText('33%', { timeout: 60_000 });
+  await expect(v.locator('.vr-habit')).toHaveCount(2);
+  await expect(v.locator('.vr-ex', { hasText: '“sao”' })).toContainText('🖼×1');
+  await expect(v.locator('.vr-ex', { hasText: 'làm khác đi' }).locator('.vr-hint')).toContainText('khác đi');
+  await expect(v.locator('.vl-search')).toBeHidden();
+  // back to the list
+  await v.locator('[data-vt="list"]').click();
+  await expect(v.locator('.vl-search')).toBeVisible();
+  await expect(v.locator('.vl-row').first()).toBeVisible();
+  fs.rmSync(path.join(PROJ, `${C}.jsonl`));
+});
