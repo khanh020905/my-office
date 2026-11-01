@@ -81,6 +81,13 @@ export default {
     resting: '{name} đang nghỉ rồi, không có gì để dừng.',
     gone: 'Phiên này đã đóng.',
   },
+  ci: {
+    pushTitle: '🔴 CI của {repo} đỏ rồi',
+    pushBody: '{wf} trên nhánh {branch} vừa hỏng. Mở nhóm chat, bấm "Sửa luôn" để Claude sửa.',
+    fix: 'CI "{wf}" trên nhánh {branch} vừa đỏ: {url}\nĐọc log của bước hỏng (gh run view {run} --log-failed), tìm nguyên nhân, sửa, rồi chạy lại đúng phần kiểm tra đó trên máy. Xong thì báo lại: hỏng vì sao, đã sửa gì. Chưa push khi tôi chưa bảo.',
+    gone: 'Thẻ CI này không còn nữa.',
+    notRed: 'CI này không còn đỏ nữa.',
+  },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',

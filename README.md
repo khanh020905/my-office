@@ -343,6 +343,11 @@ Then open <http://localhost:4310>.
   gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
   without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
   failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
+  team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
+  failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note
+  at its next step; a resting one carries its conversation on. The card says when the CI is green again. From a phone
+  only when work from phones is allowed.
 
 ### Your plan and your Mac
 
