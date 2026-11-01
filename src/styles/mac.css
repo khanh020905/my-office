@@ -79,6 +79,9 @@
 .held-group h4 small { font-size: .7rem; font-weight: 500; color: var(--muted); }
 .row--suggest { border-color: var(--accent-line); }
 .row-badge { display: inline-block; margin-left: 8px; padding: 1px 7px; border-radius: 999px; background: var(--accent-soft); color: var(--accent-hi); font-size: .64rem; font-weight: 700; vertical-align: 1px; }
+/* the conversation you are in: green, the colour of someone at work */
+.row--you { border-color: rgba(61, 220, 132, .45); }
+.row-badge--you { background: var(--green-soft); color: var(--green-ink); }
 
 /* the editor (Antigravity, VS Code…): what its memory is made of, and how to give some back */
 .row--ide { grid-template-columns: minmax(0, 1fr) auto auto; }

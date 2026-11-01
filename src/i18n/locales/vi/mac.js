@@ -142,6 +142,10 @@ export default {
     hint: 'đóng session rảnh để trả RAM, lịch sử vẫn còn',
     busy: 'đang làm',
     idle: 'rảnh {time}',
+    opened: 'mở lúc {time}',
+    openedDay: 'mở {day}, {time}',
+    agents: '{n} agent đang chạy',
+    you: 'bạn đang nói chuyện ở đây',
   },
   apps: {
     title: 'App dùng nhiều RAM',

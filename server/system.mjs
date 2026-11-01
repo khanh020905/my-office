@@ -18,6 +18,8 @@ const SESS_DIR = path.join(CLAUDE_DIR, 'sessions');
 const TMP_ROOT = OS.PATHS.claudeTmp;
 const EXT_DIR = path.join(HOME, '.antigravity-ide', 'extensions');
 const PW_DIR = OS.PATHS.playwright;
+// a claude binary inside an editor's extensions: <home>/.antigravity-ide/extensions/anthropic.claude-code-…/…/claude
+const EDITOR_DIR = /[\\/](\.[^\\/]+)[\\/]extensions[\\/]anthropic\.claude-code-/;
 const NPM_CACHE = OS.PATHS.npmCache;
 // this user's processes (on Windows: this session's; read live, it is known after the first reading there)
 const mine = (p) => p.uid === OS.UID;
@@ -331,13 +333,14 @@ async function buildSnapshot(open = true) {
       conns, idle, watched: Math.round((now - usageSince) / 1000), use: treeUsage(P, d.pid) };
   }).sort((a, b) => b.mem - a.mem);
 
-  // Claude sessions
+  // Claude sessions (editor: the folder of the editor whose Claude Code extension runs it, e.g. '.antigravity-ide')
   const claude = [];
   for (const j of files) {
     let last = j.statusUpdatedAt || j.updatedAt || j.startedAt || now;
     try { last = Math.max(last, (await fsp.stat(transcriptOf(j))).mtimeMs); } catch { /* no transcript yet */ }
-    claude.push({ pid: j.pid, start: P.procs.get(j.pid)?.start, name: j.name || path.basename(j.cwd || ''), dir: tilde(j.cwd), busy: j.status === 'busy',
-      idle: Math.max(0, Math.round((now - last) / 1000)), mem: treeMem(P, j.pid), remote: !!j.bridgeSessionId });
+    const p = P.procs.get(j.pid);
+    claude.push({ pid: j.pid, start: p?.start, name: j.name || path.basename(j.cwd || ''), dir: tilde(j.cwd), busy: j.status === 'busy',
+      idle: Math.max(0, Math.round((now - last) / 1000)), mem: treeMem(P, j.pid), remote: !!j.bridgeSessionId, editor: EDITOR_DIR.exec(p?.comm || '')?.[1] || '' });
   }
   claude.sort((a, b) => b.idle - a.idle);
 

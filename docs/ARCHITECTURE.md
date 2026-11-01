@@ -106,7 +106,7 @@ engine switches to demo mode and talks to no API.
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo-log.js` | 17 | The demo's conversation logs (a session's, shown in its drawer, and each subagent's steps), kept to what the drawer can show. |
-| `demo/demo.js` | 327 | Demo mode: fictional projects and a fictional Mac. |
+| `demo/demo.js` | 328 | Demo mode: fictional projects and a fictional Mac. |
 | `interact/first-person.js` | 263 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
@@ -179,7 +179,7 @@ engine switches to demo mode and talks to no API.
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
 | `ui/look-switch.js` | 22 | Switching the character look. |
-| `ui/mac-drawer.js` | 675 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
+| `ui/mac-drawer.js` | 684 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
 | `ui/permissions.js` | 150 | Approve / deny cards and Claude's questions. |
 | `ui/phone.js` | 94 | The office on a phone: an app-like layout for small screens, upright or held sideways. |

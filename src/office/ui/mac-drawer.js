@@ -10,7 +10,7 @@ import { TOKEN } from '../net/live.js';
 import { DEMO, demoMac } from '../demo/demo.js';
 import { icon } from './icons.js';
 import { strandedSection, strandedHolding } from './stranded.js';
-import { t as tr, num } from '../../i18n/index.js';
+import { t as tr, num, locale } from '../../i18n/index.js';
 
 export let macSnap = null;
 let confirmKey = null;
@@ -568,6 +568,11 @@ async function setAutoClose(hours) {
     renderMac(); toast(d.hours ? tr('mac.auto.saved', { n: d.hours }) : tr('mac.auto.savedOff'));
   } catch { toast(tr('mac.action.unreachable')); }
 }
+// when a session's process started: the time today, the day too before that
+function opened(ms) {
+  const d = new Date(ms), today = new Date().toDateString() === d.toDateString();
+  return today ? tr('mac.claude.opened', { time: hhmm(ms) }) : tr('mac.claude.openedDay', { day: d.toLocaleDateString(locale(), { day: 'numeric', month: 'short' }), time: hhmm(ms) });
+}
 export function renderMac() {
   const s = macSnap; const body = $('mac-body');
   if (!s?.mem) { body.replaceChildren(el('p', 'muted', tr('mac.measuring'))); return; }
@@ -610,10 +615,14 @@ export function renderMac() {
   const gS = el('div', 'held-group'), sh = el('h4', null, tr('mac.group.sessions')); sh.append(el('small', null, tr('mac.claude.hint'))); gS.append(sh);
   const cl = el('ul', 'rows');
   for (const c of s.claude) {
+    // the conversation's title (its folder's name until Claude Code gives it one), then where and since when it runs
     const li = el('li', 'row'); const main = el('div', 'row-main');
-    const name = el('div', 'row-name', c.name + (c.remote ? ' 📱' : ''));
-    if (idleIds.has(`kill:${c.pid}`)) { li.classList.add('row--suggest'); name.append(el('span', 'row-badge', tr('mac.group.suggest'))); }
-    main.append(name, el('div', 'row-sub', `${c.dir} · ${c.busy ? tr('mac.claude.busy') : tr('mac.claude.idle', { time: fmtAgo(c.idle) })}`));
+    const name = el('div', 'row-name', (c.title || c.name) + (c.remote ? ' 📱' : ''));
+    if (c.you) { li.classList.add('row--you'); name.append(el('span', 'row-badge row-badge--you', tr('mac.claude.you'))); }
+    else if (idleIds.has(`kill:${c.pid}`)) { li.classList.add('row--suggest'); name.append(el('span', 'row-badge', tr('mac.group.suggest'))); }
+    const doing = [c.busy ? tr('mac.claude.busy') : tr('mac.claude.idle', { time: fmtAgo(c.idle) })];
+    if (c.agents) doing.push(tr('mac.claude.agents', { n: c.agents }));
+    main.append(name, el('div', 'row-sub', [c.app, c.start && opened(c.start * 1000), c.dir].filter(Boolean).join(' · ')), el('div', 'row-sub', doing.join(' · ')));
     li.append(main, el('span', 'row-num', fmtBytes(c.mem)), actFor(`kill:${c.pid}`, { action: 'kill', target: c.pid, start: c.start }, tr('common.close'), { disabled: c.busy }));
     cl.append(li);
   }

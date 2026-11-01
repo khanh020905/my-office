@@ -989,6 +989,7 @@ async function onHook(p) {
       if (!said) break;
       s.lastPrompt = clip(redact(said), 90);
       s.taskStart = now;
+      if (!s.viaOffice) s.saidAt = now;   // (written by you, not a run the office started: the Mac panel's "you're talking here")
       stats.prompts++; dirty = true; trophies.bump('prompts'); trophies.session(s.sid);
       e = mk('prompt', clip(s.lastPrompt, 64));
       Object.defineProperty(e, 'full', { value: clip(redact(unwrapPaste(String(p.prompt || '').replace(STRIP_TAGS, '')).trim()), 4000), enumerable: false });   // (the chat shows it whole)
@@ -1928,6 +1929,17 @@ function switchScript() {
 // the editors that have Claude Code's extension, and their user settings
 const EDITORS = [['.vscode', 'Code', 'VS Code'], ['.vscode-insiders', 'Code - Insiders', 'VS Code Insiders'], ['.cursor', 'Cursor'], ['.windsurf', 'Windsurf'], ['.antigravity', 'Antigravity'], ['.antigravity-ide', 'Antigravity IDE'], ['.kiro', 'Kiro'], ['.trae', 'Trae'], ['.positron', 'Positron']];
 const WRAP_KEY = 'claudeCode.claudeProcessWrapper';
+/* The Mac panel's Claude sessions, told apart the way you know them: the conversation's title, the app it runs in (the
+   editor whose extension runs it, else where Claude Code says it runs), the subagents at work, and the one you last wrote
+   to in the past three hours (closing that one ends the conversation you are in). The snapshot itself is shared: new rows. */
+function claudeRows(rows) {
+  const byPid = new Map([...sessions.values()].filter((s) => s.pid).map((s) => [s.pid, s]));
+  const you = [...byPid.values()].filter((s) => s.saidAt > Date.now() - 3 * 3600e3).sort((a, b) => b.saidAt - a.saidAt)[0];
+  return rows.map((c) => {
+    const s = byPid.get(c.pid), ed = EDITORS.find(([dot]) => dot === c.editor);
+    return { ...c, title: s?.title || '', app: ed ? ed[2] || ed[1] : s?.origin || '', agents: s ? Object.keys(s.subs).length : 0, you: !!s && s === you };
+  });
+}
 function editorSettings() {
   const home = os.homedir(), base = process.platform === 'darwin' ? path.join(home, 'Library', 'Application Support') : path.join(home, '.config');
   return EDITORS.filter(([dot]) => { try { return fs.readdirSync(path.join(home, dot, 'extensions')).some((e) => /^anthropic\.claude-code-/.test(e)); } catch { return false; } })
@@ -2630,7 +2642,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
-    sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
+    sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, claude: claudeRows(snap.claude), auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
   }
   if (url.pathname === '/' || url.pathname === '/index.html') {

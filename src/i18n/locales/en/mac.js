@@ -145,6 +145,10 @@ export default {
     hint: 'close idle sessions to free RAM, the history stays',
     busy: 'working',
     idle: 'idle {time}',
+    opened: 'opened {time}',
+    openedDay: 'opened {day}, {time}',
+    agents: { one: '{n} agent running', other: '{n} agents running' },
+    you: "you're talking here",
   },
   apps: {
     title: 'Apps using the most RAM',

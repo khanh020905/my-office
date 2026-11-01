@@ -12,6 +12,8 @@ export default {
     staging: { prompt: 'Tăng RAM cho máy chủ staging', wait: 'Chạy terraform apply' },
   },
   mac: {
+    // the conversations' titles, as Claude Code names them (the Mac panel's Claude sessions)
+    titles: { 'shop-api': 'Phân trang giỏ hàng và phí ship', 'landing-page': 'Hero mới và ảnh WebP', 'data-pipeline': 'Đơn hàng bị trùng trong ETL', 'mobile-app': 'Đăng nhập Google ở màn hình login', 'docs-site': 'Trang hướng dẫn cài đặt', 'infra': 'Sửa Terraform môi trường staging' },
     devTitle: 'Tắt next dev · cổng 3000',
     devDetail: '~/projects/landing-page · chạy 2 ngày 3 giờ · CPU 290% · RAM 2,3 GB',
     lostTitle: 'Tắt vite bị bỏ quên · cổng 5173',
