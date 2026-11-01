@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
 import { createOverlap, fileOf, portInUse, WINDOW } from '../../server/overlap.mjs';
 
 test('the port a command could not have, however the tool words it', () => {
@@ -13,9 +14,10 @@ test('the port a command could not have, however the tool words it', () => {
 });
 
 test('the file a call edits, made absolute from the session folder', () => {
-  assert.equal(fileOf({ file_path: '/p/src/a.ts' }), '/p/src/a.ts');
-  assert.equal(fileOf({ file_path: 'src/a.ts' }, '/p'), '/p/src/a.ts');
-  assert.equal(fileOf({ notebook_path: '/p/n.ipynb' }), '/p/n.ipynb');
+  // (in this system's own form: backslashes on Windows)
+  assert.equal(fileOf({ file_path: '/p/src/../src/a.ts' }), path.normalize('/p/src/a.ts'));
+  assert.equal(fileOf({ file_path: 'src/a.ts' }, '/p'), path.resolve('/p', 'src/a.ts'));
+  assert.equal(fileOf({ notebook_path: '/p/n.ipynb' }), path.normalize('/p/n.ipynb'));
   assert.equal(fileOf({ file_path: 'a.ts' }), '');   // (relative, and no folder to read it from)
   assert.equal(fileOf({ command: 'ls' }), '');
 });
