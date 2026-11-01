@@ -81,6 +81,13 @@ export default {
     resting: '{name} đang nghỉ rồi, không có gì để dừng.',
     gone: 'Phiên này đã đóng.',
   },
+  overlap: {
+    file: '[My Office] Phiên “{name}” trên máy này vừa sửa file này lúc {time}. Đọc lại file ngay trước khi sửa và đừng ghi đè thay đổi của phiên đó; nếu việc hai bên đụng nhau, dừng lại hỏi người dùng.',
+    port: '[My Office] Cổng {port} đang bị {holder} giữ. Đó có thể là việc của phiên khác hoặc của người dùng: đừng tự dừng hay kill tiến trình đó; chạy ở cổng khác, hoặc hỏi người dùng.',
+    holder: '{label} (chạy {up})',
+    holderOf: '{label} của {owner} (chạy {up})',
+    someone: 'một tiến trình khác',
+  },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',

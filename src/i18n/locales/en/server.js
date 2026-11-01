@@ -85,6 +85,14 @@ export default {
     resting: '{name} is already resting: nothing to stop.',
     gone: 'This session has closed.',
   },
+  // two sessions on one file, a port another process holds (server/overlap.mjs): said to Claude with its next call
+  overlap: {
+    file: "[My Office] Another session on this computer, “{name}”, edited this file at {time}. Read the file again right before editing it and don't overwrite that session's changes; if the two pieces of work clash, stop and ask the user.",
+    port: "[My Office] Port {port} is held by {holder}. It may be another session's or the user's: don't stop or kill that process yourself; use another port, or ask the user.",
+    holder: '{label} (running {up})',
+    holderOf: '{label} from {owner} (running {up})',
+    someone: 'another process',
+  },
   // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
   cache: {
     nudgeTitle: { one: '☕ {name} goes cold in {n} minute', other: '☕ {name} goes cold in {n} minutes' },

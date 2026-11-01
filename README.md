@@ -343,6 +343,11 @@ Then open <http://localhost:4310>.
   gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
   without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
   failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Two sessions on one file, a port someone holds**: when a session is about to edit a file another session edited in
+  the last 20 minutes, its Claude is told first (read it again, don't overwrite the other's changes, ask if the work
+  clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
+  chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
+  the stuck-loop hook, so they need nothing more installed.
 
 ### Your plan and your Mac
 
