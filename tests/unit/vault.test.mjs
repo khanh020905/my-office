@@ -47,7 +47,7 @@ test('every account read once, kept small, found with or without accents, and ke
   const home = tmp(), main = path.join(home, '.claude'), other = path.join(home, '.claude-phu');
   transcript(path.join(main, 'projects', '-Users-me-app', `${SID}.jsonl`));
   transcript(path.join(main, 'projects', '-Users-me-site', `${SID2}.jsonl`), { prompt: 'thêm trang giá', reply: 'Xong trang pricing.', title: '' });
-  fs.mkdirSync(other); fs.symlinkSync(path.join(main, 'projects'), path.join(other, 'projects'));   // (an account sharing the main one's history)
+  fs.mkdirSync(other); fs.symlinkSync(path.join(main, 'projects'), path.join(other, 'projects'), 'junction');   // (an account sharing the main one's history; a junction on Windows, which needs no admin)
   let t = 1_000_000;
   const v = createVault({ dir: path.join(home, 'vault'), claudeDirs: () => [main, other], now: () => t });
   assert.equal(await v.scan(), 2);
