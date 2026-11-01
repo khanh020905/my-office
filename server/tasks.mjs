@@ -80,10 +80,18 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
     });
     proc.stderr.on('data', (c) => { t.error = String(c).trim().split('\n').pop().slice(0, 300); });
     proc.on('error', (e) => { t.error = String(e.message || e).slice(0, 300); });
+    // a process can be gone before the last of what it printed has been read (the result line: the answer itself), so
+    // its output is read to the end first; 2 s at most, as something it started may keep the pipe open after it
     proc.on('exit', (code) => {
-      running.delete(t.id);
-      if (code && !t.error) t.error = `exit ${code}`;
-      onDone?.(t);
+      let once = false;
+      const done = () => {
+        if (once) return; once = true;
+        running.delete(t.id);
+        if (code && !t.error) t.error = `exit ${code}`;
+        onDone?.(t);
+      };
+      if (proc.stdout.readableEnded) done();
+      else { proc.stdout.once('end', done); setTimeout(done, 2000); }
     });
     return true;
   }
