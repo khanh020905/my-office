@@ -28,7 +28,7 @@ export async function openUndo(s, back) {
   const go = el('button', 'btn btn--sm undo-go', tr('drawer.undo.go', { n })); go.type = 'button';
   let armT = 0;
   go.addEventListener('click', async () => {
-    if (!go.classList.contains('is-sure')) { go.classList.add('is-sure'); go.textContent = tr('drawer.undo.sure'); clearTimeout(armT); armT = setTimeout(() => { if (go.isConnected) { go.classList.remove('is-sure'); go.textContent = tr('drawer.undo.go', { n }); } }, 4000); return; }
+    if (!go.classList.contains('is-sure')) { go.classList.add('is-sure'); go.textContent = tr('drawer.undo.sure'); clearTimeout(armT); armT = setTimeout(() => { if (go.isConnected) { go.classList.remove('is-sure'); go.textContent = tr('drawer.undo.go', { n }); } }, 8000); return; }   // (8 s for the second click: a phone, a slow machine)
     go.disabled = cancel.disabled = true;
     const r = await post({ id: s.id });
     if (!r?.ok) { toast(r?.message || tr('drawer.unreachable'), 7000); openUndo(s, back); return; }

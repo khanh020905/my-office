@@ -79,7 +79,8 @@ function renderActions() {
   // the last turn's file changes, put back (server/undo.mjs): once it is over, while it rests
   if (s.status === 'rest' && s.undo?.done && !s.undo.undone) {
     const u = el('button', 'btn btn--sm'); u.type = 'button'; u.textContent = tr('drawer.undo.btn'); u.title = tr('drawer.undo.title');
-    u.addEventListener('click', () => openUndo(s, () => setTab(tab))); box.append(u);
+    // (a view of its own: no tab is selected, so the conversation, drawn again every few seconds, doesn't cover it)
+    u.addEventListener('click', () => { const back = tab; setTab('undo'); openUndo(s, () => setTab(back)); }); box.append(u);
   }
   box.append(...acctActions(s, renderActions));
   if (s.link) {
@@ -127,6 +128,7 @@ function setTab(t) {
   if (t === 'chat') { if (logItems.length) renderChat(true); else $('ds-body').replaceChildren(el('p', 'chat-empty', tr('drawer.loadingChat'))); }
   else if (t === 'subs') renderSubs(true);
   else if (t === 'pins') renderPins();   // (what you pinned for it: ui/pins.js)
+  else if (t === 'undo') return;   // (ui/undo-view.js draws it)
   else renderActivity();
   queueMicrotask(syncJump);
 }
