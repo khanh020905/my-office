@@ -29,6 +29,7 @@ for (const layout of ['pro', 'cozy', 'hq']) {
 }
 
 test('panels open and close', async ({ page }) => {
+  test.setTimeout(180_000);   // (a Mac rendering it in software takes ~100 s for all of it, before and after 1/11: not a regression)
   await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); } catch { /* private mode */ } });   // (a software-rendered page is slow enough at full quality to time out)
   const errors = watchErrors(page);
   await page.goto('/?demo&layout=pro');
