@@ -219,6 +219,7 @@ export default {
     shipper: 'Shopee courier',
     cleanHi: ['Mopping now, careful, it is slippery!', 'Floor is getting a wash, mind the wet bits.'],
     cleanBin: ['Emptying the bin first.', 'Bin is full, out it goes.'],
+    cleanLeave: ['The pantry bin is for whoever is on duty, I just do the floors.', 'Today’s rubbish is the duty rota’s, I only mop.'],
     cleanBye: ['All done, see you tomorrow!', 'Spotless. Good night!'],
     slippery: ['Oops, wet floor, going round.', 'Slippery there, the other way.'],
     shipperHi: ['Shopee delivery!', 'Shopee parcel, I will leave it at the desk!'],
@@ -363,6 +364,33 @@ export default {
     where: { going: 'Off to the pickleball court', playing: 'Playing pickleball', filming: 'Filming at the pickleball court', back: 'Pickleball done, on the way back' },
   },
   // lunch from home, warmed at the pantry's microwaves (people/comnha.js)
+  // the duty rota: the pantry's daily chores (people/duty.js, world/props/duty-board.js)
+  duty: {
+    chores: { cups: 'Wash the cups', trash: 'Take out the bin', plants: 'Water the plants', table: 'Wipe the tables' },
+    board: {
+      title: 'ON DUTY',
+      days: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      weekend: 'Weekend',
+      holiday: 'Public holiday',
+      noDuty: 'No duty rota today',
+      nobody: 'Nobody in yet, no rota',
+      doing: 'on it…',
+      owe: 'Left from yesterday: {list}',
+    },
+    say: {
+      cupsGo: ['My turn on the cups 🧽', 'Cups are piling up, washing them now 🧽'],
+      cupsDone: ['Cups all clean ✨', 'Washed and on the rack ✨'],
+      trashGo: ['Taking the bin out 🗑️', 'Nearly five, rubbish time 🗑️'],
+      trashDone: ['Bin’s done 👍', 'New bag in 👍'],
+      plantsGo: ['Morning watering 🌱', 'The plants look thirsty, on it 🌱'],
+      plantsDone: ['Plants are happy 🌿', 'All watered 🌿'],
+      tableGo: ['Wiping the pantry tables 🧻', 'Tables next 🧻'],
+      tableDone: ['Tables are clean ✨', 'All four wiped ✨'],
+      owe: ['Forgot yesterday, doing it now 🙏', 'Yesterday’s, doing it right away 🙏'],
+      called: ['Work’s in, I’ll finish this later!', 'Oh, work, back in a bit for this!'],
+    },
+    where: 'On duty: {what}',
+  },
   micro: {
     say: {
       go: ['Off to warm my lunch 🍱', 'Microwave time 🍱', 'Brought rice from home, just needs warming 🍱'],

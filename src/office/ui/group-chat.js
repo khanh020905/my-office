@@ -155,6 +155,9 @@ export function chatLife(kind, v = {}) {
     // an e-scooter under 20% (people/evswap.js): off to the battery-swap cabinet; back with a full one
     case 'evLow': if (v.id) chatSay(v.id, life('evLow', { pct: v.pct }), { key, react: ['🔋', '⚡'], reacts: 2, answer: [{ key: 'evLow', chance: 0.6 }] }); break;
     case 'evDone': if (v.id) chatSay(v.id, life('evDone'), { key, react: ['⚡', '👍'], reacts: 2, answer: [{ key: 'evDone', chance: 0.4 }] }); break;
+    // trực nhật (people/duty.js): HR's list in the morning; the morning after a chore was left undone, a grumble and a sorry
+    case 'dutyRoster': chatSay('hr', life('dutyRoster', { list: v.list }), { key, react: ['👍', '🙏'], reacts: 3, answer: [{ key: 'dutyRoster', chance: 0.6 }] }); break;
+    case 'dutyGrumble': chatSay(v.id || restingOne(), life(`duty_${v.chore}`), { key, react: ['😤', '😆', '😭'], reacts: 3 }); if (v.who) chatSay(v.who, tr('chat.reply.dutySorry'), { key: `${key}:sorry`, delay: 5000 }); break;
     case 'pickleDone': if (v.id) chatSay(v.id, life('pickleDone', { share: v.share }), { key, photo: v.photo || null, react: ['🏓', '😆', '❤️'], reacts: 4, answer: [{ key: 'pickleDone', chance: 0.8 }, { key: 'pickleDone', chance: 0.5 }] }); break;
   }
 }

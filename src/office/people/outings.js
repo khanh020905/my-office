@@ -479,7 +479,7 @@ function stepTrip(T, S) {
 export function whereabouts(w) {
   const R = w?.outing, T = (k, v) => tr(`people.where.${k}`, v);
   if (!w) return null;
-  if (!R) return w.micro ? microNow(w) : w.away ? { ic: 'home', text: T('home') } : null;   // (at the microwave: people/comnha.js)
+  if (!R) return w.micro ? microNow(w) : w.chore?.where || (w.away ? { ic: 'home', text: T('home') } : null);   // (at the microwave: people/comnha.js; a chore that says where: people/duty.js)
   // (at the till: what they are buying there; on the way down late at night: the noodles)
   if (R.kind === 'shop') return { ic: 'walk', text: R.recalled ? T('rushing') : R.stage === 'in' ? T(`buy.${R.item || 'cup'}`, { shop: R.shop }) : T(R.stage === 'back' || R.stage === 'up' ? 'fromShop' : R.night ? 'toNight' : 'toShop', { shop: R.shop }) };
   if (R.kind === 'lunch') return R.w === w ? { ic: 'coffee', text: T(R.stage === 'back' || R.stage === 'up' ? 'lunchUp' : 'lunchDown') } : null;

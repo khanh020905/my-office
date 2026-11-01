@@ -1,6 +1,7 @@
 // Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting.
 import * as THREE from 'three';
 import { t, num } from '../../i18n/index.js';
+import { TET } from '../../shared/workdays.js';
 
 export const $ = (id) => document.getElementById(id);
 // The online demo: a static export with no server behind it (next.config.mjs, OFFICE_STATIC=1). It always runs demo mode.
@@ -24,8 +25,8 @@ export const nowMs = () => (replay.on ? replay.clock : Date.now());
 let AT_SHIFT;
 export const officeNow = () => new Date(nowMs() + AT_SHIFT);
 // Decorations by date: Halloween (20/10–1/11), Christmas (12/12–31/12), Tết (two weeks before the lunar new year to
-// a week after). Settings → "Seasonal decorations" turns it off; ?season=halloween|noel|tet|none overrides it.
-const TET = { 2026: '02-17', 2027: '02-06', 2028: '01-26', 2029: '02-13', 2030: '02-03', 2031: '01-23', 2032: '02-11', 2033: '01-31' };
+// a week after: the lunar new year's days are in src/shared/workdays.js). Settings → "Seasonal decorations" turns it
+// off; ?season=halloween|noel|tet|none overrides it.
 export let SEASON;
 export const hhmm = (ts = nowMs(), sec = false) => { const d = new Date(ts); return `${pad2(d.getHours())}:${pad2(d.getMinutes())}` + (sec ? `:${pad2(d.getSeconds())}` : ''); };
 export const tint = (hex, amt) => '#' + new THREE.Color(hex).lerp(new THREE.Color('#ffffff'), amt).getHexString();

@@ -205,6 +205,7 @@ export default {
     shipper: 'Shipper Shopee',
     cleanHi: ['Cô lau nhà chút nhé, đi cẩn thận kẻo trơn!', 'Lau nhà đây, mấy đứa tránh chỗ ướt nha.'],
     cleanBin: ['Đổ rác cái đã.', 'Thùng rác đầy rồi, cô đổ nhé.'],
+    cleanLeave: ['Thùng rác pantry để bạn trực nhật đổ nha, cô lau sàn thôi.', 'Rác hôm nay của bạn trực nhật nha, cô chỉ lau nhà.'],
     cleanBye: ['Xong rồi, cô về nhé!', 'Sạch bong rồi, mai gặp nha!'],
     slippery: ['Ối, sàn ướt, đi vòng thôi.', 'Trơn đấy, vòng bên kia.'],
     shipperHi: ['Shopee giao hàng ạ!', 'Giao hàng Shopee ạ, để ở quầy nhé!'],
@@ -349,6 +350,33 @@ export default {
     where: { going: 'Đang ra sân pickleball', playing: 'Đang đánh pickleball', filming: 'Đang quay clip ở sân pickleball', back: 'Đánh pick xong, đang về' },
   },
   // cơm nhà: lunch from home warmed at the pantry's microwaves (people/comnha.js)
+  // trực nhật: the pantry's daily chores (people/duty.js, world/props/duty-board.js)
+  duty: {
+    chores: { cups: 'Rửa ly', trash: 'Đổ rác', plants: 'Tưới cây', table: 'Lau bàn pantry' },
+    board: {
+      title: 'TRỰC NHẬT',
+      days: ['Chủ nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'],
+      weekend: 'Cuối tuần',
+      holiday: 'Nghỉ lễ',
+      noDuty: 'Hôm nay không phân công trực nhật',
+      nobody: 'Chưa ai tới, chưa phân công',
+      doing: 'đang làm…',
+      owe: 'Nợ hôm qua: {list}',
+    },
+    say: {
+      cupsGo: ['Tới lượt em rửa ly 🧽', 'Đi rửa ly thôi, chất đống rồi 🧽'],
+      cupsDone: ['Ly sạch bong ✨', 'Rửa xong, úp lên giá rồi nha ✨'],
+      trashGo: ['Em đi đổ rác nha 🗑️', 'Gần 5 giờ rồi, đổ rác thôi 🗑️'],
+      trashDone: ['Đổ rác xong rồi 👍', 'Thay túi rác mới rồi nha 👍'],
+      plantsGo: ['Tưới cây buổi sáng nè 🌱', 'Cây khát nước rồi, em tưới nha 🌱'],
+      plantsDone: ['Cây tươi rói rồi 🌿', 'Tưới xong rồi 🌿'],
+      tableGo: ['Lau bàn pantry thôi 🧻', 'Em lau bàn ăn nha 🧻'],
+      tableDone: ['Bàn sạch rồi nha ✨', 'Lau xong 4 bàn rồi ✨'],
+      owe: ['Hôm qua em quên, làm liền đây 🙏', 'Nợ hôm qua, em làm ngay 🙏'],
+      called: ['Có việc rồi, lát em làm tiếp!', 'Ơ có việc, để đó em quay lại làm!'],
+    },
+    where: 'Đang trực nhật: {what}',
+  },
   micro: {
     say: {
       go: ['Đi hâm cơm cái 🍱', 'Ra pantry hâm cơm nè 🍱', 'Cơm nhà mang theo, hâm cái là ăn 🍱'],

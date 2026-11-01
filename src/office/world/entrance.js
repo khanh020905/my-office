@@ -70,6 +70,14 @@ function stairsDown(w, gone) {
   const last = w.path[w.path.length - 1];   // (held in front of the door until it is open)
   if (last) last.gate = () => { stairDoor.callUntil = state.sim + 1.2; return stairDoor.open > 0.85; };
 }
+/** Through the stairs' door and back again a few seconds later (the bin room on the landing: people/duty.js), then
+    then(). Not if the stairs aren't there: then() at once. */
+export function stairsVisit(w, secs, then) {
+  if (!STAIRS) { then(); return; }
+  w.goTo(STAIRS, () => { const e = { w, up: true, visit: then, at: state.sim + secs }; w.stairs = e; w.liftHold = true; stairQ.push(e); });
+  const last = w.path[w.path.length - 1];
+  if (last) last.gate = () => { stairDoor.callUntil = state.sim + 1.2; return stairDoor.open > 0.85; };
+}
 function updateStairs(dt) {
   for (let i = stairQ.length - 1; i >= 0; i--) {
     const e = stairQ[i], w = e.w;
@@ -79,6 +87,7 @@ function updateStairs(dt) {
       stairDoor.callUntil = state.sim + 1.8;
       if (stairDoor.open < 0.85) continue;
       w.stairs = null; w.liftHold = false; stairQ.splice(i, 1);
+      if (e.visit) { e.visit(); continue; }   // (back from the landing, not up twelve floors)
       if (w.spot === STAIRS || Math.hypot(w.pos.x - STAIRS.x, w.pos.y - STAIRS.z) < 0.3) {
         w.puffUntil = state.sim + 9;
         const text = tr('people.stairs.puff', { n: FLOOR }); w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, 4500);
