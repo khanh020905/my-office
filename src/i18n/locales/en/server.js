@@ -101,6 +101,7 @@ export default {
     holderOf: '{label} from {owner} (running {up})',
     someone: 'another process',
   },
+  deny: { over: 'This call is no longer waiting: Claude has moved on.' },
   // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
   cache: {
     nudgeTitle: { one: '☕ {name} goes cold in {n} minute', other: '☕ {name} goes cold in {n} minutes' },

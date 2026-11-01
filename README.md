@@ -348,6 +348,11 @@ Then open <http://localhost:4310>.
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
   chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
   the stuck-loop hook, so they need nothing more installed.
+- **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
+  card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
+  **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
+  otherwise the refusal stands at once and the card keeps it on record. **Copy command** to run it yourself. Phones
+  answer only when the Mac lets them approve. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 - **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
   team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
   failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note

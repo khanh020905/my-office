@@ -21,6 +21,7 @@ import { openVault } from './vault.js';
 import { toast } from './activity.js';
 import { loopCard, loopPeek } from './stuck.js';
 import { ciCard, ciPeek } from './ci-card.js';
+import { denyCard, denyPeek } from './denied-card.js';
 import { cacheWords } from './cache-words.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
@@ -135,6 +136,7 @@ function content(m) {
   }
   if (m.kind === 'work') return workCard(m);
   if (m.kind === 'loop') return loopCard(m, redrawOne);   // (a session stuck in a loop: ui/stuck.js)
+  if (m.kind === 'deny') return denyCard(m, redrawOne);   // (a call auto mode refused: ui/denied-card.js)
   if (m.kind === 'ci') return ciCard(m, redrawOne);   // (a repository's CI gone red, "Sửa luôn": ui/ci-card.js)
   if (bigEmoji(m.text)) return el('span', 'zc-bigemo', m.text);
   const t = el('span', 'zc-text');
@@ -354,7 +356,7 @@ function peek(m) {
   if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn()) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
   if (m.kind === 'work') return;   // (a card at work: its answer is the news)
-  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
+  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'deny' ? denyPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
   const box = el('span', 'zc-peek-t'); box.append(el('b', null, tr('chat.group')), el('span', null, `${m.name}: ${txt}`));
   p.replaceChildren(groupAvatar(44), box);
   p.hidden = false; p.classList.remove('is-out'); clearTimeout(peekTimer);

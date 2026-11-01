@@ -78,3 +78,13 @@ test('Windows\' hook script (--fast): nothing from an office that is down or slo
   const o = await office('{"continue":false}', 2000);
   try { const slow = await send(o.port); assert.equal(slow.code, 0); assert.equal(slow.out, ''); assert.ok(slow.ms < 1500, `took ${Math.round(slow.ms)} ms`); } finally { await o.close(); }
 });
+
+test('install also adds the hook for calls auto mode refuses: synchronous (its retry counts), waiting long enough to answer', () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-hook-')), file = path.join(dir, 'settings.json');
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', file, '--no-status'], { env: { ...process.env, HOME: dir, USERPROFILE: dir, CLAUDE_CONFIG_DIR: path.join(dir, '.claude'), OFFICE_PORT: '4310', OFFICE_DATA_DIR: dir }, stdio: 'ignore' });
+  const hooks = JSON.parse(fs.readFileSync(file, 'utf8')).hooks.PermissionDenied.flatMap((e) => e.hooks).filter((h) => h.command.includes('/hook/denied'));
+  fs.rmSync(dir, { recursive: true, force: true });
+  assert.equal(hooks.length, 1);
+  assert.ok(!hooks[0].async);
+  assert.ok(hooks[0].timeout >= 41, 'longer than the office holds it (40 s)');
+});

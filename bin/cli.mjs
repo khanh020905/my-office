@@ -36,6 +36,8 @@ const PERM_CMD = hookCmd('/hook/permission', true);
 // Claude's questions (AskUserQuestion) and plans (ExitPlanMode) are answered through PreToolUse, the documented way.
 const ASK_CMD = hookCmd('/hook/question', true);
 const ASK_MATCHER = 'AskUserQuestion|ExitPlanMode';
+// A call auto mode refused (PermissionDenied): a card in the office, and while one is open, a moment to let Claude retry.
+const DENY_CMD = hookCmd('/hook/denied', true);
 // Before each step, a quick word with the office (server/loops.mjs): a call that keeps failing the same way is blocked.
 // 0.3 s at most, and nothing printed when the office is down or slow: the call goes ahead as if there were no hook.
 const LOOP_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/loop --fast`
@@ -78,6 +80,8 @@ async function install() {
   const pre = (cfg.hooks.PreToolUse ||= []);
   if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
   if (!args.includes('--no-loop-guard') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')))) { pre.push({ hooks: [{ type: 'command', command: LOOP_CMD, timeout: 2 }] }); added++; }
+  const denied = (cfg.hooks.PermissionDenied ||= []);
+  if (!args.includes('--no-approve') && !denied.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/denied')))) { denied.push({ hooks: [{ type: 'command', command: DENY_CMD, timeout: 45 }] }); added++; }
   if (!args.includes('--no-status') && !oursStatus(cfg.statusLine)) {
     if (cfg.statusLine?.command) { await fsp.mkdir(path.dirname(STATUS_PREV), { recursive: true }); await fsp.writeFile(STATUS_PREV, JSON.stringify(cfg.statusLine)); ok(tr('cli.install.statusKept')); }
     cfg.statusLine = { type: 'command', command: STATUS_CMD, ...(cfg.statusLine?.padding != null ? { padding: cfg.statusLine.padding } : {}) };
@@ -151,6 +155,8 @@ async function doctor() {
   ask ? ok(tr('cli.doctor.ask')) : warn(tr('cli.doctor.noAsk'));
   const loop = (cfg.hooks?.PreToolUse || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')));
   loop ? ok(tr('cli.doctor.loop')) : warn(tr('cli.doctor.noLoop'));
+  const deny = (cfg.hooks?.PermissionDenied || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/denied')));
+  deny ? ok(tr('cli.doctor.denied')) : warn(tr('cli.doctor.noDenied'));
   oursStatus(cfg.statusLine) ? ok(tr('cli.doctor.status')) : warn(tr('cli.doctor.noStatus'));
   const own = otelOwner({ settings: cfg, file: SETTINGS, shell: process.env, managed: managedEnvs() });
   if (own.state === 'ours') ok(tr('cli.doctor.otel'));

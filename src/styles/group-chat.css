@@ -398,6 +398,19 @@
 .zc-ci-note { color: var(--zc-grey); font-size: 12px; }
 .zc-ci-note.is-ok { color: #1A7F37; }
 .zc-ci-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+/* a call auto mode refused (ui/denied-card.js): red while Claude waits for you, grey once decided */
+.zc-deny { display: grid; gap: 6px; min-width: 220px; max-width: 380px; padding-left: 9px; border-left: 3px solid #C9CED6; }
+.zc-deny.is-held { border-left-color: #E5484D; }
+.zc-deny-h { display: flex; align-items: center; gap: 7px; }
+.zc-deny-h b { font-size: 14.5px; font-weight: 600; }
+.zc-deny.is-held .zc-deny-h b { color: #C31818; }
+.zc-deny-ic { flex: none; font-style: normal; font-size: 13px; }
+.zc-deny-t { margin: 0; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.zc-deny-t code { padding: 1px 5px; border-radius: 4px; background: #F1F3F6; font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.zc-deny-why, .zc-deny-note, .zc-deny-left { color: var(--zc-grey); font-size: 12px; }
+.zc-deny-left { color: #C31818; font-weight: 600; }
+.zc-deny-note.is-ok { color: #1A7F37; }
+.zc-deny-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .zc .zc-work-btn.is-steer { background: #E5F1FF; color: var(--zc-blue); margin-left: auto; }
 .zc .zc-work-btn.is-steer + .is-stop { margin-left: 0; }
 .zc.is-steer .zc-reply-q { border-left-color: #F2A100; }
