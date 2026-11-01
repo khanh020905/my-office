@@ -193,6 +193,10 @@ function nextChore() {
   }
   if (!c.binned) {   // the big bin, then home
     c.binned = true;
+    if (binHooks.leave?.()) {   // (a working day: the bin is the duty rota's (people/duty.js); she mops, and says so if it is still full)
+      if (heap.scale.y > 0.5) say(c, 'people.staff.cleanLeave', null, 4500);
+      nextChore(); return;
+    }
     c.goTo(BIN_SPOT, () => {
       c.faceTarget = BIN_SPOT.face; c.anim = 'tidy'; say(c, 'people.staff.cleanBin');
       c.afterAt = state.sim + (reduceMotion ? 0.5 : 1.8);
@@ -261,10 +265,13 @@ function buildCleaningKit() {
       for (let i = 0; i < 26; i++) { g.fillStyle = `rgba(255,255,255,${0.25 + Math.random() * 0.4})`; g.fillRect(10 + Math.random() * (w - 20), Math.random() * h, 1.5 + Math.random() * 2.5, 12 + Math.random() * 40); }
     }) });
 }
-function updateBin() {   // fuller as the day goes on; emptied by the cleaner
+function updateBin() {   // fuller as the day goes on; emptied by the cleaner (or by the duty rota: binHooks.level)
   const m = minutes(), emptied = cleanDay === today() && cleanedAt >= 0 && m >= CLEAN_FROM;
-  heap.scale.y = emptied ? 0.05 : Math.min(1, Math.max(0.1, (m - 480) / 600));
+  heap.scale.y = binHooks.level?.(m) ?? (emptied ? 0.05 : Math.min(1, Math.max(0.1, (m - 480) / 600)));
 }
+/** the duty rota's say over the big bin (people/duty.js): level(m) its fill, or null for the usual; leave() true when
+    the cleaner should leave it to the rota */
+export const binHooks = { level: null, leave: null };
 
 let slowAt = 0;
 export function updateStaff(dt) {
@@ -377,6 +384,6 @@ export function setup() {
   })({ name: tr('people.staff.cleaner'), shirt: '#6FA8D6', hair: '#2B2B2B', style: 'bun', acc: null, outfit: 'shirt', pants: '#3B5F86', shoes: '#3A3A40' }, '__cleaner');
   cleaner.root.add(mopHand);
 }
-export const staff = () => ({ receptionist, cleaner, courier, delivery, strips });
+export const staff = () => ({ receptionist, cleaner, courier, delivery, strips, bin: { spot: BIN_SPOT, level: heap?.scale.y ?? 0 } });
 // for the other visitors (the postman, life/post.js): the class, the way up and back down, a line said
 export const staffKit = () => ({ Staff, arrive, depart, say });

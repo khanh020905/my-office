@@ -134,6 +134,16 @@ Then open <http://localhost:4310>.
   turns in the light, two or three minutes, "tít tít tít" (with the sound on), the next one steps up. Cá kho or mắm leaves
   smell lines over the corner and a grumble in the group chat; a lid left clipped shut pops. Then lunch at a pantry table
   or at the desk. They don't fetch the GrabFood or go down to the quán cơm (`?comnha` to see it now).
+- **Daily duty rota** (trực nhật, company floor): a whiteboard on the pantry wall names today's four chores and who does
+  them, the turn moving on each working day among the people of the projects here (HR posts the list in the group chat
+  in the morning): wash the cups, which pile up at the sink through the day (the morning coffee, a glass at lunch, the
+  afternoon cà phê) and are washed one by one after the nap; take the bin bag out to the bin room on the stairs' landing
+  at about five; water the plants in the morning; wipe the pantry's tables. Each does it while resting, never in the
+  middle of work. A chore never got to is owed the next morning: the group chat grumbles ("Hôm qua ai trực mà ly chất
+  đống vậy 😤"), the one whose turn it was says sorry and does it first thing (the board says so in red; the bin spills
+  over meanwhile). The 18:30 cleaner mops the floors and leaves the bin to the rota. No duty at the weekend or on public
+  holidays (the official Vietnamese holidays, Tết and Ngày Văn hóa Việt Nam included). Kept in the browser, per day
+  (`?duty` to see every chore now).
 - **Farewells** (tiệc chia tay): a project that really was at work (on two days or more) and has had no session for 30
   days (Settings → More: 14, 30, 60 or 90, or off) gets a last afternoon in office hours: its person comes in once more
   with the company card on a lanyard and packs the desk into a cardboard box (the little plant, the mug, the photo frame)

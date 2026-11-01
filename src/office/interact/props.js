@@ -28,6 +28,8 @@ import { BIL } from '../world/props/billiards.js';
 import { tableClick } from '../people/billiards.js';
 import { KTV } from '../world/props/karaoke.js';
 import { MW, mwMeshes, openOven } from '../world/props/microwave.js';
+import { boardMeshes } from '../world/props/duty-board.js';
+import { dutyText } from '../people/duty.js';
 import { boothClick } from '../people/karaoke.js';
 import { neonG, neonM } from '../world/props/neon.js';
 import { SOFA, cat, catGo, petCat } from '../world/props/cat.js';
@@ -168,6 +170,8 @@ export function buildProps() {
     if (GTV) prop('gametv', { name: tr('props.gametv.name'), hint: tr('props.gametv.hint'), meshes: meshesOf(GTV.g), act: tvClick });
     if (BIL) prop('billiards', { name: tr('props.billiards.name'), hint: tr('props.billiards.hint'), place: 'lounge', meshes: [...meshesOf(BIL.g), ...meshesOf(BIL.rack)], act: tableClick });
     // the microwaves (people/comnha.js): a click opens a free one's door, or shuts it
+    // the duty board in the pantry (people/duty.js): today's names under the pointer, and in a toast when tapped
+    if (boardMeshes().length) prop('dutyBoard', { name: tr('props.dutyBoard.name'), hintFn: dutyText, meshes: boardMeshes(), act: () => toast(dutyText()) });
     if (MW.g) prop('microwave', { name: tr('props.microwave.name'), hint: tr('props.microwave.hint'), place: 'coffee', meshes: mwMeshes(), act: () => { const O = MW.ovens.find((o) => o.stage === 'idle' && !o.by); if (O) { openOven(O, O.openGoal < 1); sfx.play('click'); } } });
     if (KTV) prop('karaoke', { name: tr('props.karaoke.name'), hint: tr('props.karaoke.hint'), meshes: meshesOf(KTV.g), act: boothClick });
   }
@@ -187,6 +191,7 @@ export function buildProps() {
 }
 export function propHint(p) {
   if (p.plant != null) return plantThirsty(p.plant) ? tr('props.plant.thirsty') : p.hint;
+  if (p.hintFn) return p.hintFn();
   if (p.desk == null) return p.hint;
   const s = deskSession(p.desk);
   if (p.bin) return s ? tr('props.bin.hint', { name: dn(s), pct: s.usage?.ctx ? Math.round((s.usage.ctx / (s.usage.ctxMax || 200000)) * 100) + '%' : tr('props.bin.unknown') }) : tr('props.bin.empty');

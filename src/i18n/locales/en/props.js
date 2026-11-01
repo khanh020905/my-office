@@ -8,6 +8,7 @@ export default {
   board: { name: 'Whiteboard', hint: 'What agents are working on, and your own to-dos' },
   lift: { name: 'Elevator', hint: 'Click to call it · who came and went today' },
   door: { name: 'Entrance', hint: 'Who came and went today' },
+  dutyBoard: { name: 'Duty board' },
   microwave: { name: 'Microwaves', hint: 'At noon, a line of people warming lunch from home. Click to open or shut a door' },
   coffee: { namePro: 'Dining room', name: 'Coffee corner', hint: 'Brew a cup (someone will come for it), see who is resting' },
   meeting: { name: 'Meeting room', hint: 'Subagents in a meeting' },
