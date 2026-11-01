@@ -67,8 +67,7 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
       - run: npx playwright install --with-deps chromium
-      # the smoke tests only: a runner has no GPU, and the whole 3D office in software rendering is too slow for the
-      # rest (every test passes on a machine with a GPU: npm run test:e2e)
+      # the smoke tests only, for a quick answer: every test runs in e2e-full.yml, split across runners
       - run: npm run test:e2e:smoke
       - uses: actions/upload-artifact@v4
         if: failure()
