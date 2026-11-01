@@ -12,7 +12,8 @@ import crypto from 'node:crypto';
 import zlib from 'node:zlib';
 import { fileURLToPath } from 'node:url';
 import { execFile, execFileSync, spawn } from 'node:child_process';
-import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
+import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes, fmtDur as sysDur } from './system.mjs';
+import { createOverlap, EDIT_TOOLS, fileOf, portInUse } from './overlap.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
@@ -1038,6 +1039,8 @@ async function onHook(p) {
     case 'PostToolUse': {
       if (!agent) { s.inTool = false; trackTodos(s, p); trackBackground(s, p); }
       count(s, p.tool_name, agent);
+      if (EDIT_TOOLS.has(p.tool_name)) overlap.edited(sid, fileOf(p.tool_input, p.cwd || s.cwd));   // (another session about to edit it is told: /hook/loop)
+      if (p.tool_name === 'Bash') { const r = p.tool_response; portClash(s, sid, portInUse(typeof r === 'string' ? r : r && typeof r === 'object' ? `${r.stdout || ''}\n${r.stderr || ''}` : '')); }
       if (s.status === 'wait') s.status = 'work';
       if (p.tool_name === 'Bash' && /\bgit\b/.test(String(p.tool_input?.command || ''))) setTimeout(pollGit, 1200);   // a commit or push shows up at once
       const m = p.tool_name === 'Bash' && DEPLOY_RE.exec(String(p.tool_input?.command || ''));
@@ -1049,6 +1052,7 @@ async function onHook(p) {
     }
     case 'PostToolUseFailure': {
       if (!agent) s.inTool = false;
+      if (p.tool_name === 'Bash') portClash(s, sid, portInUse(p.error));
       if (s.status === 'wait') s.status = 'work';
       const c = await classifyVi(p.tool_name, p.tool_input), runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);
       // (a failing test run is the test board's red lamp, not a failure that counts towards an incident)
@@ -1474,6 +1478,41 @@ function loopReply(p) {
     : r.deny ? { hookSpecificOutput: { hookEventName: 'PreToolUse', permissionDecision: 'deny', permissionDecisionReason: `${tr('server.loop.deny', { n: r.deny.n })}${hint ? `\n\n${hint}` : ''}` } }
       : hint ? { hookSpecificOutput: { hookEventName: 'PreToolUse', additionalContext: hint } } : null;
   return { out, sig: r.sig };
+}
+/* ---------- "Chặn ghi đè và giành cổng" (server/overlap.mjs): two sessions on one file, a port another process holds.
+   Told to the session's Claude with its next tool call (the synchronous hook above), and said in the chat. ---------- */
+const overlap = createOverlap();
+const nameOfSid = (sid) => { const x = bySid(sid); return x ? x.title || x.name : String(sid || '').slice(0, 8); };
+// before a call: another session's recent edit of the same file (once per pair and file), a word kept for this session
+function overlapNote(p) {
+  if (p.hook_event_name && p.hook_event_name !== 'PreToolUse') return null;
+  const sid = p.session_id; let text = overlap.take(sid), line = null;
+  if (EDIT_TOOLS.has(p.tool_name)) {
+    const file = fileOf(p.tool_input, p.cwd || bySid(sid)?.cwd), hit = overlap.before(sid, file);
+    if (hit) {
+      const other = nameOfSid(hit.other), time = new Date(hit.at).toTimeString().slice(0, 5);
+      text = [tr('server.overlap.file', { name: other, time }), text].filter(Boolean).join('\n\n');
+      line = tr('chat.overlap.file', { a: nameOfSid(sid), b: other, file: base(file) });
+    }
+  }
+  return text || line ? { text, line } : null;
+}
+// what Claude should know, added to whatever the loop guard answers (a deny's reason, its hint) or on its own
+function withContext(out, text) {
+  if (out?.continue === false) return out;   // (stopping anyway)
+  const h = out?.hookSpecificOutput;
+  if (h?.permissionDecision === 'deny') return { ...out, hookSpecificOutput: { ...h, permissionDecisionReason: `${h.permissionDecisionReason || ''}\n\n${text}`.trim() } };
+  return { ...out, hookSpecificOutput: { ...h, hookEventName: 'PreToolUse', additionalContext: [h?.additionalContext, text].filter(Boolean).join('\n\n') } };
+}
+// a command that couldn't have its port: who holds it (a dev server the Mac panel knows, and the session that started
+// it), said in the chat and to this session's Claude (never to kill another session's server); once per port per window
+async function portClash(s, sid, port) {
+  if (!port || !overlap.portOnce(sid, port)) return;
+  const d = (await sysSnapshot().catch(() => null))?.devServers?.find((x) => x.ports.includes(port));
+  const holder = !d ? tr('server.overlap.someone') : d.owner?.name ? tr('server.overlap.holderOf', { label: d.label, owner: d.owner.name, up: sysDur(d.up) }) : tr('server.overlap.holder', { label: d.label, up: sysDur(d.up) });
+  chat.system(tr('chat.overlap.port', { name: s.title || s.name, port, holder }));
+  overlap.note(sid, tr('server.overlap.port', { port, holder }));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} port ${port} clash ${sid}${d ? ` held by pid ${d.pid}` : ''}\n`).catch(() => {});
 }
 // Stop and a hint from the card (any page that may give work: the Mac, a phone when it is allowed)
 function loopAct(b, mac) {
@@ -2197,9 +2236,11 @@ const server = http.createServer((req, res) => {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     loopHookAt = Date.now();
     readJson(req, 4_000_000).then((p) => {
-      let r = null; try { r = p && loopReply(p); } catch (err) { console.error('loop', err); }
-      res.writeHead(200, { 'Content-Type': 'application/json' }).end(r?.out ? JSON.stringify(r.out) : '');
+      let r = null, x = null; try { r = p && loopReply(p); x = p && overlapNote(p); } catch (err) { console.error('loop', err); }
+      const out = x?.text ? withContext(r?.out, x.text) : r?.out;
+      res.writeHead(200, { 'Content-Type': 'application/json' }).end(out ? JSON.stringify(out) : '');
       if (r?.sig) onLoop(bySid(p.session_id), r.sig);   // (after the answer: Claude Code isn't kept waiting for the chat)
+      if (x?.line) chat.system(x.line);
     }).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
