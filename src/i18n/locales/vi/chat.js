@@ -24,7 +24,7 @@ export default {
     deploy: '🚀 Deploy', deployPrompt: 'Deploy bản mới nhất theo đúng quy trình của dự án này (đọc CLAUDE.md trước), xong thì báo.',
     today: '📝 Tóm tắt hôm nay', todayPrompt: 'Tóm tắt ngắn hôm nay đã làm gì trong dự án này: commit, file đã sửa, việc còn dở.',
     errors: '🩺 Kiểm tra lỗi', errorsPrompt: 'Kiểm tra lỗi build, lint và kiểu hiện tại của dự án này, sửa nếu có rồi báo.',
-    edit: 'Lệnh nhanh (chạm để điền vào ô nhắn)', label: 'Tên nút', prompt: 'Nội dung gửi Claude', add: '＋ Thêm', reset: 'Mặc định', save: 'Lưu', saved: 'Đã lưu lệnh nhanh',
+    edit: 'Lệnh nhanh (chạm để điền vào ô nhắn)', label: 'Tên nút', prompt: 'Nội dung gửi Claude', add: '＋ Thêm', reset: 'Mặc định', save: 'Lưu', saved: 'Đã lưu lệnh nhanh', keep: '⭐ Lưu câu này', kept: 'Đã lưu thành nút “{label}”. Đổi tên ở ✎', full: 'Đã đủ 12 lệnh nhanh: xoá bớt một cái rồi lưu',
   },
   readMore: 'Xem thêm',
   loop: {

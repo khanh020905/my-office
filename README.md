@@ -426,6 +426,9 @@ Then open <http://localhost:4310>.
   add up to 4 photos. The Mac runs it as `claude -p`; its commands ask for approval like any session's, and its answer
   comes back to the chat. From a phone only once "Give Claude work from a phone" is on, on the Mac; at most 3 at a
   time and 12 an hour.
+- **Quick commands**: writing "To" a conversation, a row of chips over the input fills in a prompt you use often (run
+  the tests, commit and push, deploy…). ✎ edits them (up to 12, kept on the Mac, the same on your phone), and
+  **⭐ Save this** keeps what you are writing as one more in one tap, named after its first words.
 - **Phone work as background sessions** (the phone window, under "Give Claude work from a phone"; off by default): each
   piece of work is a Claude Code background session (`claude --bg`, agent view, Claude Code 2.1.257 or newer) instead of
   `claude -p`. Its card still shows its steps, Stop and its answer, from the session's own hooks; an approval or a
