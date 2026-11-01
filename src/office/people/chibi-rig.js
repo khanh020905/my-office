@@ -41,6 +41,15 @@ function getShadowTex() {
 }
 const lighten = (c, k) => new THREE.Color(c).lerp(new THREE.Color('#ffffff'), k);
 const darken = (c, k) => new THREE.Color(c).multiplyScalar(k);
+// What a rig made by makeChibi holds on the GPU (its own geometries and materials: a set per character), given back
+// when the rig is replaced, as on a look change. The textures it uses are shared (the shadow, the steam) and stay.
+export function disposeRig(root) {
+  root.traverse((o) => {
+    if (!o.isMesh && !o.isLine && !o.isPoints) return;
+    o.geometry?.dispose();
+    for (const m of [].concat(o.material || [])) m.dispose();
+  });
+}
 const plainMat = (color, o = {}) => new THREE.MeshStandardMaterial({ color, roughness: 0.6, ...o });
 // a wisp of steam over a hot mì ly (one, shared)
 let steam = null;

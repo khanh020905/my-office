@@ -1,7 +1,7 @@
 // Workers: one character per session or subagent, what they do and where they walk.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat, wearLanyard } from './chibi-rig.js';
+import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat, wearLanyard, disposeRig } from './chibi-rig.js';
 import { state } from '../core/state.js';
 import { PRO, SEASON, V2, el, fmtAgo, nowMs, officeNow, rand, randInt, reduceMotion, replay, short, tint, wrapAngle } from '../core/env.js';
 import { ACT, ANIM_AT, bubbleText, verb } from '../ui/event-text.js';
@@ -216,8 +216,9 @@ export function setup() {
       if (SEASON === 'noel') wearHat(P);
       root.position.copy(this.root.position); root.rotation.copy(this.root.rotation);
       root.add(this.tagObj, this.bubbleObj);
-      const parent = this.root.parent; if (parent) parent.remove(this.root);
+      const parent = this.root.parent, was = this.root; if (parent) parent.remove(was);
       this.root = root; this.P = P;
+      disposeRig(was);   // (its name tag and bubble moved over above; the rest goes back to the GPU)
       root.traverse((o) => { o.userData.worker = this; });
       if (parent) parent.add(root);
       if (this.dressed) wearOuter(P, true, this.cfg);
