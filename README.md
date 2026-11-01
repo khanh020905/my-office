@@ -436,6 +436,11 @@ Then open <http://localhost:4310>.
   The chat's ••• → **History vault**: search everything that was said (with or without Vietnamese accents), read a
   conversation laid out, and copy `claude --resume <id>` while its transcript is still there. `OFFICE_VAULT=0` turns
   it off.
+- **Weekly prompt report** (the vault's second tab, `?vault=report`): the last 7 days of what you wrote to Claude,
+  looked at with the chat's prompt-helper rules: how many were clear enough for Claude to act at once (against the
+  week before), the habits that cost a round trip (a screenshot with a word or two, "this one" with nothing to point
+  at, "make it different" with no criterion, several jobs in one message, too short) with a tip for each, and real
+  examples from the week. Worked out on this computer, no model involved; a line in the chat on Monday morning.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and

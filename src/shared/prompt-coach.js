@@ -155,7 +155,7 @@ export function coach({ text = '', photos = 0, quoted = false } = {}) {
       const ph = phraseAt(toks, i, NUMBERED), j = i + (ph?.length || 0);
       if (ph && /^\d{1,2}$/.test(toks[j]?.k || '') && toks.length - (ph.length + 1) >= 4) hit = { i, n: ph.length + 1 };
     }
-    if (!hit && /^\s*\d{1,2}\s+\p{L}/u.test(src) && toks.length >= 5 && !inList(toks[1], UNIT)) hit = { i: 0, n: 1 };
+    if (!hit && /^\s*\d{1,2}\s+\p{L}/u.test(src) && toks.length >= 5 && !inList(toks[1], UNIT) && !/\n\s*2\s*[.):-]?\s+\p{L}/u.test(src)) hit = { i: 0, n: 1 };   // (not a list you numbered yourself: "1 …\n2. …")
     if (hit) out.push({ id: 'dangling', phrase: said(hit) });
   }
   // "khác đi", "hay hơn", "làm giống thật đừng làm qua loa": a quality with nothing to measure it by

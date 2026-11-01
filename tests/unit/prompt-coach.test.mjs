@@ -29,6 +29,9 @@ test('pointing at something the message does not show: dangling', () => {
   // something to point at: a photo, a quote, a file, the message it answers; or a plain count, or an answer
   assert.ok(!ids('cái này lỗi rồi', 1).includes('dangling'));
   assert.ok(!ids('cái này lỗi rồi', 0, true).includes('dangling'));
+  // a list you numbered yourself is not a number pointing at nothing
+  assert.ok(!ids('1 gởi lại tôi nên điền gì\n2. làm 2 và 3 nhé').includes('dangling'));
+  assert.ok(!ids('1 sửa header cho gọn\n2 chạy lại test').includes('dangling'));
   for (const t of ['cái này trong Header.tsx bị lỗi', 'đổi “Đăng nhập” thành “Vào” ở cái này', 'cái này: src/office/ui/chat.js', '2 cái nút bị lệch quá', '3 phút là đủ', 'chọn số 4', 'phương án 2']) assert.ok(!ids(t).includes('dangling'), t);
 });
 

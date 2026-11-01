@@ -17,6 +17,7 @@ import { createOverlap, EDIT_TOOLS, fileOf, portInUse } from './overlap.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
 import { createVault } from './vault.mjs';
+import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
@@ -1729,6 +1730,25 @@ async function vaultOut(q, mac) {
   const items = (await vault.search(String(q.get('q') || '').slice(0, 200))).map(vaultItem);
   return { ok: true, stats: vault.stats(), items };
 }
+/* ---------- "Phiếu điểm prompt" (server/prompt-report.mjs): the last 7 days of what you wrote, against the 7 before,
+   with the chat's prompt-helper rules; the vault drawer's second tab, and a line in the chat on Monday morning ---------- */
+let reportCache = null;
+async function reportOut() {
+  if (!vault) return { ok: false, off: true };
+  if (reportCache && Date.now() - reportCache.at < 10 * 60e3) return reportCache.out;
+  const now = Date.now(), D = 864e5;
+  const out = { ok: true, now: promptReport(await vault.prompts(now - 7 * D, now)), prev: promptReport(await vault.prompts(now - 14 * D, now - 7 * D)) };
+  reportCache = { at: now, out };
+  return out;
+}
+const delta = (a, b) => (a == null || b == null ? '' : `${a - b >= 0 ? '+' : '−'}${Math.abs(a - b)}`);
+setInterval(async () => {
+  const d = new Date(), week = new Date(d.getFullYear(), d.getMonth(), d.getDate()).toLocaleDateString('sv');
+  if (!vault || d.getDay() !== 1 || d.getHours() < 9 || prefs.get('reportWeek') === week) return;
+  prefs.set('reportWeek', week);
+  const r = await reportOut().catch(() => null);
+  if (r?.ok && r.now.n >= 10) chat.system(tr('chat.report.monday', { pct: r.now.pct, delta: delta(r.now.pct, r.prev.pct) || '–', n: r.now.n }));
+}, 30 * 60e3).unref();
 function othersOut() {
   return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
     return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
@@ -2737,6 +2757,7 @@ const server = http.createServer((req, res) => {
     stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
+  if (url.pathname === '/api/vault/report') { reportOut().then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the prompt report (server/prompt-report.mjs)
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
