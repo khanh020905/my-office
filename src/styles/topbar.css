@@ -5,6 +5,12 @@
 .logo { width: 28px; height: 28px; display: grid; place-items: center; color: #F08A3E; }
 .logo svg { width: 28px; height: 28px; }
 .tb-actions { display: flex; align-items: center; gap: 8px; min-width: 0; }
+/* 3D | 2D (ui/lite.js): the office, or the plain list of the sessions */
+.tb-view { display: flex; gap: 2px; margin-right: auto; padding: 2px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--side); }
+.tb-view button { all: unset; padding: 4px 10px; border-radius: 7px; font: 600 .74rem/1.2 var(--font); color: var(--muted); cursor: pointer; }
+.tb-view button:hover { color: var(--ink); }
+.tb-view button:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.tb-view button[aria-pressed="true"] { background: var(--card-3); color: var(--ink); }
 .tb-btn { position: relative; height: 38px; display: inline-flex; align-items: center; gap: 8px; padding: 0 14px; background: var(--card); border: 1px solid var(--line-2); border-radius: 10px; font-size: .8rem; font-weight: 600; cursor: pointer; white-space: nowrap; transition: background .15s, border-color .15s; }
 .tb-btn:hover { background: var(--card-2); border-color: rgba(255, 255, 255, .2); }
 .tb-btn[aria-pressed="true"] { border-color: var(--accent-line); background: var(--accent-soft); }

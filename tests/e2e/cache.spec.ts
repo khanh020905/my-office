@@ -57,11 +57,11 @@ test('no word from Claude Code (an older version): guessed from the end of the t
   await page.addInitScript(() => { try { localStorage.setItem('office-lite', 'on'); } catch { /* private mode */ } });
   const s = await restingSession(request, `cg-${Date.now() % 1e6}`);
   await page.goto('/');
-  await page.locator('#rail-list .ri', { hasText: s.name }).click({ timeout: 120_000 });
+  await page.locator('#lite .v2-row', { hasText: s.name }).click({ timeout: 120_000 });   // (the 2D view: its own list of the sessions)
   // (an API key's five minutes, or a subscription's hour once the office has heard of plan limits, as it has when
   // what-eats-your-plan's spec ran first on the same office)
   await expect(page.locator('#ds-cache')).toHaveText(/^Prompt cache still warm for ~(?:[345]|5[5-9]|60) minutes \(estimated\)$/);
-  await expect(page.locator('#lite .lite-card', { hasText: s.name })).toContainText(/☕ warm (?:[345]|5[5-9]|60) min/);
+  await expect(page.locator('#lite .v2-row', { hasText: s.name }).locator('.v2-sub')).toContainText(/☕ warm (?:[345]|5[5-9]|60) min/);
   await s.end();
   expect(errors).toEqual([]);
 });
