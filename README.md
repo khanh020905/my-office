@@ -430,6 +430,12 @@ Then open <http://localhost:4310>.
   phone locked. Turned on on each phone (⚙ → More → 📱) over the https address; on an iPhone, add My Office to the home
   screen first (Share → Add to Home Screen: it becomes an app, full screen, with its icon). The Mac's phone window counts
   the phones and sends a test. Subscriptions are posted only to the browsers' own push services.
+- **History vault**: Claude Code deletes a conversation's transcript after 30 days (`cleanupPeriodDays`). The office
+  keeps its words in `data/vault`: what you wrote and what Claude answered, its title, folder and times, from every
+  account, read every 3 hours. No screenshots, commands or their output, so a month of transcripts (GBs) is a few MB.
+  The chat's ••• → **History vault**: search everything that was said (with or without Vietnamese accents), read a
+  conversation laid out, and copy `claude --resume <id>` while its transcript is still there. `OFFICE_VAULT=0` turns
+  it off.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and
