@@ -23,7 +23,7 @@ async function office(body, wait = 0) {
 // the PreToolUse command `install` writes for that port (into a settings file of the test's own)
 function loopCommand(port) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'office-hook-')), file = path.join(dir, 'settings.json');
-  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', file, '--no-status'], { env: { ...process.env, HOME: dir, USERPROFILE: dir, OFFICE_PORT: String(port), OFFICE_DATA_DIR: dir }, stdio: 'ignore' });
+  execFileSync(process.execPath, [path.join(ROOT, 'bin', 'cli.mjs'), 'install', '--settings', file, '--no-status'], { env: { ...process.env, HOME: dir, USERPROFILE: dir, CLAUDE_CONFIG_DIR: path.join(dir, '.claude'), OFFICE_PORT: String(port), OFFICE_DATA_DIR: dir }, stdio: 'ignore' });
   const cfg = JSON.parse(fs.readFileSync(file, 'utf8'));
   const hooks = cfg.hooks.PreToolUse.flatMap((e) => e.hooks).filter((h) => h.command.includes('/hook/loop'));
   fs.rmSync(dir, { recursive: true, force: true });

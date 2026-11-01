@@ -9,7 +9,7 @@ import { cleanRewrite, createRewriter, rewriteSystem } from '../../server/rewrit
 const FAKE = path.resolve(import.meta.dirname, '../e2e/fake-claude.sh');
 function setup(opts = {}) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'office-rewrite-'));
-  const rw = createRewriter({ claude: () => ({ file: FAKE }), env: () => ({ ...process.env, HOME: home }), dir: path.join(home, 'rewrite'), ...opts });
+  const rw = createRewriter({ claude: () => ({ file: FAKE }), env: () => ({ ...process.env, HOME: home, CLAUDE_CONFIG_DIR: path.join(home, '.claude') }), dir: path.join(home, 'rewrite'), ...opts });
   const args = () => { try { return fs.readFileSync(path.join(home, '.fake-claude-rewrite.log'), 'utf8'); } catch { return ''; } };   // (every argument in [brackets])
   return { rw, args };
 }
