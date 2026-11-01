@@ -13,7 +13,7 @@ import { promisify } from 'node:util';
 
 const gzip = promisify(zlib.gzip), gunzip = promisify(zlib.gunzip);
 const SID = /^[\w-]{8,80}$/;
-const MAX_TEXT = 20000, MAX_MSGS = 4000;
+const MAX_TEXT = 20000, MAX_MSGS = 4000, V = 2;   // (V: what a record holds; one kept by an older office is read again once: 2 added ph)
 // what the editor and Claude Code put around what you typed (and Claude Code's own notes), taken out; a paste's tags too
 const WRAPS = /<(system-reminder|ide_opened_file|ide_selection|command-name|command-message|command-args|local-command-stdout|local-command-stderr|local-command-caveat)>[\s\S]*?<\/\1>/g;
 export function cleanPrompt(text) {
@@ -22,7 +22,8 @@ export function cleanPrompt(text) {
 // for search: lower case, without Vietnamese accents ("sửa lỗi" is found by "sua loi")
 export const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
 
-/** One transcript read into its words: { title, cwd, start, end, msgs: [{ r: 'u' | 'c', t, at }] }. */
+/** One transcript read into its words: { title, cwd, start, end, msgs: [{ r: 'u' | 'c', t, at, ph? }] } (ph: how many
+ *  screenshots went with what you wrote, for the prompt report: server/prompt-report.mjs). */
 export async function readTranscript(file) {
   const out = { title: '', cwd: '', start: 0, end: 0, msgs: [] };
   let custom = null, ai = null;
@@ -36,12 +37,12 @@ export async function readTranscript(file) {
     if (j.isSidechain || j.isMeta) continue;
     if (!out.cwd && typeof j.cwd === 'string') out.cwd = j.cwd;
     const at = Date.parse(j.timestamp) || 0, c = j.message?.content;
-    let r = '', t = '';
-    if (j.type === 'user') { r = 'u'; t = cleanPrompt(typeof c === 'string' ? c : Array.isArray(c) ? c.filter((b) => b?.type === 'text').map((b) => b.text).join('\n') : ''); if (/^\[Request interrupted/.test(t)) t = ''; }
+    let r = '', t = '', ph = 0;
+    if (j.type === 'user') { r = 'u'; t = cleanPrompt(typeof c === 'string' ? c : Array.isArray(c) ? c.filter((b) => b?.type === 'text').map((b) => b.text).join('\n') : ''); if (/^\[Request interrupted/.test(t)) t = ''; ph = Array.isArray(c) ? c.filter((b) => b?.type === 'image').length : 0; }
     else if (j.type === 'assistant') { r = 'c'; t = Array.isArray(c) ? c.filter((b) => b?.type === 'text').map((b) => b.text).join('\n').trim() : ''; }
     if (!t) continue;
     if (at) { out.start ||= at; out.end = Math.max(out.end, at); }
-    if (out.msgs.length < MAX_MSGS) out.msgs.push({ r, t: t.length > MAX_TEXT ? `${t.slice(0, MAX_TEXT)}…` : t, at });
+    if (out.msgs.length < MAX_MSGS) out.msgs.push({ r, t: t.length > MAX_TEXT ? `${t.slice(0, MAX_TEXT)}…` : t, at, ...(ph && { ph }) });
   }
   out.title = (custom ?? ai ?? '').trim();
   return out;
@@ -78,13 +79,13 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
           const file = path.join(root, p.name, f); let st; try { st = await fsp.stat(file); } catch { continue; }
           seen.add(sid);
           const was = index.get(sid);
-          if (was && was.size === st.size && was.mtime === Math.round(st.mtimeMs) && !was.gone) continue;
+          if (was && was.size === st.size && was.mtime === Math.round(st.mtimeMs) && !was.gone && was.v === V) continue;
           let rec; try { rec = await readTranscript(file); } catch { continue; }
           if (!rec.msgs.length) continue;
-          const body = await gzip(JSON.stringify({ v: 1, sid, ...rec }));
+          const body = await gzip(JSON.stringify({ v: V, sid, ...rec }));
           try { await fsp.writeFile(path.join(CD, `${sid}.json.gz.tmp`), body); await fsp.rename(path.join(CD, `${sid}.json.gz.tmp`), path.join(CD, `${sid}.json.gz`)); } catch { continue; }
           const first = rec.msgs.find((m) => m.r === 'u')?.t || '';
-          index.set(sid, { sid, title: rec.title, cwd: rec.cwd, start: rec.start, end: rec.end || Math.round(st.mtimeMs), n: rec.msgs.length, first: first.slice(0, 300), size: st.size, mtime: Math.round(st.mtimeMs), gone: 0, bytes: body.length });
+          index.set(sid, { v: V, sid, title: rec.title, cwd: rec.cwd, start: rec.start, end: rec.end || Math.round(st.mtimeMs), n: rec.msgs.length, first: first.slice(0, 300), size: st.size, mtime: Math.round(st.mtimeMs), gone: 0, bytes: body.length });
           kept++;
         }
       }
@@ -120,6 +121,16 @@ export function createVault({ dir, claudeDirs, now = Date.now, log = () => {} })
     }
     return out;
   }
+  /** What you wrote between two times, from every conversation kept: [{ t, ph, at, sid, title }], oldest first. */
+  async function prompts(from, to) {
+    const out = [];
+    for (const e of index.values()) {
+      if (e.end < from || (e.start && e.start > to)) continue;
+      const rec = await get(e.sid); if (!rec) continue;
+      for (const m of rec.msgs) if (m.r === 'u' && m.at >= from && m.at < to) out.push({ t: m.t, ph: m.ph || 0, at: m.at, sid: e.sid, title: e.title });
+    }
+    return out.sort((a, b) => a.at - b.at);
+  }
   const stats = () => { let gone = 0, bytes = 0; for (const e of index.values()) { if (e.gone) gone++; bytes += e.bytes || 0; } return { n: index.size, gone, bytes, at: scannedAt }; };
-  return { scan, search, get, stats };
+  return { scan, search, get, prompts, stats };
 }

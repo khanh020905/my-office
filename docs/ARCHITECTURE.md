@@ -24,6 +24,7 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `system.mjs` | The Mac panel: memory, CPU, disk, dev servers, idle Claude sessions, cleanups; safe stops (a process is only signalled if its start time matches what you saw). |
 | `usage.mjs` | Tokens and API-price equivalents read from transcripts. |
 | `vault.mjs` | "Kho lịch sử": the words of every conversation (your prompts, Claude's text, title, folder, times) kept in data/vault after Claude Code deletes the transcript; one gzip each and an index, read from every account's projects folder every 3 hours; search with or without accents. |
+| `prompt-report.mjs` | "Phiếu điểm prompt": a week of what you wrote (from the vault), looked at with the chat's prompt-helper rules (src/shared/prompt-coach.js): how many were clear, which habits cost a round trip, one example of each. No model. |
 | `trophies.mjs` | All-time totals and milestones for the trophy cabinet (`data/totals.json`). |
 | `redact.mjs` | Masks secrets in anything shown in the UI. |
 | `git.mjs` | Git per session folder (branch, uncommitted files, commits and pushes by watching HEAD and the upstream) and the latest CI run through `gh`. |
@@ -199,7 +200,7 @@ engine switches to demo mode and talks to no API.
 | `ui/timelapse.js` | 156 | A 15-second clip of the office to share: square (1080 × 1080) for a feed or vertical (1080 × 1920) for Reels, TikTok and Shorts, the camera turning slowly round the floor, people at four times their pace, the day running into the evening (a clock in the corner from 8:00 to 23:00, the lights coming on at six), a title at the start and the day's numbers over the last two and a half seconds, with an original lo-fi tune under it (clip-music.js; it can be turned off). |
 | `ui/tips.js` | 115 | The first visit: a short tour of what you can click. |
 | `ui/topbar.js` | 232 | Phone modal, notifications, the night switch. |
-| `ui/vault.js` | 119 | "Kho lịch sử" (server/vault.mjs): every conversation's words, kept after Claude Code deletes its transcript (30 days by default). |
+| `ui/vault.js` | 165 | "Kho lịch sử" (server/vault.mjs): every conversation's words, kept after Claude Code deletes its transcript (30 days by default). |
 | `ui/whiteboard.js` | 282 | The whiteboard: agents' tasks and your own sticky notes. |
 | `ui/wrapped.js` | 107 | The week in review: a 1080 × 1350 picture card (the office as it looks right now, then the week's numbers) to save as a PNG or copy, for sharing. |
 | `world/backdrops/beach.js` | 117 | Beach backdrop: sand, surf, palms, umbrellas and loungers. |

@@ -26,3 +26,21 @@
 .vl-who { font-size: .68rem; font-weight: 700; color: var(--muted); }
 .vl-txt { font-size: .84rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
 .vl-md { font-size: .84rem; line-height: 1.55; overflow-wrap: anywhere; }
+/* the weekly prompt report */
+.vl-tabs { margin: 12px 18px 0; }
+.vr-hero { display: grid; gap: 3px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.vr-pct { font-size: 2.6rem; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.vr-what { font-size: .82rem; font-weight: 600; }
+.vr-hero small { font-size: .74rem; color: var(--muted); }
+.vr-sec { margin-top: 14px; padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); display: grid; gap: 10px; }
+.vr-sec h3 { margin: 0; font-size: .8rem; font-weight: 700; }
+.vr-habit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.vr-habit b { font-size: .8rem; font-weight: 600; }
+.vr-n { font: .76rem var(--mono); color: var(--muted); text-align: right; }
+.vr-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.vr-bar i { display: block; height: 100%; background: var(--amber); }
+.vr-tip { grid-column: 1 / -1; font-size: .72rem; line-height: 1.45; color: var(--muted); }
+.vr-ex { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vr-ex:first-of-type { padding-top: 0; border-top: 0; }
+.vr-quote { margin: 0; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.vr-hint { font-size: .74rem; color: var(--amber); line-height: 1.45; }
