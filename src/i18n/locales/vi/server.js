@@ -81,6 +81,13 @@ export default {
     resting: '{name} đang nghỉ rồi, không có gì để dừng.',
     gone: 'Phiên này đã đóng.',
   },
+  ci: {
+    pushTitle: '🔴 CI của {repo} đỏ rồi',
+    pushBody: '{wf} trên nhánh {branch} vừa hỏng. Mở nhóm chat, bấm "Sửa luôn" để Claude sửa.',
+    fix: 'CI "{wf}" trên nhánh {branch} vừa đỏ: {url}\nĐọc log của bước hỏng (gh run view {run} --log-failed), tìm nguyên nhân, sửa, rồi chạy lại đúng phần kiểm tra đó trên máy. Xong thì báo lại: hỏng vì sao, đã sửa gì. Chưa push khi tôi chưa bảo.',
+    gone: 'Thẻ CI này không còn nữa.',
+    notRed: 'CI này không còn đỏ nữa.',
+  },
   overlap: {
     file: '[My Office] Phiên “{name}” trên máy này vừa sửa file này lúc {time}. Đọc lại file ngay trước khi sửa và đừng ghi đè thay đổi của phiên đó; nếu việc hai bên đụng nhau, dừng lại hỏi người dùng.',
     port: '[My Office] Cổng {port} đang bị {holder} giữ. Đó có thể là việc của phiên khác hoặc của người dùng: đừng tự dừng hay kill tiến trình đó; chạy ở cổng khác, hoặc hỏi người dùng.',

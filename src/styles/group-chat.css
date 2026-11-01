@@ -384,6 +384,20 @@
 .zc-loop-form[hidden] { display: none; }
 .zc-loop-in { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--zc-line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--zc-ink); background: #fff; }
 .zc-loop-in:focus { outline: 2px solid var(--zc-blue); outline-offset: -1px; }
+/* a repository's CI gone red, "Sửa luôn" (ui/ci-card.js): the stuck card's look, a link to the run */
+.zc-ci { display: grid; gap: 6px; min-width: 220px; max-width: 360px; padding-left: 9px; border-left: 3px solid #E5484D; }
+.zc-ci:not(.is-red) { border-left-color: #C9CED6; }
+.zc-ci.is-green { border-left-color: #2DA44E; }
+.zc-ci-h { display: flex; align-items: center; gap: 7px; }
+.zc-ci-h b { font-size: 14.5px; font-weight: 600; color: #C31818; }
+.zc-ci:not(.is-red) .zc-ci-h b { color: var(--zc-grey); }
+.zc-ci-ic { flex: none; font-style: normal; font-size: 13px; }
+.zc-ci-t { margin: 0; font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.zc-ci-link { justify-self: start; font-size: 12.5px; color: var(--zc-blue); text-decoration: none; }
+.zc-ci-link:hover { text-decoration: underline; }
+.zc-ci-note { color: var(--zc-grey); font-size: 12px; }
+.zc-ci-note.is-ok { color: #1A7F37; }
+.zc-ci-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .zc .zc-work-btn.is-steer { background: #E5F1FF; color: var(--zc-blue); margin-left: auto; }
 .zc .zc-work-btn.is-steer + .is-stop { margin-left: 0; }
 .zc.is-steer .zc-reply-q { border-left-color: #F2A100; }

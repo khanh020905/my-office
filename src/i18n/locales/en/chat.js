@@ -42,6 +42,16 @@ export default {
     hintLost: 'The turn ended before Claude read the hint. Send it again to carry on the conversation.',
     hintRest: 'Sent on to the conversation',
   },
+  ci: {
+    title: 'CI is red',
+    line: '{wf} failed on {repo}, branch {branch}',
+    open: 'See the run',
+    fix: '🛠 Fix it',
+    sent: 'Handed to Claude to fix',
+    note: 'Noted: Claude fixes it right after its current step',
+    green: '✓ CI is green again',
+    over: 'There is a newer run: see the card below',
+  },
   overlap: {
     file: "⚠️ {a} is about to edit {file}, which {b} just edited. {a}'s Claude was told to read it again first.",
     port: "⚠️ {name} needs port {port}, but {holder} holds it. If it isn't needed any more, stop it in the Mac panel.",

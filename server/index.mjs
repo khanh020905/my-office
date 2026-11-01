@@ -262,10 +262,38 @@ const git = createGit({
   onRepo: (r) => { for (const s of sessionsIn(r.root)) broadcast({ k: 'sess', s: pub(s) }); },
   onCommit: (r, subject) => gitEvent(r, 'commit', clip(redact(oneLine(subject)), 64)),
   onPush: (r) => gitEvent(r, 'push', r.branch),
-  onCi: (r) => gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName),
+  onCi: (r) => { gitEvent(r, r.ci === 'red' ? 'cired' : 'cigreen', r.ciName); ciCard(r); },
   onRelease: (r, tag) => gitEvent(r, 'release', clip(redact(oneLine(tag)), 40)),   // (four of them off to the photo booth: people/photobooth.js)
 });
 const pollGit = () => git.poll([...sessions.values()].map((s) => s.cwd));
+
+/* ---------- "Sửa luôn": a repository's CI gone red. A card in the chat from the session working in it; its button hands
+   Claude the failing run to fix (a note into the conversation while it works, else a message that carries it on, as
+   "Gửi tới" does). Phones may use it only when the Mac allows work from phones. ---------- */
+const runIdOf = (url) => /\/actions\/runs\/(\d+)/.exec(url || '')?.[1] || '';
+function ciCard(r) {
+  const red = chat.state.msgs.findLast((m) => m.kind === 'ci' && m.ci?.repo === r.name && m.ci?.branch === r.branch && m.ci?.state === 'red');
+  if (r.ci === 'green') { if (red) chat.setCi(red.id, { state: 'green' }); return; }
+  if (r.ci !== 'red' || !r.ciUrl || chat.state.msgs.some((m) => m.kind === 'ci' && m.ci?.url === r.ciUrl)) return;   // (this run's card is there already: an office started again)
+  const s = sessionsIn(r.root)[0]; if (!s) return;
+  if (red) chat.setCi(red.id, { state: 'over' });   // (an older run of the branch: the new card is the one to act on)
+  chat.ciCard(s.id, { repo: r.name, branch: r.branch, wf: r.ciName, url: r.ciUrl, sess: s.id, sid: s.sid || '', dir: s.cwd, state: 'red', fix: null });
+  pushOut({ title: tr('server.ci.pushTitle', { repo: r.name }), body: tr('server.ci.pushBody', { wf: r.ciName || 'CI', branch: r.branch }), tag: `ci-${r.name}`, url: '/?chat' });
+}
+// the card's "Sửa luôn": { id } (the card) -> [status, { ok, how: 'note' | 'sent', message }]
+async function ciFix(b, who) {
+  const m = chat.byId(String(b?.id || ''));
+  if (m?.kind !== 'ci') return [404, { ok: false, message: tr('server.ci.gone') }];
+  const c = m.ci;
+  if (c.state !== 'red') return [409, { ok: false, message: tr('server.ci.notRed') }];
+  const text = tr('server.ci.fix', { wf: c.wf || 'CI', branch: c.branch, url: c.url, run: runIdOf(c.url) || c.url });
+  const s = (c.sid && bySid(c.sid)) || [...sessions.values()].find((x) => x.id === c.sess) || null;
+  const busy = !!s?.sid && s.pid && (s.status !== 'rest' || s.busy);
+  const [code, out] = busy ? await steerTo({ sid: s.sid, text }, who) : await giveWork(s?.sid ? { sid: s.sid, text } : { dir: c.dir, text }, who);
+  if (code === 200) chat.setCi(m.id, { fix: busy ? 'note' : 'sent' });
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ci fix ${c.repo}@${c.branch} from ${who}: ${code === 200 ? (busy ? 'note' : 'sent') : out?.code || code}\n`).catch(() => {});
+  return [code, code === 200 ? { ok: true, how: busy ? 'note' : 'sent' } : out];
+}
 
 /* ---------- each project's working life (server/tenure.mjs): the farewell after a long quiet, the return ---------- */
 // (a folder's project as the page names it: its repository's folder, else its own)
@@ -2225,7 +2253,7 @@ const server = http.createServer((req, res) => {
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
   // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2540,6 +2568,16 @@ const server = http.createServer((req, res) => {
       if (b?.op === 'official') { json(res, 200, { ok: tenure.markOfficial(String(b.name || '').slice(0, 200)) }); return; }
       if (b?.op === 'farewell') { const name = String(b.name || '').slice(0, 200); json(res, 200, { ok: tenure.markFarewell(name, farewellDays(), liveProjects().has(name)) }); return; }
       json(res, 400, { ok: false });
+    });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/ci') {   // a red CI's card: { id } -> "Sửa luôn"
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then(async (b) => {
+      if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
+      const [code, out] = await ciFix(b, mac ? 'mac' : `phone ${clientIp(req)}`).catch(() => [500, { ok: false }]);
+      json(res, code, out);
     });
     return;
   }

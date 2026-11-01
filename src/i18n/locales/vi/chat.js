@@ -41,6 +41,16 @@ export default {
     hintLost: 'Lượt đã xong trước khi Claude đọc gợi ý. Gửi lại để nhắn tiếp cuộc trò chuyện.',
     hintRest: 'Đã nhắn tiếp cuộc trò chuyện',
   },
+  ci: {
+    title: 'CI đỏ',
+    line: '{wf} hỏng trên nhánh {branch} của {repo}',
+    open: 'Xem lần chạy',
+    fix: '🛠 Sửa luôn',
+    sent: 'Đã giao cho Claude sửa',
+    note: 'Đã chen lời: Claude sửa ngay sau bước đang làm',
+    green: '✓ CI xanh lại rồi',
+    over: 'Có lần chạy mới hơn: xem thẻ bên dưới',
+  },
   overlap: {
     file: '⚠️ {a} sắp sửa {file}, file mà {b} vừa sửa. Claude của {a} đã được nhắc đọc lại trước khi sửa.',
     port: '⚠️ {name} cần cổng {port} nhưng {holder} đang giữ. Không cần nữa thì dừng nó ở bảng Máy Mac.',

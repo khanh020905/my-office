@@ -85,6 +85,14 @@ export default {
     resting: '{name} is already resting: nothing to stop.',
     gone: 'This session has closed.',
   },
+  // a repository's CI gone red: the chat card's "Fix it" hands Claude the failing run
+  ci: {
+    pushTitle: '🔴 {repo}: CI is red',
+    pushBody: '{wf} on {branch} just failed. Open the group chat and tap "Fix it" to have Claude fix it.',
+    fix: 'CI "{wf}" on branch {branch} just went red: {url}\nRead the failing step\'s log (gh run view {run} --log-failed), find the cause, fix it, then run that same check here. When done, tell me why it failed and what you changed. Don\'t push until I say so.',
+    gone: 'This CI card is gone.',
+    notRed: 'This CI is no longer red.',
+  },
   // two sessions on one file, a port another process holds (server/overlap.mjs): said to Claude with its next call
   overlap: {
     file: "[My Office] Another session on this computer, “{name}”, edited this file at {time}. Read the file again right before editing it and don't overwrite that session's changes; if the two pieces of work clash, stop and ask the user.",

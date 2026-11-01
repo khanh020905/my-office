@@ -348,6 +348,11 @@ Then open <http://localhost:4310>.
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
   chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
   the stuck-loop hook, so they need nothing more installed.
+- **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
+  team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
+  failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note
+  at its next step; a resting one carries its conversation on. The card says when the CI is green again. From a phone
+  only when work from phones is allowed.
 
 ### Your plan and your Mac
 
