@@ -343,6 +343,11 @@ Then open <http://localhost:4310>.
   gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
   without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
   failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Two sessions on one file, a port someone holds**: when a session is about to edit a file another session edited in
+  the last 20 minutes, its Claude is told first (read it again, don't overwrite the other's changes, ask if the work
+  clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
+  chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
+  the stuck-loop hook, so they need nothing more installed.
 - **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
   team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
   failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note
@@ -437,6 +442,9 @@ Then open <http://localhost:4310>.
   add up to 4 photos. The Mac runs it as `claude -p`; its commands ask for approval like any session's, and its answer
   comes back to the chat. From a phone only once "Give Claude work from a phone" is on, on the Mac; at most 3 at a
   time and 12 an hour.
+- **Quick commands**: writing "To" a conversation, a row of chips over the input fills in a prompt you use often (run
+  the tests, commit and push, deploy…). ✎ edits them (up to 12, kept on the Mac, the same on your phone), and
+  **⭐ Save this** keeps what you are writing as one more in one tap, named after its first words.
 - **Phone work as background sessions** (the phone window, under "Give Claude work from a phone"; off by default): each
   piece of work is a Claude Code background session (`claude --bg`, agent view, Claude Code 2.1.257 or newer) instead of
   `claude -p`. Its card still shows its steps, Stop and its answer, from the session's own hooks; an approval or a

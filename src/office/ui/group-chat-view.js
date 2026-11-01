@@ -453,13 +453,26 @@ setInterval(() => { if (root && !root.hidden) drawToCache(); }, 20_000);
 let quick = null;
 const QUICK0 = () => ['test', 'commit', 'deploy', 'today', 'errors'].map((k) => ({ label: tr(`chat.quick.${k}`), prompt: tr(`chat.quick.${k}Prompt`) }));
 async function loadQuick() { const r = await fetch(`/api/quick${tq()}`).then((x) => x.json()).catch(() => null); quick = r?.list?.length ? r.list : QUICK0(); drawQuick(); }
+let keepChip = null;   // "⭐ Lưu câu này": shown while what you are writing isn't one of them yet
+const canKeep = () => !!quick && input.value.trim().length >= 6 && !quick.some((q) => q.prompt === input.value.trim());
 function drawQuick() {
   if (!quickEl) return;
   quickEl.hidden = !target || !quick;
   if (quickEl.hidden) return;
   const chip = (label, fn, cls = '') => { const b = el('button', `zc-quick-c ${cls}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+  keepChip = chip(tr('chat.quick.keep'), keepQuick, 'is-keep'); keepChip.hidden = !canKeep();
+  keepChip.addEventListener('pointerdown', (e) => e.preventDefault());   // (the input keeps its focus and the keyboard)
   quickEl.replaceChildren(...quick.map((q) => chip(q.label, () => { input.value = q.prompt; syncBar(); input.dispatchEvent(new Event('input')); input.focus(); })),
-    chip('✎', editQuick, 'is-edit'));
+    keepChip, chip('✎', editQuick, 'is-edit'));
+}
+// what you are writing, kept as a quick command in one tap: named after its first words (✎ renames it)
+async function keepQuick() {
+  const text = input.value.trim(); if (!text || !quick) return;
+  if (quick.length >= 12) { toast(tr('chat.quick.full'), 5000); editQuick(); return; }
+  const first = text.split('\n')[0].trim(), label = first.length > 22 ? `${first.slice(0, 21).trimEnd()}…` : first;
+  const r = await fetch(`/api/quick${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list: [...quick, { label, prompt: text }] }) }).then((x) => x.json()).catch(() => null);
+  if (!r?.ok) { toast(tr('drawer.unreachable')); return; }
+  quick = r.list.length ? r.list : QUICK0(); drawQuick(); toast(tr('chat.quick.kept', { label }), 5000);
 }
 function editQuick() {
   mentionEl.hidden = moreEl.hidden = stickersEl.hidden = true;
@@ -842,7 +855,7 @@ function build() {
   bar = el('form', 'zc-bar');
   input = el('textarea', 'zc-in'); input.rows = 1; input.maxLength = 600;
   input.placeholder = tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
-  input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; coachLater(); });
+  input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; coachLater(); if (keepChip) keepChip.hidden = !canKeep(); });
   input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } if (e.key === 'Escape') { if (steerTo) setSteer(null); else if (replyTo) setReply(null); else toggle(false); } });
   // the phone's 🎤: speak into the input (the browser's speech recognition, in the office's language)
   let stopMic = null;
