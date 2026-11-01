@@ -485,6 +485,15 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-quick-ed .zc-quick-c.is-save').click();
   await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Lint' })).toBeVisible();
   expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Run the linter.');
+  // ⭐ keeps what you are writing as one more, in one tap, named after its first words; not for one already kept
+  const keep = zc.locator('.zc-quick .zc-quick-c.is-keep');
+  await expect(keep).toBeHidden();
+  await zc.locator('.zc-in').fill('Check the bundle size of the landing page and list the three biggest imports');
+  await keep.click();
+  await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Check the bundle size…' })).toBeVisible();
+  expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Check the bundle size of the landing page and list the three biggest imports');
+  await expect(keep).toBeHidden();   // (that text is one of them now)
+  await zc.locator('.zc-in').fill('');
   // a photo with what you write: from this device, made smaller, read by Claude from its path
   const chooser = page.waitForEvent('filechooser');
   await zc.locator('.zc-bar .zc-photo-btn, .zc-toolbar .zc-photo-btn').first().click();

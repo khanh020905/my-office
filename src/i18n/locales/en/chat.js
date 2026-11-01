@@ -24,7 +24,7 @@ export default {
     deploy: '🚀 Deploy', deployPrompt: 'Deploy the latest the way this project does it (read CLAUDE.md first), and tell me when it’s done.',
     today: '📝 Today', todayPrompt: 'Sum up in short what was done in this project today: commits, files changed, what is left.',
     errors: '🩺 Check errors', errorsPrompt: 'Check this project’s build, lint and type errors now, fix any, and report.',
-    edit: 'Quick commands (a tap fills the input)', label: 'Button', prompt: 'What it sends Claude', add: '＋ Add', reset: 'Defaults', save: 'Save', saved: 'Quick commands saved',
+    edit: 'Quick commands (a tap fills the input)', label: 'Button', prompt: 'What it sends Claude', add: '＋ Add', reset: 'Defaults', save: 'Save', saved: 'Quick commands saved', keep: '⭐ Save this', kept: 'Saved as “{label}”. Rename it with ✎', full: '12 quick commands already: remove one, then save',
   },
   readMore: 'Read more',
   // a session stuck in a loop (server/loops.mjs): its card
