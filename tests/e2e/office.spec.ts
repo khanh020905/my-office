@@ -1275,6 +1275,13 @@ test('the machine drawer says why it is slow, closes idle sessions in one go and
   expect(segs).toBeGreaterThan(2);
   await expect(body.locator('.held-legend li')).toHaveCount(segs);
   await expect(body.locator('.row--ide .ide-parts li').first()).toBeVisible();
+  // the Claude sessions as you know them: the conversation's title, the app it runs in and since when, the one you are in
+  const you = body.locator('.row--you');
+  await expect(you).toHaveCount(1);
+  await expect(you.locator('.row-name')).toContainText('New hero section and WebP images');
+  await expect(you.locator('.row-badge--you')).toHaveText("you're talking here");
+  await expect(you.locator('.row-sub').first()).toHaveText(/^Cursor · opened .*\d\d:\d\d · ~\/projects\/landing-page$/);
+  await expect(body.locator('.row-name', { hasText: 'Cart pagination and shipping fees' })).toBeVisible();
   // the main action asks first, then (in the demo) does nothing on a real machine. Both clicks in one go: the drawer is
   // rebuilt every 5 seconds and the question goes away after 4.5, longer than a slow page takes between two steps.
   await expect(body.locator('.verdict-acts .btn--primary')).toBeVisible({ timeout: 10_000 });

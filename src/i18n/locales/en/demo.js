@@ -17,6 +17,8 @@ export default {
   },
   // the pretend Mac: what to stop, quit and clean up
   mac: {
+    // the conversations' titles, as Claude Code names them (the Mac panel's Claude sessions)
+    titles: { 'shop-api': 'Cart pagination and shipping fees', 'landing-page': 'New hero section and WebP images', 'data-pipeline': 'Duplicate orders in the ETL', 'mobile-app': 'Google sign-in on the login screen', 'docs-site': 'Installation guide', 'infra': 'Staging Terraform changes' },
     devTitle: 'Stop next dev · port 3000',
     devDetail: '~/projects/landing-page · running 2 d 3 h · CPU 290% · RAM 2.3 GB',
     lostTitle: 'Stop forgotten vite · port 5173',

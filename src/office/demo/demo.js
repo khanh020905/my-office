@@ -125,8 +125,9 @@ function demoBattery() {
 }
 export function demoMac() {
   const GBb = 1024 ** 3, now = Math.round(Date.now() / 1000), list = [...sessions.values()];
-  const claude = list.map((s, i) => ({ pid: 52000 + i, start: now - 3600 * (i + 1), name: s.name, dir: s.dir, busy: s.status !== 'rest', idle: s.status === 'rest' ? Math.round((Date.now() - s.lastAt) / 1000) + 3600 * i : 0, mem: (260 + i * 90) * 1024 ** 2, remote: i === 0 }));
   const owner = list.find((s) => s.desk >= 0 && s.name === 'landing-page') || list.find((s) => s.desk >= 0);
+  const claude = list.map((s, i) => ({ pid: 52000 + i, start: now - 3600 * (i + 1), name: s.name, dir: s.dir, busy: s.status !== 'rest', idle: s.status === 'rest' ? Math.round((Date.now() - s.lastAt) / 1000) + 3600 * i : 0, mem: (260 + i * 90) * 1024 ** 2, remote: i === 0,
+    title: tr(`demo.mac.titles.${s.name}`), app: ['VS Code', 'Cursor', 'Terminal', 'VS Code', 'Antigravity IDE', 'Terminal'][i % 6], agents: s.subs?.length || 0, you: s === owner }));
   const dev = { pid: 41001, start: now - 2 * 86400 - 3 * 3600, label: 'next dev', ports: [3000], dir: '~/projects/landing-page', up: 2 * 86400 + 3 * 3600, cpu: 290, mem: 2.3 * GBb,
     owner: owner ? { sid: owner.id, name: owner.name, alive: true } : null };
   const lost = { pid: 41007, start: now - 9 * 3600, label: 'vite', ports: [5173], dir: '~/projects/old-prototype', up: 9 * 3600, cpu: 2, mem: 0.7 * GBb, owner: { sid: 'demo-gone', name: 'old-prototype', alive: false } };
