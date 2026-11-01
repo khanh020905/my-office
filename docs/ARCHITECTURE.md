@@ -180,7 +180,7 @@ engine switches to demo mode and talks to no API.
 | `ui/group-chat.js` | 210 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
-| `ui/lite.js` | 49 | List mode: the sessions as cards, no 3D. |
+| `ui/lite.js` | 143 | The 2D view: every session as a row, no 3D (the office keeps a frame a second behind it). |
 | `ui/look-switch.js` | 22 | Switching the character look. |
 | `ui/mac-drawer.js` | 684 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
