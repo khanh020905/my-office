@@ -64,8 +64,8 @@ const standBy = (page: Page, kind: string, v: View) => page.evaluate(([kind, v])
 test('walking into Điện Máy Xanh: the blue sign with the yellow runner, the người xanh dancing, a kettle paid at the till', async ({ page }) => {
   test.setTimeout(180_000);
   const errors = watchErrors(page);
-  // (in Ho Chi Minh City it is the ninth chain: one more walk-in than the default makes it a room)
-  await open(page, 'at=17:40&walkins=9');
+  // (in Ho Chi Minh City it is the tenth chain, after Cộng Cà Phê: two more walk-ins than the default make it a room)
+  await open(page, 'at=17:40&walkins=10');
   await toStreet(page);
   const at = atShop(page, 'dmx');
   await at(0, 6.5); await page.waitForTimeout(2000);
@@ -98,7 +98,7 @@ test('Điện Máy Xanh further off: its painted front (the sign, the TV wall be
   test.setTimeout(150_000);
   const errors = watchErrors(page);
   // where its front is (the same city, the same fronts), then the default: too far off to walk into, painted
-  await open(page, 'at=16:00&walkins=9');
+  await open(page, 'at=16:00&walkins=10');
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.street!.doors().some((x) => x.key === 'dmx')), { timeout: 20_000 }).toBe(true);
   const d = await page.evaluate(() => (window as unknown as Win).__office!.street!.doors().find((x) => x.key === 'dmx')!);
   await open(page, 'at=16:00');
