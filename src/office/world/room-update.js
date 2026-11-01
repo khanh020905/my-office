@@ -22,6 +22,7 @@ import { STATIONS } from '../people/navigation.js';
 import { updateCoffeeQueue } from '../people/breaks.js';
 import { colorOf, leaving, npcs, sessions, subs, workers } from '../people/workers.js';
 import { updateSeason } from '../life/rain.js';
+import { updateLiftService } from '../life/lift-service.js';
 import { applyWeather } from '../life/weather.js';
 import { macSnap } from '../ui/mac-drawer.js';
 import { doorKick } from '../interact/props.js';
@@ -75,7 +76,7 @@ export function updateRoom(dt, t) {
   });
   updateCoffeeQueue();
   updateSeason(dt, t);
-  if (lift) updateLift(dt);
+  if (lift) { updateLift(dt); updateLiftService(); }   // (and the lift's servicing after a restart: life/lift-service.js)
   else {
     const busyDoor = [...all, ...subs.values(), ...leaving].some((w) => w.pos.x < -6.2 && Math.abs(w.pos.y - DZ) < 1.3);
     doorPivot.rotation.y += ((busyDoor || doorKick > t ? 1.25 : 0) - doorPivot.rotation.y) * Math.min(1, dt * 5);

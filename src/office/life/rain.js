@@ -50,8 +50,9 @@ export function wetSign() {
 
 export function setup() {
   /* ---------- rainy days at the entrance: an umbrella stand always; when it really rains outside (weather on), an open
-     umbrella drying on the floor and a yellow "wet floor" sign ---------- */
-  RAIN_AT = PRO ? { stand: [-7.62, 4.72], umbrella: [-6.25, 4.12, 0.5], sign: [-4.2, 3.78, 0.6] } : { stand: [-7.6, 2.75], umbrella: [-6.9, 3.2, 0.9], sign: [-5.6, 0.4, 0.4] };
+     umbrella drying on the floor and a yellow "wet floor" sign (the company floor's stand on the lift's left: the stairs'
+     door is on its right) ---------- */
+  RAIN_AT = PRO ? { stand: [-7.74, 2.0], umbrella: [-6.25, 4.12, 0.5], sign: [-4.2, 3.78, 0.6] } : { stand: [-7.6, 2.75], umbrella: [-6.9, 3.2, 0.9], sign: [-5.6, 0.4, 0.4] };
   { const [x, z] = RAIN_AT.stand, g = new THREE.Group(); g.position.set(x, 0, z); scene.add(g);
     put(g, cyl(0.13, 0.11, 0.5, mat('#3A3F47', { roughness: 0.45, metalness: 0.3 }), 18), 0, 0.25, 0);
     put(g, new THREE.Mesh(new THREE.TorusGeometry(0.13, 0.012, 6, 20).rotateX(Math.PI / 2), metal), 0, 0.5, 0);

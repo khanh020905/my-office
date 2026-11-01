@@ -5,6 +5,7 @@ import { CHAIR_IDLE, chairs } from '../world/desks.js';
 import { sessions, subs, workers } from '../people/workers.js';
 import { chatAct, chatApply, chatLeft, chatLoad } from '../ui/group-chat.js';
 import { setTrophies } from '../life/trophies.js';
+import { setLiftService } from '../life/lift-service.js';
 import { addFeed, queueFeed, queueUi, renderFeed, toast } from '../ui/activity.js';
 import { closeSession, drM } from '../ui/session-drawer.js';
 import { acctLogin, acctMoved, acctSwitched, limitWarned, liveWindows, loadMac, renderLimits, renderMac } from '../ui/mac-drawer.js';
@@ -238,6 +239,7 @@ export function applyMsg(d, quiet = false) {
       if (d.build) { if (state.build && d.build !== state.build) reloadSoon(); else state.build = d.build; }   // (the office was updated: this page is an older one)
       state.todos = d.todos || []; onTodos();
       if (d.trophies) setTrophies(d.trophies);
+      if (d.lift) setLiftService(d.lift);   // (the lift's servicing after the server started: life/lift-service.js)
       state.limits = d.limits || null; state.limitsNote = d.limitsNote || ''; for (const w of liveWindows()) if (w.pct >= 80) limitWarned.add(`${w.key}:${w.resetsAt}:${w.pct >= 95 ? 95 : 80}`); renderLimits();
       $('btn-phone').hidden = false; if ($('btn-phone-top')) $('btn-phone-top').hidden = !state.isLocal;   // (on a phone: its PIN, and what the Mac allows it)
       $('btn-bell').hidden = !('Notification' in window) || !window.isSecureContext;

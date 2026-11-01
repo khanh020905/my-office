@@ -13,7 +13,7 @@ import { PRO, STATIC, V2, officeNow, rand, replay } from '../core/env.js';
 import { TOKEN } from '../net/live.js';
 import { scene } from '../scene/renderer.js';
 import { mat } from '../scene/blocks.js';
-import { DZ, LIFT_X, lift, liftArrive } from '../world/entrance.js';
+import { DZ, LIFT_X, lift, liftArrive, liftDown } from '../world/entrance.js';
 import { THEME, THEMES } from '../world/backdrops/index.js';
 import { DESK_SPOTS, DOOR_IN, DOOR_OUT, STATIONS, allocate } from './navigation.js';
 import { showMeal } from './breaks.js';
@@ -57,14 +57,14 @@ export function walk(w, S, pts, cb, face) {
   w.pose = 'stand'; w.phase = 'walk'; w.onArrive = cb;
 }
 export const here = (w) => ({ x: w.pos.x, z: w.pos.y });
-// down to the street: the lift (wait for it, step in, the doors shut, down) or out of the door, then unseen a moment
+// down to the street: the lift (wait for it, step in, the doors shut, down; the stairs while it is serviced) or out of
+// the door, then unseen a moment
 export function goDown(w, R, cb) {
   const stage = R.stage, gone = () => { if (!live(R, stage)) return; w.offstage = true; later(lift ? 3 : 1, () => live(R, stage) && cb()); };
   w.goTo(DOOR_IN, () => {
     if (!live(R, stage)) return;
     if (!lift) { w.goTo(DOOR_OUT, gone); return; }
-    w.anim = 'idle'; w.faceTarget = DOOR_IN.face;
-    w.liftWait = () => w.goTo(DOOR_OUT, () => { w.faceTarget = Math.PI / 2; w.liftRide = gone; });
+    liftDown(w, gone);
   });
 }
 export function outside(w, S, at) { w.offstage = false; w.street = true; w.ground = S.pavement; w.pos.set(at.x, at.z); w.spot = { x: at.x, z: at.z, face: w.face }; }

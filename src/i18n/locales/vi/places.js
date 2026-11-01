@@ -80,6 +80,7 @@ export default {
     titleLift: 'Thang máy',
     sub: 'Mỗi session mới đi vào bằng cửa này, đóng session thì đi ra',
     subLift: 'Session mới đi thang máy lên; đóng session thì khoác áo, đeo balo, đi thang xuống',
+    subService: 'Đang bảo trì vài phút sau khi văn phòng khởi động lại: mọi người đi thang bộ bên cạnh',
     came: '{name} vào văn phòng',
     went: '{name} ra về',
     empty: 'Chưa ai vào hay ra từ khi văn phòng mở.',
