@@ -17,6 +17,7 @@ import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { openBurn } from './burn.js';
+import { openVault } from './vault.js';
 import { toast } from './activity.js';
 import { loopCard, loopPeek } from './stuck.js';
 import { cacheWords } from './cache-words.js';
@@ -779,7 +780,10 @@ function drawMore() {
   // what eats the plan (ui/burn.js): from the chat too, so a phone reaches it
   const burn = el('button', 'zc-more-o'); burn.type = 'button'; burn.append(icon('chart'), el('span', null, tr('burn.open')));
   burn.addEventListener('click', () => { moreEl.hidden = true; openBurn(); });
-  moreEl.replaceChildren(task, burn, at, form);
+  // every conversation's words, kept after Claude Code deletes them (ui/vault.js)
+  const vault = el('button', 'zc-more-o'); vault.type = 'button'; vault.append(icon('book'), el('span', null, tr('vault.open')));
+  vault.addEventListener('click', () => { moreEl.hidden = true; openVault(); });
+  moreEl.replaceChildren(task, burn, vault, at, form);
 }
 function drawMembers() {
   const rows = [];

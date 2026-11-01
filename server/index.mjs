@@ -15,6 +15,7 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes } from './system.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
+import { createVault } from './vault.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
@@ -1644,6 +1645,23 @@ function scanAccounts() {
     repick();
   }
 }
+/* ---------- "Kho lịch sử" (server/vault.mjs): the words of every conversation, kept after Claude Code deletes its
+   transcript (30 days by default). Every account's projects folder, read 90 s after the office starts, then every 3
+   hours; searched and read from the vault drawer (ui/vault.js). OFFICE_VAULT=0 turns it off. ---------- */
+const vault = process.env.OFFICE_VAULT === '0' ? null : createVault({ dir: path.join(DATA_DIR, 'vault'), claudeDirs: () => [CLAUDE_DIR, ...otherDirs], log: (s) => console.log(s) });
+if (vault) { setTimeout(() => vault.scan().catch(() => {}), 90_000).unref(); setInterval(() => vault.scan().catch(() => {}), 3 * 3600e3).unref(); }
+// what the drawer shows (secrets masked, as everywhere the office shows what was typed)
+const vaultItem = (x) => ({ ...x, title: redact(x.title), first: redact(x.first), cwd: tilde(x.cwd), ...(x.snip && { snip: redact(x.snip) }) });
+async function vaultOut(q, mac) {
+  if (!vault) return { ok: false, off: true };
+  if (q.get('sid')) {
+    const rec = await vault.get(String(q.get('sid'))); if (!rec) return { ok: false };
+    return { ok: true, rec: { ...rec, title: redact(rec.title), cwd: tilde(rec.cwd), msgs: rec.msgs.map((m) => ({ ...m, t: redact(m.t) })) } };
+  }
+  if (mac && q.has('fresh')) await vault.scan().catch(() => {});   // (read again now: the Mac's own button, and the tests)
+  const items = (await vault.search(String(q.get('q') || '').slice(0, 200))).map(vaultItem);
+  return { ok: true, stats: vault.stats(), items };
+}
 function othersOut() {
   return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
     return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
@@ -2640,6 +2658,7 @@ const server = http.createServer((req, res) => {
     stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
+  if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {
     sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, claude: claudeRows(snap.claude), auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
