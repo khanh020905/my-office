@@ -144,6 +144,17 @@ Then open <http://localhost:4310>.
   over meanwhile). The 18:30 cleaner mops the floors and leaves the bin to the rota. No duty at the weekend or on public
   holidays (the official Vietnamese holidays, Tết and Ngày Văn hóa Việt Nam included). Kept in the browser, per day
   (`?duty` to see every chore now).
+- **Quarterly fire drill** (diễn tập PCCC, company floor): on the first working day of each quarter HR pins the notice
+  in the group chat, and at 15:00 the fire alarm rings (with the sound on) and the horn-strobes on the walls flash. The
+  lift goes down to the ground floor and parks; HR, the floor's fire marshal in a red armband, calls everyone out, and
+  every person on the floor (working or not, the receptionist, the director) walks down the stairs, never the lift,
+  HR last. With the city outside they gather at an assembly point on the pavement by a green "ĐIỂM TẬP KẾT" standee;
+  HR takes the roll on her clipboard ("Có!") and reports the count and the time it took; the guard, the other marshal,
+  lights a practice fire in a steel tray and shows the powder extinguisher (shake, pull the pin, aim at the base,
+  squeeze), the fire goes out, a round of applause, and everyone goes back up in the lift. Purely for show: the
+  sessions keep working throughout. As Vietnam's fire law has it (Luật PCCC và CNCH 2024; Nghị định 105/2025/NĐ-CP,
+  Điều 16: a facility practises its fire plan at least once a year) and the fire police's guidance (stairs only, never
+  the lift). Settings → More turns it off (`?drill` for one now).
 - **Farewells** (tiệc chia tay): a project that really was at work (on two days or more) and has had no session for 30
   days (Settings → More: 14, 30, 60 or 90, or off) gets a last afternoon in office hours: its person comes in once more
   with the company card on a lanyard and packs the desk into a cardboard box (the little plant, the mug, the photo frame)
