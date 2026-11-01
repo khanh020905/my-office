@@ -91,4 +91,14 @@ export default {
     said: 'Nhắc lại lần gần nhất lúc {time}.',
     hook: 'Cần chạy lại node bin/cli.mjs install một lần để thêm hook nhắc lại.',
   },
+  undo: {
+    btn: '↶ Hoàn tác lượt cuối', title: 'Trả các file lượt cuối đã sửa về như trước lượt đó',
+    intro: 'Lượt “{prompt}” lúc {time}. Chỉ những file Claude sửa bằng công cụ sửa file; thay đổi do lệnh terminal (git, sed, build…) không hoàn tác được.',
+    act: { restore: 'trả về như trước', delete: 'xoá (file mới của lượt đó)', same: 'đã như trước', changedAfter: 'bị sửa sau lượt đó: để yên', big: 'quá lớn để giữ bản sao: để yên' },
+    go: '↶ Hoàn tác {n} file', sure: 'Bấm lần nữa để hoàn tác', cancel: 'Thôi',
+    none: 'Không có gì cần hoàn tác: các file đã như trước, hoặc bị sửa sau lượt đó.',
+    done: 'Đã trả {n} file về như trước lượt đó. Bản lúc nãy được giữ ở {dir}.',
+    tell: 'Báo cho Claude', told: 'Đã báo cho Claude.',
+    tellNote: 'Claude chưa biết file đã bị trả về: báo để nó đọc lại trước khi làm tiếp.',
+  },
 };

@@ -100,6 +100,11 @@ export default {
     noSid: 'Chưa biết mã của cuộc trò chuyện này: nhắn cho nó một câu trước đã.',
     full: 'Đã đủ {n} điều ghim: xoá bớt một điều đã.',
   },
+  undo: {
+    busy: '{name} đang làm: đợi nó xong rồi hoàn tác.',
+    nothing: 'Không còn gì để hoàn tác.',
+    tell: '[My Office] Người dùng vừa hoàn tác các thay đổi file của lượt trước; các file sau đã trở lại như trước lượt đó: {files}. Đọc lại chúng trước khi làm tiếp, và đừng làm lại những thay đổi đó trừ khi được bảo.',
+  },
   deny: { over: 'Lệnh này không còn chờ nữa: Claude đã làm tiếp.' },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',

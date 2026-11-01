@@ -16,6 +16,7 @@ import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n,
 import { createOverlap, EDIT_TOOLS, fileOf, portInUse } from './overlap.mjs';
 import { OS } from './platform/index.mjs';
 import { redact } from './redact.mjs';
+import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
 import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
@@ -58,6 +59,8 @@ const DATA_DIR = process.env.OFFICE_DATA_DIR ? path.resolve(process.env.OFFICE_D
 // what you pinned for each conversation ("Ghi nhớ cho Claude", further down): read before any session is shown
 const PINS_FILE = path.join(DATA_DIR, 'pins.json'), PIN_MAX = 12, PIN_LEN = 500;
 let pins = {}; try { pins = JSON.parse(fs.readFileSync(PINS_FILE, 'utf8')) || {}; } catch { /* none yet */ }
+// the office's own copies of what Claude's file tools change, per turn ("Hoàn tác lượt cuối", further down): made before any session is shown
+const undo = createUndo({ dir: path.join(DATA_DIR, 'undo') });
 const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/opengraph-image.jpg', '/twitter-image.jpg', '/manifest.webmanifest', '/sw.js', '/icon-512.png']);   // (app/: the tab icons, the share card, the app on a phone's home screen; public/: its worker and big icon)
 const prefs = createPrefs(DATA_DIR), { tr } = prefs;   // tr('area.key', vars): words in the office's language (src/i18n)
 const num = (n, digits) => createT(prefs.lang()).num(n, digits);   // a number written the office's way (1,000 / 1.000)
@@ -331,6 +334,7 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   stuck: s.stuck || null,
   cache: cacheOut(s),
   pins: pinsOf(s.sid).length,
+  undo: s.sid ? undo.info(s.sid) : null,
   git: gitOf(s),
   usage: s.usage?.model ? { cost: Math.round(s.usage.cost * 100) / 100, ...liveCtx(s), model: s.usage.model, out: s.usage.out } : null });
 function gitOf(s) { const r = s.cwd && git.repoOf(s.cwd); return r ? { repo: r.name, branch: r.branch, dirty: r.dirty, ahead: r.ahead, ci: r.ci, ciName: r.ciName, ciUrl: r.ciUrl, born: r.born || null } : null; }
@@ -1024,7 +1028,8 @@ async function onHook(p) {
       if (!said) break;
       s.lastPrompt = clip(redact(said), 90);
       s.taskStart = now;
-      if (!s.viaOffice) s.saidAt = now;   // (written by you, not a run the office started: the Mac panel's "you're talking here")
+      if (!s.viaOffice) s.saidAt = now;
+      undo.prompt(sid, said);   // (a new turn: the files it changes are copied first, for "Hoàn tác lượt cuối")   // (written by you, not a run the office started: the Mac panel's "you're talking here")
       stats.prompts++; dirty = true; trophies.bump('prompts'); trophies.session(s.sid);
       e = mk('prompt', clip(s.lastPrompt, 64));
       Object.defineProperty(e, 'full', { value: clip(redact(unwrapPaste(String(p.prompt || '').replace(STRIP_TAGS, '')).trim()), 4000), enumerable: false });   // (the chat shows it whole)
@@ -1090,6 +1095,7 @@ async function onHook(p) {
       break;
     }
     case 'Stop':
+      undo.stop(sid);   // (the turn is over: "Hoàn tác lượt cuối" may now put its files back)
       setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
       if (steerLater.has(sid) && !tasks.of(sid)) setTimeout(() => sendLater(sid), 2000);   // (a note that couldn't get in while it worked: now; a run's own: when it ends)
       s.inTool = false;
@@ -1439,6 +1445,27 @@ async function onDenied(p, res) {
   deniedHeld.set(m.id, settle);
   timer = setTimeout(() => settle(false), DENY_HOLD_MS);
   res.on('close', () => { if (deniedHeld.get(m.id) === settle) { deniedHeld.delete(m.id); clearTimeout(timer); chat.setDeny(m.id, { state: 'kept', until: 0 }); } });   // (Claude Code gave up waiting)
+}
+
+/* ---------- "Hoàn tác lượt cuối" (server/undo.mjs): the files Claude's file tools changed in a conversation's last
+   turn, put back from the office's own copies (made by /hook/loop before each write). Only once the turn is over and
+   the session rests; what is there now is kept in data/undo/<session>/<turn>/after. Phones may only when the Mac lets
+   them give work. ---------- */
+const sessionById = (id) => [...sessions.values()].find((x) => x.id === String(id || '')) || null;
+async function undoOut(s) { const p = s?.sid ? await undo.plan(s.sid) : null; return p ? { ok: true, ...p, files: p.files.map((x) => ({ ...x, file: tilde(x.file) })) } : { ok: false }; }
+async function undoAct(b, who) {
+  const s = sessionById(b?.id); if (!s?.sid) return [404, { ok: false, message: tr('server.loop.gone') }];
+  if (b.op === 'tell') {   // Claude told what was put back (it doesn't know otherwise)
+    const files = String(b.files || '').slice(0, 2000);
+    return s.pid && (s.status !== 'rest' || s.busy) ? steerTo({ sid: s.sid, text: tr('server.undo.tell', { files }) }, who) : giveWork({ sid: s.sid, text: tr('server.undo.tell', { files }) }, who);
+  }
+  if (s.status !== 'rest' || s.busy) return [409, { ok: false, message: tr('server.undo.busy', { name: s.title || s.name }) }];
+  const r = await undo.apply(s.sid);
+  if (!r.done.length) return [409, { ok: false, message: tr('server.undo.nothing') }];
+  chat.system(tr('chat.undo.done', { name: s.title || s.name, n: r.done.length }));
+  broadcast({ k: 'sess', s: pub(s) });
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} undo ${s.sid} from ${who}: ${r.done.map((x) => `${x.action} ${x.file}`).join(', ')}\n`).catch(() => {});
+  return [200, { ok: true, done: r.done.map((x) => ({ ...x, file: tilde(x.file) })), after: tilde(r.after || '') }];
 }
 
 /* ---------- questions and plans from Claude, answered in the office ----------
@@ -2339,6 +2366,8 @@ const server = http.createServer((req, res) => {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     loopHookAt = Date.now();
     readJson(req, 4_000_000).then((p) => {
+      // (a file tool about to write: its file copied first, for "Hoàn tác lượt cuối"; before the answer, so before the write)
+      try { if (p && (!p.hook_event_name || p.hook_event_name === 'PreToolUse') && UNDO_TOOLS.has(p.tool_name)) undo.before(p.session_id, fileOf(p.tool_input, p.cwd || bySid(p.session_id)?.cwd)); } catch (err) { console.error('undo', err); }
       let r = null, x = null; try { r = p && loopReply(p); x = p && overlapNote(p); } catch (err) { console.error('loop', err); }
       const out = x?.text ? withContext(r?.out, x.text) : r?.out;
       res.writeHead(200, { 'Content-Type': 'application/json' }).end(out ? JSON.stringify(out) : '');
@@ -2367,7 +2396,7 @@ const server = http.createServer((req, res) => {
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
   // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2707,6 +2736,16 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/undo') {   // "Hoàn tác lượt cuối": { id (the session), op?: 'tell', files? }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then(async (b) => {
+      if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
+      const [code, out] = await undoAct(b, mac ? 'mac' : `phone ${clientIp(req)}`).catch(() => [500, { ok: false }]);
+      json(res, code, out);
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/ci') {   // a red CI's card: { id } -> "Sửa luôn"
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -2857,6 +2896,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/pins') { json(res, 200, pinsOut([...sessions.values()].find((x) => x.id === String(url.searchParams.get('id') || '')))); return; }
   if (url.pathname === '/api/vault/report') { reportOut().then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the prompt report (server/prompt-report.mjs)
+  if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what "Hoàn tác lượt cuối" would do
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)
   if (url.pathname === '/api/sys') {

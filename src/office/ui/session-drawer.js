@@ -14,6 +14,7 @@ import { DEMO, demoLog } from '../demo/demo.js';
 import { acctActions } from './session-account.js';
 import { drawDrawerCache } from './cache-words.js';
 import { pinsLabel, renderPins } from './pins.js';
+import { openUndo } from './undo-view.js';
 import { t as tr, locale } from '../../i18n/index.js';
 
 /* ---------- session drawer ---------- */
@@ -66,7 +67,7 @@ export async function openWindowOf(s) {
 }
 // what the buttons below depend on
 let drawnSig = '', qrFor = null;   // (qrFor: the session whose Remote Control QR code is shown)
-const actionsSig = (s) => [s.id, s.status === 'rest', s.pid, s.moved?.to, s.acct, state.limits?.others?.length].join('|');
+const actionsSig = (s) => [s.id, s.status === 'rest', s.pid, s.moved?.to, s.acct, state.limits?.others?.length, s.undo?.at, s.undo?.undone, s.undo?.done].join('|');
 function renderActions() {
   const s = sessions.get(state.selectedId); if (!s) return;
   const box = $('ds-actions'); box.replaceChildren(); drawnSig = actionsSig(s);
@@ -75,6 +76,12 @@ function renderActions() {
     b.title = tr('drawer.openWindowTitle'); b.addEventListener('click', () => openWindowOf(s)); box.append(b);
   }
   if (state.isLocal && s.pid && s.status === 'rest') box.append(closeSessionButton(s));
+  // the last turn's file changes, put back (server/undo.mjs): once it is over, while it rests
+  if (s.status === 'rest' && s.undo?.done && !s.undo.undone) {
+    const u = el('button', 'btn btn--sm'); u.type = 'button'; u.textContent = tr('drawer.undo.btn'); u.title = tr('drawer.undo.title');
+    // (a view of its own: no tab is selected, so the conversation, drawn again every few seconds, doesn't cover it)
+    u.addEventListener('click', () => { const back = tab; setTab('undo'); openUndo(s, () => setTab(back)); }); box.append(u);
+  }
   box.append(...acctActions(s, renderActions));
   if (s.link) {
     const a = el('a', 'btn btn--primary btn--sm', tr('drawer.openOnClaude')); a.href = s.link; a.target = '_blank'; a.rel = 'noopener';
@@ -121,6 +128,7 @@ function setTab(t) {
   if (t === 'chat') { if (logItems.length) renderChat(true); else $('ds-body').replaceChildren(el('p', 'chat-empty', tr('drawer.loadingChat'))); }
   else if (t === 'subs') renderSubs(true);
   else if (t === 'pins') renderPins();   // (what you pinned for it: ui/pins.js)
+  else if (t === 'undo') return;   // (ui/undo-view.js draws it)
   else renderActivity();
   queueMicrotask(syncJump);
 }
