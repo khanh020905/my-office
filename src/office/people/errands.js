@@ -91,14 +91,15 @@ const timers = [];
 export function later(sec, fn) { timers.push({ at: state.sim + sec, fn }); }
 
 /* ---------- held things: a page, a cup, a watering can ---------- */
-let paperGeo, paperM, cupGeo, cupM, canM, canDarkM;
+let paperGeo, paperM, cupGeo, cupM, canM, canDarkM, canGeos;
 function hold(w, kind) {
   let m;
   if (kind === 'can') {
+    canGeos ||= [new THREE.CylinderGeometry(0.06, 0.065, 0.13, 14), new THREE.CylinderGeometry(0.008, 0.012, 0.16, 6), new THREE.TorusGeometry(0.045, 0.008, 6, 14, Math.PI)];   // (shared: a can of its own each time stayed on the GPU)
     m = new THREE.Group();
-    m.add(new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.065, 0.13, 14), canM));
-    const spout = new THREE.Mesh(new THREE.CylinderGeometry(0.008, 0.012, 0.16, 6), canM); spout.position.set(0, 0.03, 0.09); spout.rotation.x = 1.05; m.add(spout);
-    const handle = new THREE.Mesh(new THREE.TorusGeometry(0.045, 0.008, 6, 14, Math.PI), canDarkM); handle.position.set(0, 0.07, -0.01); m.add(handle);
+    m.add(new THREE.Mesh(canGeos[0], canM));
+    const spout = new THREE.Mesh(canGeos[1], canM); spout.position.set(0, 0.03, 0.09); spout.rotation.x = 1.05; m.add(spout);
+    const handle = new THREE.Mesh(canGeos[2], canDarkM); handle.position.set(0, 0.07, -0.01); m.add(handle);
     m.position.set(0, -0.09, 0.05);
   } else m = kind === 'paper' ? new THREE.Mesh(paperGeo, paperM) : new THREE.Mesh(cupGeo, cupM);
   if (kind === 'paper') { m.position.set(0, -0.06, 0.07); m.rotation.x = 0.3; } else if (kind === 'cup') m.position.set(0, -0.05, 0.03);

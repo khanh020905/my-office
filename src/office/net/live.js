@@ -108,7 +108,7 @@ export function removeSession(id) {
   const s = sessions.get(id); sessions.delete(id); freeDesk(id);
   const w = workers.get(id);
   if (w) {
-    workers.delete(id); leavingIds.add(id); leaving.add(w);
+    workers.delete(id); leavingIds.add(id); leaving.add(w); trimLeaving();
     for (const [aid, sw] of subs) if (sw.parent === w) dropSub(aid, false);   // the boss is leaving: no report
     w.leave(() => leavingIds.delete(id));
   }

@@ -72,7 +72,7 @@ export async function chatLoad() {
   chat.msgs = r.msgs || []; chat.pinned = r.pinned || null; chat.typing = r.typing || [];
   emit('all');
 }
-const post = (body) => fetch(`/api/chat${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).catch(() => null);
+const post = (body) => fetch(`/api/chat${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.body?.cancel()).catch(() => null);   // (the answer is not needed, but unread it would stay in memory)
 // what you do: to the server (or the demo's engine)
 export function chatSend(text, opts = {}) { if (engine) engine.send({ text, sticker: opts.sticker ?? null, replyTo: opts.replyTo || null }); else post({ op: 'send', text, sticker: opts.sticker ?? null, replyTo: opts.replyTo || null }); }
 export function react(m, emoji) { if (engine) engine.react(m.id, 'me', emoji); else post({ op: 'react', id: m.id, emoji }); }
@@ -105,6 +105,7 @@ const lastLife = new Map();
 export function chatLife(kind, v = {}) {
   const every = v.every ?? 20 * 60e3, now = Date.now(), lk = `${kind}:${v.id || ''}`;
   if (replay.on || (lastLife.get(lk) || 0) > now) return;
+  if (lastLife.size > 200) for (const [k, until] of lastLife) if (until <= now) lastLife.delete(k);   // (one per person and kind: sessions come and go for months)
   lastLife.set(lk, now + every);
   const key = `life:${lk}:${Math.floor(now / every)}`;   // (two pages telling the same moment: one message)
   const name = v.name || (v.id ? who(v.id)?.name : '') || '';

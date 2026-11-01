@@ -16,6 +16,7 @@ import { onPerm, perms, renderPerms, reportPresence } from '../ui/permissions.js
 import { renderPhone } from '../ui/topbar.js';
 import { summarize } from '../../shared/burn.js';
 import { setTenure } from '../people/farewell.js';
+import { logLine } from './demo-log.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let DEMO;
@@ -43,7 +44,8 @@ function demoProjects() {
   ];
 }
 let demoSeq = 0, demoReleases = 3;
-export const demoLog = new Map(), demoTimers = [];
+export const demoLog = new Map(), demoTimers = new Set();   // (a timer leaves the set when it fires: the demo runs for days)
+const demoLater = (fn, ms) => { const id = setTimeout(() => { demoTimers.delete(id); fn(); }, ms); demoTimers.add(id); };
 function demoEmit(s, type, label = '', extra = {}) {
   const now = Date.now(), e = { id: ++demoSeq, ts: now, sess: s.id, name: s.name, type, label, ...extra };
   if (!extra.agent && !['wait', 'stop', 'substart', 'substop', 'deploy'].includes(type)) s.last = { type, label };
@@ -56,15 +58,14 @@ function demoEmit(s, type, label = '', extra = {}) {
   if (type === 'edit' || type === 'write') state.stats.edit = (state.stats.edit || 0) + 1;
   if (type === 'bash' || type === 'test') state.stats.cmd = (state.stats.cmd || 0) + 1;
   if (type === 'deploy') state.stats.deploy = (state.stats.deploy || 0) + 1;
-  const log = demoLog.get(extra.agent || s.id) || []; demoLog.set(extra.agent || s.id, log);
-  if (type === 'prompt') log.push({ role: 'user', text: label, ts: now });
-  else if (type === 'stop') log.push({ role: 'claude', text: demoReply(demoSeq % REPLY_KEYS.length), ts: now });
-  else if (!['wait', 'substart', 'substop', 'testok', 'testfail', 'commit', 'push'].includes(type)) log.push({ role: 'tool', type: type === 'test' ? 'bash' : type, label, ts: now });
+  logLine(demoLog, extra.agent || s.id, type === 'prompt' ? { role: 'user', text: label, ts: now }
+    : type === 'stop' ? { role: 'claude', text: demoReply(demoSeq % REPLY_KEYS.length), ts: now }
+    : !['wait', 'substart', 'substop', 'testok', 'testfail', 'commit', 'push'].includes(type) ? { role: 'tool', type: type === 'test' ? 'bash' : type, label, ts: now } : null);
   upsertSession({ ...s, subs: s.subs.map((x) => ({ ...x })) });
   onEvent(e);
 }
 function demoRun(s, task, at = 0) {
-  const later = (ms, fn) => demoTimers.push(setTimeout(fn, ms));
+  const later = (ms, fn) => demoLater(fn, ms);
   const step = () => rand(1500, 3200);
   let t = at;
   later(t, () => { s.status = 'work'; s.taskStart = Date.now(); s.lastPrompt = task.prompt; demoEmit(s, 'prompt', task.prompt); });
@@ -112,7 +113,7 @@ function demoLoop(s, p, first) {
   let k = first ? 0 : Math.floor(Math.random() * p.tasks.length);
   // between tasks a short pause, now and then a long break: long enough to nap, fetch the lunch or pop out to the shop
   // (people/outings.js)
-  const go = (delay) => { const task = p.tasks[k++ % p.tasks.length]; const end = demoRun(s, task, delay); demoTimers.push(setTimeout(() => go(Math.random() < 0.22 ? rand(70000, 150000) : rand(6000, 16000)), end + 50)); };
+  const go = (delay) => { const task = p.tasks[k++ % p.tasks.length]; const end = demoRun(s, task, delay); demoLater(() => go(Math.random() < 0.22 ? rand(70000, 150000) : rand(6000, 16000)), end + 50); };
   go(first ? rand(300, 2500) : rand(4000, 14000));
 }
 const demoAuto = { hours: 0, last: null };
@@ -212,7 +213,7 @@ export function startDemo() {
   ]);
   state.connectedOnce = true; setConn(true); queueUi();
   // one scripted incident so the red alarm can be seen: three failing commands in a row
-  demoTimers.push(setTimeout(() => { const list = [...sessions.values()]; [0, 1, 2].forEach((k) => setTimeout(() => demoEmit(list[k % list.length], 'fail', tr('demo.incident')), k * 900)); }, 45000));
+  demoLater(() => { const list = [...sessions.values()]; [0, 1, 2].forEach((k) => setTimeout(() => demoEmit(list[k % list.length], 'fail', tr('demo.incident')), k * 900)); }, 45000);
 }
 // One handler for the live stream and for replays. `quiet` (fast-forwarding a replay) places people without walking
 // and fills the feed without bubbles or animations.

@@ -1,7 +1,7 @@
 // Workers: one character per session or subagent, what they do and where they walk.
 import * as THREE from 'three';
 import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
-import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat, wearLanyard, disposeRig } from './chibi-rig.js';
+import { makeChibi, chibiPose, applyChibiPose, wearOuter, wearHat, wearLanyard, disposeChibi } from './chibi-rig.js';
 import { state } from '../core/state.js';
 import { PRO, SEASON, V2, el, fmtAgo, nowMs, officeNow, rand, randInt, reduceMotion, replay, short, tint, wrapAngle } from '../core/env.js';
 import { ACT, ANIM_AT, bubbleText, verb } from '../ui/event-text.js';
@@ -140,11 +140,18 @@ export function nearBoss(boss, me) {
 // Workers walking out of the office: no longer in workers/subs, but still animated until they reach the door.
 export const leaving = new Set();
 export const leavingIds = new Set();
+/* Each one walking out is a whole character in memory. When they come faster than they go (a slow machine draws 5
+   frames a second, a burst of subagents finishes at once, the lift stays open while others arrive), the ones who
+   started leaving first just go, so the crowd stays small. */
+const LEAVING_MAX = 8;
+export function trimLeaving() {
+  for (const w of leaving) { if (leaving.size <= LEAVING_MAX) return; w.leaving = true; w.remove(); leavingIds.delete(w.id); }   // (its id free again: a session that left may come back)
+}
 export function dropSub(agentId, report = true) {
   const w = subs.get(agentId); if (!w) return;
-  subs.delete(agentId); leaving.add(w);
+  subs.delete(agentId); leaving.add(w); trimLeaving();
   const boss = w.parent;
-  if (!report || reduceMotion || !boss || workers.get(boss.id) !== boss || boss.leaving || replay.on) { w.leave(); return; }
+  if (!report || reduceMotion || document.hidden || !boss || workers.get(boss.id) !== boss || boss.leaving || replay.on) { w.leave(); return; }
   const desc = w.desc || '';
   w.want = null; w.hush();
   w.goTo(nearBoss(boss, w), () => {
@@ -216,9 +223,9 @@ export function setup() {
       if (SEASON === 'noel') wearHat(P);
       root.position.copy(this.root.position); root.rotation.copy(this.root.rotation);
       root.add(this.tagObj, this.bubbleObj);
-      const parent = this.root.parent, was = this.root; if (parent) parent.remove(was);
+      const parent = this.root.parent, was = this.P; if (parent) parent.remove(this.root);
       this.root = root; this.P = P;
-      disposeRig(was);   // (its name tag and bubble moved over above; the rest goes back to the GPU)
+      disposeChibi(was);   // (its name tag and bubble moved over above; its geometries go back to the GPU)
       root.traverse((o) => { o.userData.worker = this; });
       if (parent) parent.add(root);
       if (this.dressed) wearOuter(P, true, this.cfg);
@@ -441,6 +448,7 @@ export function setup() {
       const gone = () => { this.remove(); onGone && onGone(); };
       if (this.outing) this.outing.drop(this);
       if (this.liftHold || this.away || this.street || this.offstage || this.stairs) { this.liftHold = false; gone(); return; }   // still in the lift that brought them (or on the stairs), gone home, or out (they don't come back)
+      if (document.hidden) { gone(); return; }   // (nobody watching: a tab in the background draws nothing, so nobody would get out until it is shown)
       this.walkOut(gone);
     }
     // packing up at the desk (coat on, bag on the back), then out: the lift (press the button, wait, step in, ride
@@ -490,8 +498,9 @@ export function setup() {
       if (this.queued) leaveCoffee(this);
       if (this.mealBox) hideMeal(this);
       if (this.spot && this.spot.by === this) this.spot.by = null;
-      scene.remove(this.root);
+      scene.remove(this.root); leaving.delete(this);
       this.root.traverse((o) => { if (o.element) o.element.remove(); });
+      disposeChibi(this.P);   // (gone for good: nothing shows this rig again)
     }
     update(dt, t) {
       if (this.after && state.sim >= this.afterAt) { const f = this.after; this.after = null; f(); }

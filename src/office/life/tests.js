@@ -75,7 +75,7 @@ export function updateTests(t) {
     checkAt = t + 0.5;
     const now = rowsNow();
     if (now.length !== shown.length || now.some((s, i) => s !== shown[i])) dirty = true;
-    for (const r of runs.values()) if (r.st !== 'run' && !r.faded && state.sim - r.at >= FADE) { r.faded = true; dirty = true; }
+    for (const [id, r] of runs) { if (!sessions.has(id)) runs.delete(id); else if (r.st !== 'run' && !r.faded && state.sim - r.at >= FADE) { r.faded = true; dirty = true; } }   // (a closed session's row goes)
   }
   if (dirty) redraw();
   shown.forEach((s, i) => {
