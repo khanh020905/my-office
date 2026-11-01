@@ -85,6 +85,14 @@ export default {
     resting: '{name} is already resting: nothing to stop.',
     gone: 'This session has closed.',
   },
+  // a repository's CI gone red: the chat card's "Fix it" hands Claude the failing run
+  ci: {
+    pushTitle: '🔴 {repo}: CI is red',
+    pushBody: '{wf} on {branch} just failed. Open the group chat and tap "Fix it" to have Claude fix it.',
+    fix: 'CI "{wf}" on branch {branch} just went red: {url}\nRead the failing step\'s log (gh run view {run} --log-failed), find the cause, fix it, then run that same check here. When done, tell me why it failed and what you changed. Don\'t push until I say so.',
+    gone: 'This CI card is gone.',
+    notRed: 'This CI is no longer red.',
+  },
   // the prompt cache's clock: a session waiting for you is about to go cold (off unless turned on)
   cache: {
     nudgeTitle: { one: '☕ {name} goes cold in {n} minute', other: '☕ {name} goes cold in {n} minutes' },
