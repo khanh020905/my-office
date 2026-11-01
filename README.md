@@ -353,6 +353,11 @@ Then open <http://localhost:4310>.
   conversation, what you said along the way can be summed up away; right after each compaction the office says the
   pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
   `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
+  card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
+  **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
+  otherwise the refusal stands at once and the card keeps it on record. **Copy command** to run it yourself. Phones
+  answer only when the Mac lets them approve. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 - **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
   team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
   failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note

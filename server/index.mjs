@@ -1412,6 +1412,34 @@ async function onStart(p) {
   return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${tr('server.pins.context')}\n${list.map((x) => `- ${x.text}`).join('\n')}` } };
 }
 
+/* ---------- "Hộp lệnh bị chặn": a call auto mode refused (the synchronous PermissionDenied hook). A card in the chat
+   says what was refused and why. While an office page has focus, Claude Code waits up to 40 s for "Cho Claude thử
+   lại" (retry: Claude is told it may try the call again, which goes through auto mode again) or "Giữ chặn"; with none,
+   or when auto mode gave no verdict (a retry would be ignored), the refusal stands at once and the card keeps it on
+   record, the command ready to copy. Phones answer only when the Mac lets them approve. ---------- */
+const DENY_HOLD_MS = 40_000;
+const deniedHeld = new Map();   // card id -> settle(retry)
+const NO_VERDICT = /^(Auto mode could not evaluate|Classifier unavailable)/i;
+async function onDenied(p, res) {
+  let s = p?.session_id ? bySid(p.session_id) : null; if (p?.session_id && !s) { await scanSessions(); s = bySid(p.session_id); }
+  const reason = clip(oneLine(String(p?.reason || '')), 300), canRetry = !NO_VERDICT.test(reason), hold = !!s && canRetry && officeFocused();
+  const shell = p?.tool_name === 'Bash' || p?.tool_name === 'PowerShell';
+  const cmd = clip(redact(String(shell ? p.tool_input?.command || '' : JSON.stringify(p?.tool_input || {}))), 2000);
+  const m = s ? chat.denyCard(s.id, { sess: s.id, tool: p.tool_name || '', label: loopLabel(p.tool_name, p.tool_input), cmd, shell, reason, retry: canRetry, state: hold ? 'held' : 'kept', until: hold ? Date.now() + DENY_HOLD_MS : 0 }) : null;
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${p?.session_id || '?'} ${clip(oneLine(cmd), 100)} ${reason}${hold ? ' (held)' : ''}\n`).catch(() => {});
+  if (!hold || !m) { res.writeHead(200).end(''); return; }
+  let timer = 0;
+  const settle = (retry) => {
+    if (deniedHeld.get(m.id) !== settle) return;
+    deniedHeld.delete(m.id); clearTimeout(timer);
+    chat.setDeny(m.id, { state: retry ? 'retry' : 'kept', until: 0 });
+    try { res.writeHead(200, { 'Content-Type': 'application/json' }).end(retry ? JSON.stringify({ hookSpecificOutput: { hookEventName: 'PermissionDenied', retry: true } }) : ''); } catch { /* gone */ }
+  };
+  deniedHeld.set(m.id, settle);
+  timer = setTimeout(() => settle(false), DENY_HOLD_MS);
+  res.on('close', () => { if (deniedHeld.get(m.id) === settle) { deniedHeld.delete(m.id); clearTimeout(timer); chat.setDeny(m.id, { state: 'kept', until: 0 }); } });   // (Claude Code gave up waiting)
+}
+
 /* ---------- questions and plans from Claude, answered in the office ----------
    A synchronous PreToolUse hook (matcher AskUserQuestion|ExitPlanMode) posts here, under the same rule as approvals:
    held only while an office page has focus, 45 s at most, otherwise Claude Code asks as usual. Documented answer
@@ -2305,6 +2333,11 @@ const server = http.createServer((req, res) => {
       .catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/hook/denied') {   // a call auto mode refused: held a while when an office page has focus
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    readJson(req, 4_000_000).then((p) => onDenied(p, res)).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
@@ -2314,7 +2347,7 @@ const server = http.createServer((req, res) => {
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
   // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/denied'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2629,6 +2662,19 @@ const server = http.createServer((req, res) => {
       if (b?.op === 'official') { json(res, 200, { ok: tenure.markOfficial(String(b.name || '').slice(0, 200)) }); return; }
       if (b?.op === 'farewell') { const name = String(b.name || '').slice(0, 200); json(res, 200, { ok: tenure.markFarewell(name, farewellDays(), liveProjects().has(name)) }); return; }
       json(res, 400, { ok: false });
+    });
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/denied') {   // a refused call's card: { id, op: 'retry' | 'keep' }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then((b) => {
+      if (!mac && !prefs.get('phoneApprove')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+      const settle = deniedHeld.get(String(b?.id || ''));
+      if (!settle) { json(res, 409, { ok: false, message: tr('server.deny.over') }); return; }
+      settle(b?.op === 'retry');
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} denied ${b?.op === 'retry' ? 'retry' : 'keep'} from ${mac ? 'mac' : 'phone'}\n`).catch(() => {});
+      json(res, 200, { ok: true });
     });
     return;
   }

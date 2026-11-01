@@ -100,6 +100,7 @@ export default {
     noSid: 'Chưa biết mã của cuộc trò chuyện này: nhắn cho nó một câu trước đã.',
     full: 'Đã đủ {n} điều ghim: xoá bớt một điều đã.',
   },
+  deny: { over: 'Lệnh này không còn chờ nữa: Claude đã làm tiếp.' },
   cache: {
     nudgeTitle: '☕ {name} còn {n} phút là nguội',
     nudgeBody: 'Phiên đang chờ bạn trả lời. Trả lời ngay thì nhắn tiếp rẻ; để nguội thì lần nhắn sau sẽ đọc lại ~{tokens}k token.',
