@@ -34,8 +34,9 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
       - run: npx playwright install --with-deps chromium
-      # one test at a time: a software-rendered office keeps every core of the runner busy
-      - run: npx playwright test --shard=${{ matrix.shard }}/12 --workers=1 --reporter=list,blob
+      # one test at a time: a software-rendered office keeps every core of the runner busy. Split by test, not by file
+      # (--fully-parallel): office.spec.ts alone holds 49 of them, and by file some runners got none at all
+      - run: npx playwright test --shard=${{ matrix.shard }}/12 --fully-parallel --workers=1 --reporter=list,blob
       - uses: actions/upload-artifact@v4
         if: always()
         with:
