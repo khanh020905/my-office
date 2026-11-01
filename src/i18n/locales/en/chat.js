@@ -69,6 +69,7 @@ export default {
     kept: 'Kept refused. Copy the command to run it yourself if you need it.',
     noRetry: "No retry: auto mode couldn't evaluate this call.",
   },
+  pins: { said: { one: '📌 {name} just compacted its memory: the {n} note you pinned was said again.', other: '📌 {name} just compacted its memory: the {n} notes you pinned were said again.' } },
   card: { stopped: 'Stopped', allow: 'Allow', deny: 'Deny', stop: '⏹ Stop', askHere: '⏳ {what}', risky: 'A risky command: it can only be allowed on the Mac.', work: 'Working', wait: 'Waiting for your approval', done: 'Done', fail: 'Hit an error', meta: { one: '{n} step · {took}', other: '{n} steps · {took}' }, ask: '⏳ {what} · the approval card is below (45 s)', all: 'See all {n} steps', show: 'See the {n} steps', none: 'No steps needed',
     attach: 'Back on the Mac, type {cmd} to carry on', waitMac: { perm: 'Waiting for your approval on the Mac itself', input: 'Waiting for your answer on the Mac itself', other: 'Waiting for you on the Mac' } },
   steer: {

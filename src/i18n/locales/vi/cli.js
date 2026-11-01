@@ -38,6 +38,8 @@ export default {
     noAsk: 'Chưa có hook trả lời câu hỏi / duyệt kế hoạch. Chạy: my-office install',
     loop: 'Có hook ngắt vòng lặp kẹt (lệnh lỗi y hệt nhiều lần sẽ bị chặn)',
     noLoop: 'Chưa có hook ngắt vòng lặp kẹt. Chạy: my-office install',
+    pins: 'Đã cài hook nhắc lại những điều bạn ghim mỗi khi Claude Code nén một cuộc trò chuyện',
+    noPins: 'Chưa có hook cho ghi nhớ. Chạy: my-office install',
     denied: 'Đã cài hook cho lệnh bị chế độ tự động chặn (thẻ trong văn phòng, cho Claude thử lại khi văn phòng đang mở)',
     noDenied: 'Chưa có hook cho lệnh bị chế độ tự động chặn. Chạy: my-office install',
     status: 'Có status line báo hạn mức gói (5 giờ / 7 ngày) và ngữ cảnh chính xác',

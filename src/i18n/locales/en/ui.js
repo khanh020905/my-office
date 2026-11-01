@@ -15,6 +15,7 @@ export default {
     yesterday: 'Yesterday',
   },
   topBar: {
+    view: 'View', view3d: 'The 3D office', view2d: 'A plain 2D list of the sessions: light on the machine',
     sampleData: 'sample data',
     plan: 'Claude plan',
     reading: 'reading…',

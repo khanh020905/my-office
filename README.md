@@ -348,6 +348,11 @@ Then open <http://localhost:4310>.
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
   chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
   the stuck-loop hook, so they need nothing more installed.
+- **Pinned notes that survive compaction**: a session's drawer has a **Pinned** tab for what that conversation should
+  always keep in mind ("commit messages in Vietnamese", "never push without asking"). When Claude Code compacts a long
+  conversation, what you said along the way can be summed up away; right after each compaction the office says the
+  pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
+  `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
 - **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
   card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
   **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
@@ -413,7 +418,11 @@ Then open <http://localhost:4310>.
 - English or Vietnamese (Settings → Display).
 - Graphics: Auto, Low, Medium or High. Auto steps down by itself when frames come late, and remembers it per device.
 - Streamer mode blurs commands, paths and chat for recording.
-- List mode turns the 3D off and shows sessions as cards. It saves battery and works without WebGL.
+- **2D view** (3D | 2D in the top bar, or `?view=2d`): no 3D, just the sessions as rows, quiet on purpose. Approvals
+  sit on top with their buttons, then needs you, working and resting; tabs count and filter them, a search (`/`) finds
+  one by name, project or branch. Each row: the conversation, its project and branch (or the task it was given), what
+  it is doing now in words of the work, its checklist, context, time and cost, with its subagents under it; a click
+  opens it. Kept per browser. It saves battery and works without WebGL.
 - Open on your phone: same Wi-Fi, or anywhere through the Cloudflare tunnel (below), 6-digit PIN. Watching, plus
   approving if you turn on "Approve from a phone" on the Mac. Claude Code's own Remote Control (`/rc`) works too: the
   session's QR code in its drawer opens that conversation in the Claude app.

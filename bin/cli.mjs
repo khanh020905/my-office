@@ -42,6 +42,10 @@ const DENY_CMD = hookCmd('/hook/denied', true);
 // 0.3 s at most, and nothing printed when the office is down or slow: the call goes ahead as if there were no hook.
 const LOOP_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/loop --fast`
   : `curl -s -m 0.3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}/hook/loop || true`;
+// After Claude Code compacts a conversation (SessionStart, source "compact"): what you pinned for it, said again. A few
+// seconds at most, nothing printed when the office is down: the conversation goes on as if there were no hook.
+const START_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/start --wait 3`
+  : `curl -s -m 3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}/hook/start || true`;
 // The status line feeds the plan's 5-hour / 7-day usage; an existing status line keeps running through ours.
 const STATUS_SCRIPT = path.join(ROOT, 'hooks', 'status-line.mjs'), STATUS_PREV = path.join(ROOT, 'data', 'statusline-prev.json');
 const STATUS_CMD = WIN ? `"${fwd(process.execPath)}" "${fwd(STATUS_SCRIPT)}"` : `"${process.execPath}" "${STATUS_SCRIPT}"`;
@@ -80,6 +84,8 @@ async function install() {
   const pre = (cfg.hooks.PreToolUse ||= []);
   if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
   if (!args.includes('--no-loop-guard') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')))) { pre.push({ hooks: [{ type: 'command', command: LOOP_CMD, timeout: 2 }] }); added++; }
+  const start = (cfg.hooks.SessionStart ||= []);
+  if (!args.includes('--no-pins') && !start.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/start')))) { start.push({ matcher: 'compact', hooks: [{ type: 'command', command: START_CMD, timeout: 5 }] }); added++; }
   const denied = (cfg.hooks.PermissionDenied ||= []);
   if (!args.includes('--no-approve') && !denied.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/denied')))) { denied.push({ hooks: [{ type: 'command', command: DENY_CMD, timeout: 45 }] }); added++; }
   if (!args.includes('--no-status') && !oursStatus(cfg.statusLine)) {
@@ -155,6 +161,8 @@ async function doctor() {
   ask ? ok(tr('cli.doctor.ask')) : warn(tr('cli.doctor.noAsk'));
   const loop = (cfg.hooks?.PreToolUse || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')));
   loop ? ok(tr('cli.doctor.loop')) : warn(tr('cli.doctor.noLoop'));
+  const pinsHook = (cfg.hooks?.SessionStart || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/start')));
+  pinsHook ? ok(tr('cli.doctor.pins')) : warn(tr('cli.doctor.noPins'));
   const deny = (cfg.hooks?.PermissionDenied || []).some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/denied')));
   deny ? ok(tr('cli.doctor.denied')) : warn(tr('cli.doctor.noDenied'));
   oursStatus(cfg.statusLine) ? ok(tr('cli.doctor.status')) : warn(tr('cli.doctor.noStatus'));

@@ -39,6 +39,8 @@ export default {
     noAsk: 'No hook for questions / plan approval yet. Run: my-office install',
     loop: 'Stuck-loop hook installed (a call that keeps failing the same way is blocked)',
     noLoop: 'No stuck-loop hook yet. Run: my-office install',
+    pins: 'Hook installed to say your pinned notes again after Claude Code compacts a conversation',
+    noPins: 'No hook for pinned notes yet. Run: my-office install',
     denied: 'Hook installed for calls auto mode refuses (a card in the office, and a retry while it is open)',
     noDenied: 'No hook for calls auto mode refuses yet. Run: my-office install',
     status: 'Status line installed: plan usage limits (5 hours / 7 days) and the exact context',
