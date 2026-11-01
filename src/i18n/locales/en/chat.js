@@ -56,6 +56,7 @@ export default {
     file: "⚠️ {a} is about to edit {file}, which {b} just edited. {a}'s Claude was told to read it again first.",
     port: "⚠️ {name} needs port {port}, but {holder} holds it. If it isn't needed any more, stop it in the Mac panel.",
   },
+  pins: { said: { one: '📌 {name} just compacted its memory: the {n} note you pinned was said again.', other: '📌 {name} just compacted its memory: the {n} notes you pinned were said again.' } },
   undo: { done: { one: '↶ Undid {name}\'s last turn: {n} file is back as it was.', other: '↶ Undid {name}\'s last turn: {n} files are back as they were.' } },
   card: { stopped: 'Stopped', allow: 'Allow', deny: 'Deny', stop: '⏹ Stop', askHere: '⏳ {what}', risky: 'A risky command: it can only be allowed on the Mac.', work: 'Working', wait: 'Waiting for your approval', done: 'Done', fail: 'Hit an error', meta: { one: '{n} step · {took}', other: '{n} steps · {took}' }, ask: '⏳ {what} · the approval card is below (45 s)', all: 'See all {n} steps', show: 'See the {n} steps', none: 'No steps needed',
     attach: 'Back on the Mac, type {cmd} to carry on', waitMac: { perm: 'Waiting for your approval on the Mac itself', input: 'Waiting for your answer on the Mac itself', other: 'Waiting for you on the Mac' } },

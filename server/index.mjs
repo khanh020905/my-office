@@ -55,6 +55,9 @@ const SESS_DIR = path.join(CLAUDE_DIR, 'sessions');
 // OFFICE_LOG: append the server's output to a file (the Windows sign-in script has nowhere else to put it)
 if (process.env.OFFICE_LOG) { const out = fs.createWriteStream(process.env.OFFICE_LOG, { flags: 'a' }); process.stdout.write = process.stderr.write = out.write.bind(out); }
 const DATA_DIR = process.env.OFFICE_DATA_DIR ? path.resolve(process.env.OFFICE_DATA_DIR) : path.join(ROOT, 'data');   // tests and a second dev copy use their own
+// what you pinned for each conversation ("Ghi nhớ cho Claude", further down): read before any session is shown
+const PINS_FILE = path.join(DATA_DIR, 'pins.json'), PIN_MAX = 12, PIN_LEN = 500;
+let pins = {}; try { pins = JSON.parse(fs.readFileSync(PINS_FILE, 'utf8')) || {}; } catch { /* none yet */ }
 // the office's own copies of what Claude's file tools change, per turn ("Hoàn tác lượt cuối", further down): made before any session is shown
 const undo = createUndo({ dir: path.join(DATA_DIR, 'undo') });
 const PAGE_FILES = new Set(['/favicon.ico', '/icon.svg', '/apple-icon.png', '/opengraph-image.jpg', '/twitter-image.jpg', '/manifest.webmanifest', '/sw.js', '/icon-512.png']);   // (app/: the tab icons, the share card, the app on a phone's home screen; public/: its worker and big icon)
@@ -329,6 +332,7 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   dayFirst: s.dayFirst || null,
   stuck: s.stuck || null,
   cache: cacheOut(s),
+  pins: pinsOf(s.sid).length,
   undo: s.sid ? undo.info(s.sid) : null,
   git: gitOf(s),
   usage: s.usage?.model ? { cost: Math.round(s.usage.cost * 100) / 100, ...liveCtx(s), model: s.usage.model, out: s.usage.out } : null });
@@ -1381,6 +1385,39 @@ async function onPermission(p, res, long = false) {
       res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } }); } }
 }
 
+/* ---------- "Ghi nhớ cho Claude": what you pin for a conversation (the session drawer's "Ghi nhớ" tab), said to Claude
+   again each time Claude Code compacts it, when what it was told along the way may be summed up away. The synchronous
+   SessionStart hook (matcher "compact") gets them as additionalContext. Kept by the conversation's id in
+   data/pins.json, so they outlive the office starting again: 12 a conversation, 500 characters each, 300
+   conversations. ---------- */
+const savePins = () => fsp.writeFile(PINS_FILE, JSON.stringify(pins)).catch(() => {});
+const pinsOf = (sid) => (sid && pins[sid]?.list) || [];
+function pinsOut(s) { const p = (s?.sid && pins[s.sid]) || {}; return { ok: true, list: p.list || [], said: p.said || 0 }; }
+function pinOp(b, s) {
+  if (!s?.sid) return { ok: false, message: tr('server.pins.noSid') };
+  const p = (pins[s.sid] ||= { list: [], at: 0 });
+  if (b.op === 'add') {
+    const text = String(b.text || '').trim().slice(0, PIN_LEN); if (!text) return { ok: false };
+    if (p.list.length >= PIN_MAX) return { ok: false, message: tr('server.pins.full', { n: PIN_MAX }) };
+    p.list.push({ id: crypto.randomUUID().slice(0, 8), text, at: Date.now() });
+  } else if (b.op === 'del') p.list = p.list.filter((x) => x.id !== String(b.pin || ''));
+  else return { ok: false };
+  p.at = Date.now();
+  if (!p.list.length) delete pins[s.sid];
+  const keys = Object.keys(pins); if (keys.length > 300) for (const k of keys.sort((a, c) => (pins[a].at || 0) - (pins[c].at || 0)).slice(0, keys.length - 300)) delete pins[k];
+  savePins(); broadcast({ k: 'sess', s: pub(s) });
+  return pinsOut(s);
+}
+// a conversation just compacted: its pins, as Claude Code wants them, and a word in the chat
+async function onStart(p) {
+  if (p?.source !== 'compact') return null;
+  const list = pinsOf(p.session_id); if (!list.length) return null;
+  pins[p.session_id].said = Date.now(); savePins();
+  const s = bySid(p.session_id); if (s) chat.system(tr('chat.pins.said', { name: s.title || s.name, n: list.length }));
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} pins said again ${p.session_id} (${list.length})\n`).catch(() => {});
+  return { hookSpecificOutput: { hookEventName: 'SessionStart', additionalContext: `${tr('server.pins.context')}\n${list.map((x) => `- ${x.text}`).join('\n')}` } };
+}
+
 /* ---------- "Hoàn tác lượt cuối" (server/undo.mjs): the files Claude's file tools changed in a conversation's last
    turn, put back from the office's own copies (made by /hook/loop before each write). Only once the turn is over and
    the session rests; what is there now is kept in data/undo/<session>/<turn>/after. Phones may only when the Mac lets
@@ -2291,6 +2328,12 @@ const server = http.createServer((req, res) => {
     }).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/hook/start') {   // a conversation compacted: its pins, said again
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
+    readJson(req, 4_000_000).then(async (p) => { const out = await onStart(p).catch(() => null); res.writeHead(200, { 'Content-Type': 'application/json' }).end(out ? JSON.stringify(out) : ''); })
+      .catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
     readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
@@ -2300,7 +2343,7 @@ const server = http.createServer((req, res) => {
   // through the tunnel (the internet), only what a phone may send: the PIN (and a new one, with the one it has now), its
   // answers to approvals (when the Mac allows them), the page's presence, the chat and work (when the Mac allows it; the
   // prompt helper's rewrite too). Everything else that changes something stays on the Mac and the home network.
-  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+  if (req.viaTunnel && req.method !== 'GET' && req.method !== 'HEAD' && !['/pin', '/api/pin', '/api/perm', '/api/presence', '/api/chat', '/api/tasks', '/api/tasks/stop', '/api/tasks/steer', '/api/prompt/rewrite', '/api/push', '/api/quick', '/api/loop', '/api/ci', '/api/pins', '/api/undo'].includes(url.pathname)) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
   if (url.pathname === '/pin' && (req.method === 'GET' || req.method === 'POST')) {
     const ip = clientIp(req);
     if (isLoopback(req) || cookieOk(req)) { res.writeHead(303, { Location: '/' }).end(); return; }
@@ -2618,6 +2661,15 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/pins') {   // the session drawer's "Ghi nhớ": { id (the session), op 'add' | 'del', text | pin }
+    if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
+    const mac = isLoopback(req);
+    readJson(req).then((b) => {
+      if (!mac && !prefs.get('phoneTasks')) { json(res, 403, { ok: false, code: 'notAllowed', message: tr('chat.task.notAllowed') }); return; }
+      json(res, 200, pinOp(b || {}, [...sessions.values()].find((x) => x.id === String(b?.id || ''))));
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/undo') {   // "Hoàn tác lượt cuối": { id (the session), op?: 'tell', files? }
     if (!authorized(req, url) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false }); return; }
     const mac = isLoopback(req);
@@ -2776,6 +2828,7 @@ const server = http.createServer((req, res) => {
     stranded.list({ force: url.searchParams.has('fresh') }).then((r) => json(res, 200, { ...r, local: isLoopback(req) })).catch(() => json(res, 200, { ok: false, items: [] }));
     return;
   }
+  if (url.pathname === '/api/pins') { json(res, 200, pinsOut([...sessions.values()].find((x) => x.id === String(url.searchParams.get('id') || '')))); return; }
   if (url.pathname === '/api/undo') { undoOut(sessionById(url.searchParams.get('id'))).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // what "Hoàn tác lượt cuối" would do
   if (url.pathname === '/api/vault') { vaultOut(url.searchParams, isLoopback(req)).then((r) => json(res, 200, r)).catch(() => json(res, 500, { ok: false })); return; }   // the history vault (server/vault.mjs)
   if (url.pathname === '/api/burn') { json(res, 200, burnOut(String(url.searchParams.get('range') || ''))); return; }   // what eats the plan (server/otel.mjs)

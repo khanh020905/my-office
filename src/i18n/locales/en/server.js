@@ -101,6 +101,12 @@ export default {
     holderOf: '{label} from {owner} (running {up})',
     someone: 'another process',
   },
+  // "Ghi nhớ cho Claude": what you pinned, said again after a compaction
+  pins: {
+    context: '[My Office] This conversation was just compacted. The user pinned the following for it; keep following them:',
+    noSid: "This conversation's id isn't known yet: send it a message first.",
+    full: 'Already {n} pinned notes: remove one first.',
+  },
   // "Hoàn tác lượt cuối": the last turn's files put back
   undo: {
     busy: '{name} is working: wait until it is done to undo.',
