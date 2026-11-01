@@ -63,6 +63,7 @@ export default {
       stream: 'Streamer mode (hides commands and paths)',
       zones: 'Always show area names (default: only on hover)',
       season: 'Seasonal decorations (Halloween, Christmas, Lunar New Year)',
+      drill: 'A fire drill every quarter (15:00, the quarter’s first working day)',
       coach: 'Prompt helper: tips when you write to Claude',
     },
     nightLabel: 'Night',

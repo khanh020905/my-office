@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { dayKey, dayKind, holidayOf, isWorkday, prevWorkday } from '../../src/shared/workdays.js';
+import { dayKey, dayKind, holidayOf, isWorkday, prevWorkday, quarterStart } from '../../src/shared/workdays.js';
 
 const D = (s) => new Date(`${s}T09:00:00`);
 const kinds = (from, to) => { const out = {}; for (let d = D(from); d <= D(to); d.setDate(d.getDate() + 1)) out[dayKey(d)] = dayKind(d); return out; };
@@ -37,4 +37,14 @@ test('the working day before: over the weekend and over Tết', () => {
   assert.equal(dayKey(prevWorkday(D('2026-11-02'))), '2026-10-30');
   assert.equal(dayKey(prevWorkday(D('2026-11-03'))), '2026-11-02');
   assert.equal(dayKey(prevWorkday(D('2027-02-11'))), '2027-02-03');
+});
+
+test('the first working day of each quarter (when the fire drill is): past 1/1, the weekend and the holidays', () => {
+  const first = (iso) => dayKey(quarterStart(D(iso)));
+  assert.equal(first('2026-11-20'), '2026-10-01');   // (a Thursday)
+  assert.equal(first('2027-02-15'), '2027-01-04');   // (1/1 a Friday holiday, then the weekend)
+  assert.equal(first('2027-05-20'), '2027-04-01');
+  assert.equal(first('2027-07-01'), '2027-07-01');
+  assert.equal(first('2026-04-30'), '2026-04-01');
+  assert.equal(first('2028-01-10'), '2028-01-04');   // (1/1/2028 a Saturday, so taken on Monday 3/1)
 });

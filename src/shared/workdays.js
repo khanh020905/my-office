@@ -63,6 +63,13 @@ export function dayKind(d) {
   return weekend(d) ? 'weekend' : 'work';
 }
 export const isWorkday = (d) => dayKind(d) === 'work';
+/** the first working day of the quarter `d` is in (a Date at noon): 1/1 is a holiday, so the year's is in the first
+    days of January (2027: Monday 4/1) */
+export function quarterStart(d) {
+  let x = new Date(d.getFullYear(), Math.floor(d.getMonth() / 3) * 3, 1, 12);
+  for (let k = 0; k < 31 && !isWorkday(x); k++) x = plus(x, 1);
+  return x;
+}
 /** the working day before `d` (a Date at noon), looking back at most a month */
 export function prevWorkday(d) {
   let x = plus(new Date(d.getFullYear(), d.getMonth(), d.getDate(), 12), -1);

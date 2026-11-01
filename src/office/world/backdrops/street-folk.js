@@ -109,6 +109,8 @@ export function folk(G, n, { low = false, shadows = true } = {}) {
     hide,
     // where a posed figure's right hand is (for a racket's swing, a phone's glow): the end of the right arm's last matrix
     hand(i, out) { m.arm.getMatrixAt(i * 2 + 1, A); return out.set(0, -0.5, 0).applyMatrix4(A); },
+    // a posed figure's arm (k: 0 left, 1 right) as a matrix: something worn on it (a marshal's armband, life/drill.js)
+    arm(i, k, out) { m.arm.getMatrixAt(i * 2 + k, out); return out; },
     // each part drawn only up to the highest slot out (the hidden ones below it are folded to nothing)
     flush() {
       if (!dirty) return; dirty = false;

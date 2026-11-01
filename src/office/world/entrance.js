@@ -23,16 +23,17 @@ export let lift;
 // being serviced: up the stairs, out of their door)
 export function liftArrive(w) {
   if (!lift) return;
-  if (lift.service) { stairsUp(w); return; }
+  if (lift.service || lift.drill) { stairsUp(w); return; }
   w.pos.set(LIFT_X, DZ + rand(-0.3, 0.3)); w.face = w.faceTarget = Math.PI / 2; w.spot = DOOR_OUT;
   w.liftHold = true;
   if (lift.open < 0.05 && lift.at === LIFT_HOME && lift.goal === LIFT_HOME) lift.at = LIFT_HOME - randInt(3, 9);
 }
 export function liftCall(hold = 2.5) { if (lift) lift.callUntil = state.sim + hold; }
 /** At the lift's doors (DOOR_IN) on the way down: press the button, wait, step in, turn round, and `gone()` once the doors
-    have shut on them. While the lift is being serviced (life/lift-service.js): a sigh at the sign, and the stairs. */
+    have shut on them. While the lift is being serviced (life/lift-service.js): a sigh at the sign, and the stairs; in a
+    fire drill (life/drill.js), the stairs. */
 export function liftDown(w, gone) {
-  if (lift?.service) { stairsDown(w, gone); return; }
+  if (lift?.service || lift?.drill) { stairsDown(w, gone, lift.drill ? null : 'people.stairs.sigh'); return; }
   w.anim = 'idle'; w.faceTarget = DOOR_IN.face;
   w.liftWait = () => w.goTo(DOOR_OUT, () => { w.faceTarget = Math.PI / 2; w.liftRide = gone; });
 }
@@ -59,9 +60,10 @@ function stairsUp(w, secs = rand(7, 10)) {
   w.pos.set(STAIRS.x, STAIRS.z); w.face = w.faceTarget = Math.PI / 2; w.spot = STAIRS; w.liftHold = true; w.stairs = e;
   stairQ.push(e); stairHooks.used?.(w);
 }
-// going down them: to the door (it opens for them), through it, and `gone()` once they are down
-function stairsDown(w, gone) {
-  if (Math.random() < 0.6) { const text = tr('people.stairs.sigh'); w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, 3500); }
+/** going down them: to the door (it opens for them), through it, and `gone()` once they are down (`sigh`: a line now
+    and then on the way, null for none) */
+export function stairsDown(w, gone, sigh = 'people.stairs.sigh') {
+  if (sigh && Math.random() < 0.6) { const text = tr(sigh); w.say('idle', text); setTimeout(() => { if (w.lastSay?.text === text) w.hush(); }, 3500); }
   stairHooks.used?.(w);
   w.goTo(STAIRS, () => {
     const e = { w, up: false, at: state.sim + rand(6, 9), gone };
@@ -177,6 +179,17 @@ export function updateLift(dt) {
     lift.open += (lift.service.open - lift.open) * Math.min(1, dt * 2);
     const k = lift.open * lift.open * (3 - 2 * lift.open);
     lift.doors[0].position.z = DZ - 0.25 - k * 0.48; lift.doors[1].position.z = DZ + 0.25 + k * 0.48;
+    lift.btn[0].color.set('#4A4F57'); lift.btn[1].color.set('#4A4F57');
+    return;
+  }
+  if (lift.drill) {   // a fire drill (life/drill.js): down to the ground floor and parked there, doors shut, the call buttons dead
+    lift.open = Math.max(0, lift.open - dt * 1.5);
+    const k = lift.open * lift.open * (3 - 2 * lift.open);
+    lift.doors[0].position.z = DZ - 0.25 - k * 0.48; lift.doors[1].position.z = DZ + 0.25 + k * 0.48;
+    lift.goal = 1;
+    if (lift.open === 0 && lift.at > 1 && state.sim > lift.stepAt) { lift.at--; lift.stepAt = state.sim + 0.34; }
+    const text = lift.at > 1 ? `▼ ${lift.at}` : tr('life.drill.liftSign');
+    if (text !== lift.shown) { lift.shown = text; drawLiftDisplay(text); }
     lift.btn[0].color.set('#4A4F57'); lift.btn[1].color.set('#4A4F57');
     return;
   }
