@@ -16,6 +16,7 @@ import { drawDrawerCache } from './cache-words.js';
 import { pinsLabel, renderPins } from './pins.js';
 import { openUndo } from './undo-view.js';
 import { t as tr, locale } from '../../i18n/index.js';
+import { modelLong } from '../../shared/model-name.js';
 
 /* ---------- session drawer ---------- */
 export let tab = 'chat';
@@ -358,7 +359,8 @@ export function renderSubs(scrollEnd = false) {
     const b = el('button', 'sub-card'); b.type = 'button';
     const ic = el('span', 'fi-ico'); if (running) ic.dataset.tone = 'blue'; ic.append(icon(running ? 'sparkle' : 'check'));
     const steps = tr('drawer.steps', { n: x.steps || 0 });
-    b.append(ic, el('b', null, `${x.type}${x.desc ? ' · ' + x.desc : ''}`), el('small', null, running ? steps : tr('drawer.doneAt', { time: hhmm(x.endedAt) })),
+    const m = modelLong(x.model);
+    b.append(ic, el('b', null, `${x.type}${x.desc ? ' · ' + x.desc : ''}`), el('small', null, [m, running ? steps : tr('drawer.doneAt', { time: hhmm(x.endedAt) })].filter(Boolean).join(' · ')),
       el('span', null, running ? (x.last ? cap(verb(x.last)) : tr('drawer.starting')) : tr('drawer.subDoneMeta', { steps, time: hhmm(x.startedAt) })));
     b.addEventListener('click', () => { state.subView = x.id; subItems = []; renderSubs(); loadLog(true); });
     return b;

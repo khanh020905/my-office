@@ -328,7 +328,7 @@ function freeDesk() {
   for (let i = 0; i < DESKS; i++) if (!used.has(i)) return i;
   return -1;
 }
-const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0 });
+const pubSub = (x) => ({ id: x.id, type: x.type, desc: x.desc || '', last: x.last || null, startedAt: x.startedAt, endedAt: x.endedAt || null, steps: x.steps || 0, model: x.model || '' });
 const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', dir: tilde(s.cwd), link: s.link, desk: s.desk, status: s.status, lastPrompt: s.lastPrompt && oneLine(unwrapPaste(s.lastPrompt)),
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
@@ -355,10 +355,29 @@ async function subMeta(s, agentId) {
   if (!dir || !/^[A-Za-z0-9_-]+$/.test(agentId)) return null;
   try { return JSON.parse(await fsp.readFile(path.join(dir, `agent-${agentId}.meta.json`), 'utf8')); } catch { return null; }
 }
+// the model a subagent runs on: the last one its transcript's answers name (the subagents' model in the settings, or
+// the one Claude picked for it); read again on its steps until there is one (its first answer comes after a moment)
+async function subModel(s, agentId) {
+  const dir = subDir(s);
+  if (!dir || !/^[A-Za-z0-9_-]+$/.test(agentId)) return '';
+  let fh;
+  try {
+    fh = await fsp.open(path.join(dir, `agent-${agentId}.jsonl`), 'r');
+    const { size } = await fh.stat(), n = Math.min(size, 65536), buf = Buffer.alloc(n);
+    await fh.read(buf, 0, n, size - n);
+    return [...buf.toString('utf8').matchAll(/"model":"(claude-[A-Za-z0-9.[\]-]{1,60})"/g)].at(-1)?.[1] || '';
+  } catch { return ''; } finally { await fh?.close(); }
+}
+function lookModel(s, x, now = Date.now()) {
+  if (x.model || now - (x.modelAt || 0) < 8000) return;
+  x.modelAt = now;
+  subModel(s, x.id).then((m) => { if (m && m !== x.model) { x.model = m; broadcast({ k: 'sess', s: pub(s) }); } });
+}
 function ensureSub(s, agentId, type, now) {
   let x = s.subs[agentId];
   if (!x) {
     x = s.subs[agentId] = { id: agentId, type: type || 'agent', desc: '', startedAt: now, seenAt: now, steps: 0, last: null };
+    lookModel(s, x, now);
     subMeta(s, agentId).then(async (m) => {
       if (!m) return;
       x.desc = clip(redact(oneLine(await toVi(m.description || ''))), 70);
@@ -374,6 +393,7 @@ function finishSub(s, agentId, now) {
   if (!x) return null;
   delete s.subs[agentId];
   x.endedAt = now;
+  if (!x.model) { x.modelAt = 0; lookModel(s, x, now); }   // (done before its first step was read)
   s.doneSubs = [x, ...(s.doneSubs || [])].slice(0, 8);
   return x;
 }
@@ -1044,7 +1064,7 @@ async function onHook(p) {
       const runner = p.tool_name === 'Bash' && testRunner(p.tool_input?.command);   // a test run: the test board lights up for it
       if (runner) Object.assign(c, { type: 'test', runner });
       if (!agent) { if (s.status === 'rest' && !s.taskStart) s.taskStart = now; s.status = 'work'; s.inTool = true; s.last = { type: c.type, label: c.label }; }
-      else { const x = s.subs[agent]; if (x) { x.last = { type: c.type, label: c.label }; x.steps++; } }   // (it may have stopped while the call was being read)
+      else { const x = s.subs[agent]; if (x) { x.last = { type: c.type, label: c.label }; x.steps++; lookModel(s, x, now); } }   // (it may have stopped while the call was being read)
       if (bgTask && !agent) cardStep(bgTask.id, stepOf(p.tool_name, p.tool_input || {}));
       const img = imageId(c.file);
       e = mk(c.type, c.label, { desc: c.desc, agent, agentType: p.agent_type || null, quiet: !!agent, ...(c.runner ? { runner: c.runner } : {}), ...(img ? { img } : {}) });

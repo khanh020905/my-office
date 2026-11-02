@@ -166,7 +166,7 @@ engine switches to demo mode and talks to no API.
 | `people/staff.js` | 394 | People who work here but aren't sessions: the receptionist, the evening cleaner, a Shopee courier with a parcel. |
 | `people/team-lines.js` | 28 | Dashed lines from a boss to its subagents. |
 | `people/teatime.js` | 91 | Friday 16:00: afternoon tea. |
-| `people/workers.js` | 547 | Workers: one character per session or subagent, what they do and where they walk. |
+| `people/workers.js` | 555 | Workers: one character per session or subagent, what they do and where they walk. |
 | `replay/replay.js` | 162 | Replay and recording. |
 | `replay/timeline.js` | 193 | The timeline: one lane per session. |
 | `scene/blocks.js` | 32 | Building blocks: materials, rounded boxes, cylinders, rugs, canvas textures. |
@@ -175,7 +175,7 @@ engine switches to demo mode and talks to no API.
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
 | `ui/activity.js` | 301 | The activity column and the session list. |
 | `ui/ai-accounts.js` | 270 | The other AI tools' accounts, in the plan card under Claude's (server/codex-accounts.mjs, antigravity-accounts.mjs): Codex and Antigravity IDE, each with its accounts (usage, the one in use, out until when), adding one, using another, and switching by itself when the one in use runs out. |
-| `ui/burn.js` | 212 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
+| `ui/burn.js` | 218 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
 | `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
 | `ui/chat-avatars.js` | 72 | Round photos for the group chat (group-chat-view.js): each person's own chibi, head and shoulders, drawn once by the office's renderer (the way Settings draws its portraits: same materials, light and tone mapping) and kept as a data URL. |
@@ -187,7 +187,7 @@ engine switches to demo mode and talks to no API.
 | `ui/group-chat.js` | 210 | The company group chat, on the page (the window: group-chat-view.js; the people and what they say: src/shared/chat-engine.js). |
 | `ui/icons.js` | 85 | Stroke icons (24 px grid) and the icon helper. |
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
-| `ui/lite.js` | 143 | The 2D view: every session as a row, no 3D (the office keeps a frame a second behind it). |
+| `ui/lite.js` | 144 | The 2D view: every session as a row, no 3D (the office keeps a frame a second behind it). |
 | `ui/look-switch.js` | 22 | Switching the character look. |
 | `ui/mac-drawer.js` | 684 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/models.js` | 44 | "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the model a Claude session runs on, the one its subagents run on, always that one or only when Claude doesn't pick, and the note asking Claude to split big tasks. |
@@ -198,7 +198,7 @@ engine switches to demo mode and talks to no API.
 | `ui/pins.js` | 63 | "Ghi nhớ cho Claude" (server: /api/pins, /hook/start): what you want a conversation to keep in mind, said to Claude again each time Claude Code compacts it. |
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
-| `ui/session-drawer.js` | 396 | The session drawer: chat, steps, subagents. |
+| `ui/session-drawer.js` | 398 | The session drawer: chat, steps, subagents. |
 | `ui/settings.js` | 125 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stranded.js` | 159 | "Việc bỏ quên" in the Mac drawer: the worktrees and checkouts of the repositories the office knows that still hold work (files not committed, commits not pushed, stashes), and worktrees with nothing left in them that could go. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |

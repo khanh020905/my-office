@@ -80,7 +80,7 @@ function demoRun(s, task, at = 0) {
     }
     if (task.sub && i === 1) {
       const id = `demo-sub-${++demoSeq}`, [kind, desc] = task.sub;
-      later(t, () => { s.subs.push({ id, type: kind, desc, last: null, startedAt: Date.now(), steps: 0 }); demoEmit(s, 'agent', kind, { desc }); demoEmit(s, 'substart', kind, { agent: id, quiet: false }); });
+      later(t, () => { s.subs.push({ id, type: kind, desc, last: null, startedAt: Date.now(), steps: 0, model: 'claude-sonnet-5-5' }); demoEmit(s, 'agent', kind, { desc }); demoEmit(s, 'substart', kind, { agent: id, quiet: false }); });
       for (const [k, l] of [['grep', 'useCart'], ['read', 'src/index.ts'], ['web', desc]]) {
         t += rand(1200, 2200);
         later(t, () => { const x = s.subs.find((y) => y.id === id); if (x) { x.last = { type: k, label: l }; x.steps++; } demoEmit(s, k, l, { agent: id, agentType: kind, quiet: true }); });
@@ -165,7 +165,7 @@ export function demoBurn(range = 'today') {
       sess[sid] = { m: true, cwd: `~/projects/${name}`, l: at - i * 864e5 - j * 600e3 };
       // a share of the session's cost under one attribution (model, source, agent, skill, plugin, MCP server)
       const put = (share, src, a = '', sk = '', mc = '') => {
-        const key = [model, src, a, sk, sk === 'pdf' ? 'document-skills' : '', mc].join('\t'), v = u * share, was = m[key] || [0, 0, 0, 0, 0, 0];
+        const key = [src === 'subagent' ? 'claude-sonnet-5-5' : model, src, a, sk, sk === 'pdf' ? 'document-skills' : '', mc].join('\t'), v = u * share, was = m[key] || [0, 0, 0, 0, 0, 0];   // (the subagents on Sonnet, as Settings → More sets them)
         m[key] = [was[0] + v, ...[1200, 900, 42000, 3000].map((t, x) => was[x + 1] + Math.round(t * v)), 0];
       };
       put(0.42, 'main'); put(0.06, 'auxiliary');
