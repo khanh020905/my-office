@@ -21,7 +21,7 @@ import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
 import { MAIN, SUB, modelsOf, withModels, hasSplit, withSplit } from './models.mjs';
 import { createCodexAccounts } from './codex-accounts.mjs';
-import { createAntigravityAccounts, makeDb } from './antigravity-accounts.mjs';
+import { createAntigravityAccounts, makeDb, windowsOf } from './antigravity-accounts.mjs';
 import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
@@ -2351,7 +2351,24 @@ async function agQuit() {
   for (let i = 0; i < 40; i++) { await new Promise((r) => setTimeout(r, 750)); if (!(await agRunning())) return true; }
   return false;   // (still open: a "save changes?" question, most likely)
 }
-const agLaunch = () => new Promise((r) => execFile('open', ['-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
+/* Opened again, with every window it had (the IELTS site, the CRM, the LMS…: one folder each). The IDE brings them
+   back itself as it starts (window.restoreWindows, "all" unless set otherwise), with their tabs, unsaved files and
+   terminals; the office then opens each folder once more with the IDE's own command, which only brings forward a window
+   already open: none is lost even when the IDE starts on its sign-in after an account was taken out. */
+const agCli = () => { const d = `/Applications/${AG_APP}.app/Contents/Resources/app/bin`; try { const f = fs.readdirSync(d).find((x) => !x.endsWith('.cmd')); return f ? path.join(d, f) : null; } catch { return null; } };
+async function agLaunch() {
+  let wins = [];
+  try { wins = windowsOf(JSON.parse(fs.readFileSync(path.join(path.dirname(agDbFile()), 'storage.json'), 'utf8'))).filter((p) => fs.existsSync(p)); } catch { /* none kept */ }
+  const ok = await new Promise((r) => execFile('open', ['-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
+  const cli = agCli();
+  if (ok && cli && wins.length) {
+    setTimeout(async () => {
+      for (const p of wins) await new Promise((r) => execFile(cli, [p], { timeout: 20_000 }, () => r()));
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} antigravity: ${wins.length} windows opened again\n`).catch(() => {});
+    }, 8000).unref();
+  }
+  return ok;
+}
 // the Claude sessions at work in the IDE (closing it would end them)
 async function agBusy() {
   const rows = (await sysSnapshot().catch(() => null))?.claude || [], pids = new Set(rows.filter((c) => c.editor === AG_DOT).map((c) => c.pid));
