@@ -13,6 +13,7 @@ import { openSession } from './session-drawer.js';
 import { closePlace } from '../interact/place-cards.js';
 import { exitFp, fp } from '../interact/first-person.js';
 import { t as tr } from '../../i18n/index.js';
+import { modelFamily } from '../../shared/model-name.js';
 
 export let lite = false;
 let filter = 'all', query = '', head = null, tabs = null, permHost = null, listEl = null, emptyEl = null;
@@ -72,7 +73,7 @@ function subRows(s) {
   if (!s.subs?.length || s.status === 'rest') return [];
   return s.subs.slice(0, 4).map((x) => {
     const r = el('div', 'v2-subrow');
-    r.append(el('span', 'v2-sub-arrow', '↳'), el('b', null, x.type || 'agent'), el('span', null, x.last ? verb(x.last) : x.desc || ''));
+    r.append(el('span', 'v2-sub-arrow', '↳'), el('b', null, x.type || 'agent'), ...(modelFamily(x.model) ? [el('i', 'v2-sub-model', modelFamily(x.model))] : []), el('span', null, x.last ? verb(x.last) : x.desc || ''));
     return r;
   });
 }

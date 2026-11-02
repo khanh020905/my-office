@@ -91,7 +91,7 @@ function empty(d) {
 }
 
 // what the drawing shows: the same numbers again (every 20 s while nothing new came in) leave the drawing alone
-const sig = (d) => JSON.stringify([d.range, d.setup, d.total, d.ranked, d.by, d.projects, d.perDay, d.plan?.perUsd, !!(d.lastMetricsAt || d.lastLogsAt),
+const sig = (d) => JSON.stringify([d.range, d.setup, d.total, d.ranked, d.by, d.roles, d.projects, d.perDay, d.plan?.perUsd, !!(d.lastMetricsAt || d.lastLogsAt),
   d.sessions?.map((x) => [x.sid, x.name, x.usd, x.req, x.open])]);
 const syncTabs = () => { for (const b of $('burn-range').querySelectorAll('[data-range]')) b.setAttribute('aria-selected', String(b.dataset.range === range)); };
 function render() {
@@ -132,6 +132,12 @@ function render() {
   const bySource = stack(d.by.source, (n) => SOURCE_COLOR[n] ?? 0, srcName, d);
   for (const li of bySource.querySelectorAll('li')) if (li.querySelector('.bn-ln')?.textContent === tr('burn.source.auxiliary')) li.title = tr('burn.source.auxTip');
   out.push(sec(tr('burn.bySource'), bySource));
+  // the session (the coordinator) and its subagents, each by model: what moving the subagents to a cheaper model saves
+  if ((d.roles || []).some((r) => r.role === 'subagent')) {
+    const roles = el('ol', 'bn-list');
+    for (const r of d.roles.slice(0, 6)) roles.append(row('', `${tr(`burn.source.${r.role}`)} · ${modelName(r.model)}`, r.share, d.money ? usd(r.usd) : toks(r.tokens), '', '', [el('i', `bn-dot bn-c${colors.get(r.model) ?? 0}`)]));
+    out.push(sec(tr('burn.roles.title'), roles, el('p', 'bn-note', tr('burn.roles.note'))));
+  }
   if (d.range === '7d') out.push(sec(tr('burn.perDay'), days(d, colors)));
   // by project, by session (the 40 that cost most, the rest in one line so it still adds up)
   const projects = el('ol', 'bn-list');

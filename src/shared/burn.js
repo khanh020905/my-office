@@ -24,7 +24,7 @@ export const projectOf = (cwd) => { if (!cwd) return ''; const m = /^(.*?)[\\/]\
  * @param {{ anonAt?: number, at?: number }} [o]
  */
 export function summarize(days, sess, { anonAt = 0, at = Date.now() } = {}) {
-  const total = zero(), plain = zero(), S = new Map(), by = Object.fromEntries(DIMS.map((d) => [d, new Map()])), perDay = [];
+  const total = zero(), plain = zero(), S = new Map(), by = Object.fromEntries(DIMS.map((d) => [d, new Map()])), perDay = [], R = new Map();
   let req = 0, err = 0, prompts = 0;
   // counters without a session id (a collector of your own that drops it): events can't be told from them, so they
   // stop counting money and only count requests
@@ -43,6 +43,7 @@ export function summarize(days, sess, { anonAt = 0, at = Date.now() } = {}) {
         addTo(total, w); addTo(s.sum, w);
         DIMS.forEach((dim, i) => { if (!names[i]) return; const m = by[dim]; m.set(names[i], addTo(m.get(names[i]) || zero(), w)); });
         if (!names[2] && !names[3] && !names[4] && !names[5]) addTo(plain, w);
+        if (names[1] === 'main' || names[1] === 'subagent') { const rk = `${names[1]}\t${names[0]}`; R.set(rk, addTo(R.get(rk) || zero(), w)); }
         s.models.set(names[0], (s.models.get(names[0]) || 0) + w[0]);
         models[names[0] || '?'] = (models[names[0] || '?'] || 0) + w[0]; dayUsd += w[0];
       }
@@ -64,5 +65,7 @@ export function summarize(days, sess, { anonAt = 0, at = Date.now() } = {}) {
   // who eats it: the named MCP servers, skills, plugins and subagent types, together (a request may have several, so
   // these shares overlap and don't add up to 100 %; what had none of them, `plain`, is Claude's own work)
   const ranked = ['mcp', 'skill', 'plugin', 'agent'].flatMap((kind) => list(by[kind]).map((r) => ({ kind, ...r }))).sort((a, b) => b.share - a.share);
-  return { money, total: { ...row('', total), req, err, prompts }, plain: row('', plain), by: Object.fromEntries(DIMS.map((d) => [d, list(by[d])])), ranked, sessions, projects, perDay };
+  // the coordinator and its subagents: what each costs on each model (a subagent on Sonnet next to the session on Opus)
+  const roles = [...R].map(([k, v]) => { const [role, model] = k.split('\t'); return { role, model, ...row(model, v) }; }).filter((r) => r.usd > 0 || r.tokens > 0).sort((a, b) => b.share - a.share);
+  return { money, total: { ...row('', total), req, err, prompts }, plain: row('', plain), roles, by: Object.fromEntries(DIMS.map((d) => [d, list(by[d])])), ranked, sessions, projects, perDay };
 }

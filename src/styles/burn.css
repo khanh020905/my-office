@@ -77,3 +77,4 @@
   .bn-list li { grid-template-columns: minmax(0, 1fr) auto auto; grid-template-areas: "who pct money" "bar bar bar" "meta meta meta"; row-gap: 4px; column-gap: 8px; }
   .bn-who { grid-area: who; } .bn-list b { grid-area: pct; } .bn-list small { grid-area: money; } .bn-track { grid-area: bar; height: 6px; } .bn-meta { grid-area: meta; margin-top: 0; }
 }
+.bn-dot { flex: none; display: inline-block; width: 8px; height: 8px; margin-right: 6px; border-radius: 50%; vertical-align: 1px; }   /* (a model's colour, as "By model": the coordinator and its subagents) */

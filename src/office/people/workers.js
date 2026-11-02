@@ -17,6 +17,7 @@ import { COFFEE_Q, hideMeal, joinCoffee, leaveCoffee, showMeal } from './breaks.
 import { blocked, fp } from '../interact/first-person.js';
 import { sfx } from '../audio/sfx.js';
 import { t as tr } from '../../i18n/index.js';
+import { modelFamily } from '../../shared/model-name.js';
 
 /* ---------- workers ---------- */
 export const PALETTE = ['#6A8042', '#E8742A', '#3F7CC4', '#8C4FA8', '#D64550', '#2A9D8F', '#C9A227', '#5B6CD8', '#B5651D', '#C2577A', '#3E8E7E', '#7A6FD0'];
@@ -98,6 +99,7 @@ export function spawnSub(parent, agentId, type, instant = false, info = null) {
   const h = hash(agentId);
   const w = new Worker({ name: type || 'agent', shirt: tint(parent.cfg.shirt, 0.3), hair: HAIRS[h % HAIRS.length], style: STYLES[(h >>> 3) % STYLES.length], acc: (h >>> 6) % 3 === 0 ? 'glasses' : null, pants: '#4C566A' }, { sub: true, scale: 0.78, parent, id: agentId });
   subs.set(agentId, w);
+  if (info?.model) w.setModel(info.model);
   const x = () => info || sessions.get(parent.id)?.subs?.find((y) => y.id === agentId);
   const seated = () => {
     w.station = 'meeting'; w.anim = 'think';
@@ -204,6 +206,12 @@ export function setup() {
       if (this.acct === (name || '')) return; this.acct = name || '';
       if (!this.acctEl) { this.acctEl = el('span', 'tag-acct'); this.tagEl.insertBefore(this.acctEl, this.tagText.nextSibling); }
       this.acctEl.hidden = !this.acct; this.acctEl.textContent = this.acct;
+    }
+    // a subagent's model ("Sonnet"): a small chip on its name tag, coloured by family as the cost panel colours it
+    setModel(m) {
+      const f = modelFamily(m); if (this.modelTag === f) return; this.modelTag = f;
+      if (!this.modelEl) { this.modelEl = el('span', 'tag-model'); this.tagEl.append(this.modelEl); }
+      this.modelEl.hidden = !f; this.modelEl.textContent = f; this.modelEl.dataset.family = f.toLowerCase();
     }
     setTeam(n) {
       if (this.team === n) return; this.team = n;

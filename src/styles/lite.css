@@ -52,6 +52,7 @@
 .v2-subrow { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 6px 14px 7px 36px; font-size: .74rem; color: var(--muted); background: rgba(255, 255, 255, .015); }
 .v2-rows > .v2-subrow { border-top-color: transparent; }
 .v2-subrow b { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.v2-sub-model { flex: none; font-style: normal; font-size: .64rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: rgba(92, 160, 230, .18); color: #A9D0F7; }   /* (the subagent's model) */
 .v2-subrow span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v2-sub-arrow { color: var(--faint); }
 .v2-empty { margin-top: 28px; color: var(--muted); font-size: .85rem; }
