@@ -111,7 +111,7 @@ engine switches to demo mode and talks to no API.
 | --- | ---: | --- |
 | `audio/sfx.js` | 75 | Sounds, synthesized in the browser. |
 | `core/env.js` | 73 | Page-wide basics: DOM helpers, the floor plan choice, replay clock, office clock, season, formatting. |
-| `core/loop.js` | 235 | The render loop and its frame budget. |
+| `core/loop.js` | 237 | The render loop and its frame budget. |
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo-log.js` | 17 | The demo's conversation logs (a session's, shown in its drawer, and each subagent's steps), kept to what the drawer can show. |

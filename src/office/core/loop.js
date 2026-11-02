@@ -57,7 +57,9 @@ const clock = new THREE.Clock();
 // Frame budget. The office is a thing you leave open, so it runs smooth while you use it and light the rest of the
 // time: 60 fps while you move the camera, point, type or walk in first person (never more, even on a 120 Hz screen); 30
 // while something moves on its own (people walking, a rocket, a replay, a clip being recorded); 20 when the office is
-// calm (a phone: 20 and 12); 8 when the window sits in the background (a hidden tab pauses on its own). Someone on the
+// calm (a phone: 20 and 12); 8 when the window sits in the background, and 2 once it has sat there untouched for two
+// minutes (an office left open behind the editor all day: a glance still shows who is where; a hidden tab pauses on its
+// own). Someone on the
 // staff is nearly always walking somewhere, so "something moves" is the usual case: 30 instead of 60 halves what an open
 // office costs. Shadows only change when something moves: the shadow map is redrawn every other frame while someone
 // walks, else every fourth.
@@ -69,7 +71,7 @@ function frameGap(now) {
   if (state.covered) return 1000 / 2;   // (a phone's full-screen sheet over it, the chat say: nobody sees the office, its CPU goes to the sheet)
   if (fp.on) return 1000 / 60;
   if (recorder || state.clip) return 1000 / 30;
-  if (!document.hasFocus()) return 1000 / 8;
+  if (!document.hasFocus()) return now - lastInput > 120_000 ? 1000 / 2 : 1000 / 8;
   if (now - lastInput < 1500 || state.zoomGoal !== null || focusTarget.distanceToSquared(controls.target) > 1e-4) return 1000 / 60;
   const moving = walkingNow() || particles.length || rocketState.t >= 0 || (replay.on && replay.playing);
   if (phoneLike()) return moving ? 1000 / 20 : 1000 / 12;   // a phone: its battery and its CPU first (a glance at the office, not a game)
