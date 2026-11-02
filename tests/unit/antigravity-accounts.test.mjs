@@ -96,3 +96,15 @@ test('switching by itself when the model in use runs out, and adding an account'
   assert.equal(ag.out().now, b);
   ag.stop();
 });
+
+test('the windows the IDE had open: every folder once, the one in front last; not a remote one', async () => {
+  const { windowsOf } = await import('../../server/antigravity-accounts.mjs');
+  const { pathToFileURL } = await import('node:url');
+  const [ielts, crm, lms] = ['Website-Ielts', path.join('Coding-Project', 'CRM-TID'), 'lms.code-workspace'].map((p) => path.join(os.homedir(), p)), u = (p) => pathToFileURL(p).href;
+  const w = { windowsState: {
+    lastActiveWindow: { folder: u(ielts) },
+    openedWindows: [{ folder: u(ielts) }, { folder: u(crm) }, { workspace: { configPath: u(lms) } }, { folder: 'vscode-remote://ssh-remote%2Bbox/srv/app' }, { folder: u(crm) }],
+  } };
+  assert.deepEqual(windowsOf(w), [crm, lms, ielts]);
+  assert.deepEqual(windowsOf({}), []);
+});

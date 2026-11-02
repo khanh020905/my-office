@@ -12,6 +12,7 @@ import fsp from 'node:fs/promises';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { execFile, spawn } from 'node:child_process';
+import { fileURLToPath } from 'node:url';
 
 export const KEYS = { token: 'antigravityUnifiedStateSync.oauthToken', status: 'antigravityUnifiedStateSync.userStatus', prefs: 'antigravityUnifiedStateSync.modelPreferences' };
 const EMPTY = 0.02;   // a model with this little left: the account is out of it until it resets
@@ -86,6 +87,16 @@ export function quotaRows(models, picked = 0, now = Date.now()) {
 export function outUntil(a, picked = 0, now = Date.now()) {
   const ms = a.models || [], m = ms.find((x) => x.id === picked && x.left !== null) || ms.find((x) => x.left !== null);
   return m && m.left <= EMPTY && m.resetsAt > now ? m.resetsAt : 0;
+}
+
+/** The windows the IDE had open when it last quit (windowsState in its storage.json): their folders or workspace files,
+ *  the one in front last, so that opening them again in this order leaves it in front. */
+export function windowsOf(storage) {
+  const w = storage?.windowsState || {}, uri = (x) => x?.folder || x?.workspace?.configPath || '', local = (u) => /^file:\/\//.test(u);
+  const front = uri(w.lastActiveWindow);
+  const list = [...new Set((w.openedWindows || []).map(uri))].filter((u) => local(u) && u !== front);
+  if (local(front)) list.push(front);
+  return list.flatMap((u) => { try { return [fileURLToPath(u)]; } catch { return []; } });   // (one another system wrote: left out)
 }
 
 /* ---------- the IDE's database, through the sqlite3 program ---------- */
