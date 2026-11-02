@@ -26,6 +26,12 @@ export default {
     onMac: 'Accounts can only be added on this computer.',
     main: 'the main account',
   },
+  // Settings → More: the models of a session and its subagents (server/models.mjs)
+  models: {
+    unreadable: "Couldn't read ~/.claude/settings.json (it may have comments). Set the model there by hand.",
+    failed: "Couldn't write Claude Code's settings.",
+    splitNote: '## Big tasks: hand parts to subagents\nWhen a task has several independent parts (reading or researching in many places, edits that don\'t touch each other), give each part to a subagent with the Agent tool, and run the independent ones in parallel. This session coordinates: it splits the work, writes each subagent a brief with the context it needs, puts the results together and checks them before saying it is done. Small tasks, or ones that need one unbroken line of context, it does itself.',
+  },
   ai: {
     noAccount: 'That account is no longer in the list.',
     noCopy: "The office has no saved sign-in for that account. Add it again.",

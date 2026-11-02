@@ -15,6 +15,7 @@ const CITIES = [['hn', 'Hà Nội'], ['hcm', ''], ['dn', 'Đà Nẵng'], ['hue',
 const TIME_ICON = { auto: 'clock', day: 'sun', night: 'moon' } as const;
 const LOOP_N = [2, 3, 4, 5], LOOP_MIN = [5, 10, 20, 30];   // (the server's choices: server/loops.mjs)
 const FAREWELL_DAYS = [14, 30, 60, 90];   // (server/tenure.mjs)
+const MODEL_MAIN = ['opus', 'sonnet', ''], MODEL_SUB = ['', 'sonnet', 'haiku', 'opus'];   // (server/models.mjs: '' = the default, the same as the session)
 
 export default async function SettingsPanel() {
   const t = await getT();
@@ -125,6 +126,21 @@ export default async function SettingsPanel() {
           <h3>{t('settings.behaviour')}</h3>
           <div className="pop-toggles">{toggle('sound', true)}{toggle('perm', true)}{toggle('drill', true)}</div>
           <div className="pop-acts"><button id="btn-tips" className="tb-btn" type="button"><span data-icon="sparkle"></span><span className="lbl">{t('tips.again')}</span></button></div>
+          {/* the models of a session and its subagents (src/office/ui/models.js fills it in from the server; on the Mac only) */}
+          <div className="st-loop" id="st-models" hidden>
+            <h3>{t('settings.models.title')}</h3>
+            <p className="pop-note">{t('settings.models.note')}</p>
+            <div className="st-loop-row"><span>{t('settings.models.main')}</span>
+              <div className="seg">{MODEL_MAIN.map((m) => <button key={m || 'default'} type="button" data-model-main={m} aria-pressed="false">{t(`settings.models.opt.${m || 'default'}`)}</button>)}</div></div>
+            <div className="st-loop-row"><span>{t('settings.models.sub')}</span>
+              <div className="seg">{MODEL_SUB.map((m) => <button key={m || 'same'} type="button" data-model-sub={m} aria-pressed="false">{t(`settings.models.opt.${m || 'same'}`)}</button>)}</div></div>
+            <p className="pop-note" id="st-models-other" hidden></p>
+            <div className="pop-toggles">
+              <button type="button" className="tgl" data-model-force="" role="switch" aria-checked="false"><span>{t('settings.models.force')}</span><i></i></button>
+              <button type="button" className="tgl" data-model-split="" role="switch" aria-checked="false"><span>{t('settings.models.split')}</span><i></i></button>
+            </div>
+            <p className="pop-note">{t('settings.models.splitNote')}</p>
+          </div>
           {/* the stuck-loop breaker (src/office/ui/stuck.js fills it in from the server; hidden in the demo) */}
           <div className="st-loop" id="st-loop" hidden>
             <h3>{t('settings.loop.title')}</h3>

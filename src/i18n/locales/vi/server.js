@@ -24,6 +24,11 @@ export default {
     onMac: 'Chỉ thêm tài khoản được trên chính máy này.',
     main: 'tài khoản chính',
   },
+  models: {
+    unreadable: 'Không đọc được ~/.claude/settings.json (có thể có chú thích). Đặt model trong đó bằng tay nhé.',
+    failed: 'Không ghi được cài đặt của Claude Code.',
+    splitNote: '## Việc lớn: chia cho subagent\nKhi một việc có nhiều phần độc lập (đọc hay tra cứu ở nhiều nơi, sửa nhiều chỗ không dính nhau), giao từng phần cho một subagent bằng công cụ Agent, chạy song song những phần không phụ thuộc nhau. Phiên này làm người điều phối: chia việc, viết cho mỗi subagent một đề bài đủ ngữ cảnh, ghép kết quả và tự kiểm tra lại trước khi báo xong. Việc nhỏ, hoặc cần một mạch ngữ cảnh liền, thì tự làm.',
+  },
   ai: {
     noAccount: 'Tài khoản này không còn trong danh sách.',
     noCopy: 'Văn phòng chưa lưu đăng nhập của tài khoản này. Thêm lại nhé.',

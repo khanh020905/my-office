@@ -19,6 +19,7 @@ import { parseEtime } from './platform/shared.mjs';
 import { redact } from './redact.mjs';
 import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
+import { MAIN, SUB, modelsOf, withModels, hasSplit, withSplit } from './models.mjs';
 import { createCodexAccounts } from './codex-accounts.mjs';
 import { createAntigravityAccounts, makeDb } from './antigravity-accounts.mjs';
 import { report as promptReport } from './prompt-report.mjs';
@@ -2888,6 +2889,17 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (url.pathname === '/api/models') {   // Settings → More: the models of a session and its subagents (this computer only)
+    if (!isLoopback(req) || (req.method === 'POST' && (!sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')))) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    if (req.method !== 'POST') { json(res, 200, modelsOut()); return; }
+    readJson(req).then((b) => {
+      const pick = (v, list) => (v === undefined ? undefined : list.includes(String(v)) ? String(v) : null);
+      const main = pick(b?.main, MAIN), sub = pick(b?.sub, SUB);
+      if (main === null || sub === null) { json(res, 400, { ok: false }); return; }
+      json(res, 200, setModels({ main, sub, force: b?.force === undefined ? undefined : !!b.force, split: b?.split === undefined ? undefined : !!b.split }));
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/cache') {   // the "about to go cold" notification: { nudge } (this computer only)
     if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
     readJson(req).then((b) => {
@@ -3093,6 +3105,34 @@ function setRcAtStartup(on) {
   try { real = fs.realpathSync(CC_SETTINGS); cfg = JSON.parse(fs.readFileSync(real, 'utf8') || '{}'); } catch (e) { if (e.code !== 'ENOENT') return false; }   // (a file it can't read, with comments say: left alone)
   if (on) cfg.remoteControlAtStartup = true; else delete cfg.remoteControlAtStartup;
   try { fs.mkdirSync(path.dirname(real), { recursive: true }); fs.writeFileSync(`${real}.office-tmp`, `${JSON.stringify(cfg, null, 2)}\n`); fs.renameSync(`${real}.office-tmp`, real); return true; } catch { return false; }
+}
+/* "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the main session's model in the same
+   settings, the subagents' in its env block, and the office's note in ~/.claude/CLAUDE.md asking Claude to hand the
+   independent parts of a big task to subagents. Written through the links, as the other accounts share both files. */
+const CC_MEMORY = path.join(CLAUDE_DIR, 'CLAUDE.md');
+function readReal(f) { let real = f; try { real = fs.realpathSync(f); return { real, text: fs.readFileSync(real, 'utf8') }; } catch (e) { return { real, text: e.code === 'ENOENT' ? '' : null }; } }
+function writeReal(real, text) { try { fs.mkdirSync(path.dirname(real), { recursive: true }); fs.writeFileSync(`${real}.office-tmp`, text); fs.renameSync(`${real}.office-tmp`, real); return true; } catch { return false; } }
+function modelsOut() {
+  const set = readReal(CC_SETTINGS), mem = readReal(CC_MEMORY);
+  let cfg = null; try { cfg = JSON.parse(set.text || '{}'); } catch { /* with comments: shown, not changed */ }
+  return { ok: true, ...modelsOf(cfg || {}), split: hasSplit(mem.text), main_: MAIN, sub_: SUB, readOnly: cfg === null || set.text === null };
+}
+function setModels({ main, sub, force, split }) {
+  if (main !== undefined || sub !== undefined || force !== undefined) {
+    const set = readReal(CC_SETTINGS); let cfg;
+    try { cfg = JSON.parse(set.text === null ? 'x' : set.text || '{}'); } catch { return { ok: false, message: tr('server.models.unreadable') }; }   // (one with comments: left alone)
+    if (!writeReal(set.real, `${JSON.stringify(withModels(cfg, { main, sub, force }), null, 2)}\n`)) return { ok: false, message: tr('server.models.failed') };
+    modelAt = 0;   // (the plan card's model week follows at once)
+  }
+  if (split !== undefined) {
+    const mem = readReal(CC_MEMORY); if (mem.text === null) return { ok: false, message: tr('server.models.failed') };
+    const next = withSplit(mem.text, split, tr('server.models.splitNote'));
+    if (next !== mem.text && !writeReal(mem.real, next)) return { ok: false, message: tr('server.models.failed') };
+    if (split) for (const d of otherDirs) shareWithMain(d);   // (an account added before there was a CLAUDE.md: linked now)
+  }
+  const out = modelsOut();
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} models main=${out.main || 'default'} sub=${out.sub || 'same'}${out.force ? ' (forced)' : ''} split=${out.split ? 'on' : 'off'}\n`).catch(() => {});
+  return out;
 }
 // While the tunnel is on, the Mac stays awake so it can be reached (macOS): `caffeinate -s` holds off system sleep on the
 // power adapter only (on battery it sleeps as usual), and the display still turns off; `-w` ends it with this server,

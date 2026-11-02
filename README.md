@@ -387,6 +387,12 @@ Then open <http://localhost:4310>.
   you write in it again (the office starts it there through the same script; its person waits at the desk meanwhile).
   A session in a terminal gets the command that resumes it there. With switching on, the sessions open on an account
   that runs out for a while (not a short rate limit) move by themselves too; a box under the switch turns that off.
+- **Models: coordinator and subagents** (Settings → More): the model a Claude session runs on (Opus, Sonnet or the
+  default) and the one its subagents run on (the same, Sonnet, Haiku or Opus), so a big task can be coordinated by Opus
+  while Sonnet does the parts. "Always this model for subagents" also overrides the model Claude picks for one
+  (`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`). "Ask Claude to split big tasks among subagents" adds a short note to
+  `~/.claude/CLAUDE.md`, taken out again when off. Written to `~/.claude/settings.json` (`model`,
+  `env.CLAUDE_CODE_SUBAGENT_MODEL`); the other accounts share it by a link. Sessions started from then on use it.
 - **Codex and Antigravity accounts too**: the plan card has a section for each, under Claude's. **Codex**: the account
   Codex is signed in with shows by itself, with its 5-hour and weekly usage (read by Codex's own `codex app-server`);
   "Add a Codex account" opens the ChatGPT sign-in page without signing the current one out; "Use" puts that account's

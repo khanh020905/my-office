@@ -31,6 +31,19 @@ export default {
   weatherOff: 'Off',
   notify: 'Phone and alerts',
   behaviour: 'Behaviour',
+  // Settings → More: the models of a session and its subagents (ui/models.js, server/models.mjs)
+  models: {
+    title: 'Models: coordinator and subagents',
+    note: 'A big task can be split among subagents: the session coordinates on one model, its subagents work on another (Sonnet costs less than Opus). For Claude sessions started from now on, on every account.',
+    main: 'The session (coordinator)', sub: 'Subagents',
+    opt: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku', default: 'Default', same: 'Same' },
+    force: 'Always this model for subagents (even when Claude picks another)',
+    split: 'Ask Claude to split big tasks among subagents',
+    splitNote: 'A short note in ~/.claude/CLAUDE.md, taken out again when this is off.',
+    other: 'Now: {model} (set by hand)',
+    saved: 'Saved. Claude sessions started from now on use it; the ones open now keep their model.',
+    readOnly: "~/.claude/settings.json can't be read here (it may have comments): set the model there by hand.",
+  },
   // Settings → More: the stuck-loop breaker (server/loops.mjs)
   loop: {
     title: 'Stuck loops',

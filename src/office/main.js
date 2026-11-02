@@ -101,6 +101,7 @@ import * as uiTimelapse from './ui/timelapse.js';
 import * as uiGroupChat from './ui/group-chat.js';
 import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiStuck from './ui/stuck.js';
+import * as uiModels from './ui/models.js';
 import * as uiCacheWords from './ui/cache-words.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
@@ -220,6 +221,7 @@ const MODULES = [
   uiGroupChat,
   uiGroupChatView,
   uiStuck,
+  uiModels,
   uiCacheWords,
   uiTips,
   interactFirstPerson,
