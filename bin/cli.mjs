@@ -147,7 +147,12 @@ function menubar() {
   // tell macOS the app changed, so notifications pick up the new logo instead of the blank one it remembered
   try { execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister', ['-f', MENUBAR_APP], { stdio: 'ignore', timeout: 15_000 }); } catch { /* only the logo waits */ }
   try { execFileSync('pkill', ['-f', MENUBAR_BIN], { stdio: 'ignore' }); } catch { /* not running */ }
-  try { execFileSync('open', ['-g', MENUBAR_APP, '--args', String(PORT)], { stdio: 'ignore', timeout: 15_000 }); } catch { /* the office starts it next time */ }
+  // `open` right after pkill fails (-600) while the old copy is still quitting, which left no icon at all: wait it out
+  const nap = (ms) => Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
+  for (let i = 0; i < 25; i++) { try { execFileSync('pgrep', ['-f', MENUBAR_BIN], { stdio: 'ignore' }); nap(200); } catch { break; } }
+  for (let i = 0; i < 3; i++) {
+    try { execFileSync('open', ['-g', MENUBAR_APP, '--args', String(PORT)], { stdio: 'ignore', timeout: 15_000 }); break; } catch { nap(1000); }   // else the office starts it next time
+  }
   ok(tr('cli.install.menubar'));
 }
 // the small panel in the side bar of each editor on this computer (vscode-extension/, packed by server/vsix.mjs)
