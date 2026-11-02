@@ -1,0 +1,88 @@
+name: E2E (all tests)
+
+# Every end-to-end test, not just the smoke ones (ci.yml), split across runners: a runner has no GPU, so each test draws
+# the whole 3D office in software and takes one to three minutes. Every night and by hand (Actions → E2E → Run workflow),
+# not on pull requests: in software rendering some tests run past their time limit (about 45 of them, 2/11/2026), so a
+# red run here says "look at the report", not "this pull request broke something". A batch of pull requests that each
+# passed on its own once broke six tests together (1/11/2026): the nightly run is what catches that.
+on:
+  schedule:
+    - cron: '0 19 * * *'   # 02:00 in Vietnam
+  workflow_dispatch:
+
+concurrency:
+  group: e2e-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: E2E ${{ matrix.shard }}/12
+    runs-on: ubuntu-24.04   # (as in ci.yml: Playwright 1.56 has no browsers for Ubuntu 26.04)
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: npx playwright install --with-deps chromium
+      # one test at a time: a software-rendered office keeps every core of the runner busy. Split by test, not by file
+      # (--fully-parallel): office.spec.ts alone holds 49 of them, and by file some runners got none at all
+      - run: npx playwright test --shard=${{ matrix.shard }}/12 --fully-parallel --workers=1 --reporter=list,blob
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: blob-${{ matrix.shard }}
+          path: blob-report/
+          retention-days: 3
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: failed-${{ matrix.shard }}
+          path: test-results/
+          retention-days: 7
+
+  report:
+    name: E2E report
+    needs: e2e
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: blob-*
+          path: all-blob
+          merge-multiple: true
+      # one HTML report for all the shards, and the slowest tests in the run's summary (to keep the split even)
+      - run: npx playwright merge-reports --reporter=html,json all-blob
+        env:
+          PLAYWRIGHT_JSON_OUTPUT_NAME: merged.json
+      - run: |
+          node -e '
+            const r = require("./merged.json"), rows = [];
+            const walk = (s) => { for (const x of s.suites || []) walk(x); for (const sp of s.specs || []) for (const t of sp.tests) for (const res of t.results) rows.push([res.duration, res.status, sp.file + ":" + sp.line + " " + sp.title]); };
+            for (const s of r.suites) walk(s);
+            const by = (st) => rows.filter((x) => x[1] === st).length, total = rows.reduce((n, x) => n + x[0], 0);
+            const out = ["### E2E: " + by("passed") + " passed, " + by("failed") + " failed, " + by("timedOut") + " timed out, " + by("skipped") + " skipped", "",
+              "Test time in all: " + Math.round(total / 60000) + " min", "", "| s | status | test |", "|---:|---|---|",
+              ...rows.sort((a, b) => b[0] - a[0]).slice(0, 15).map((x) => "| " + Math.round(x[0] / 1000) + " | " + x[1] + " | " + x[2].replace(/\|/g, "\\|") + " |")];
+            require("fs").appendFileSync(process.env.GITHUB_STEP_SUMMARY, out.join("\n") + "\n");'
+      - uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report
+          path: playwright-report/
+          retention-days: 7

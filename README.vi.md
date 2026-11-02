@@ -168,7 +168,7 @@ Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại c
 - `app/` + `src/components/`: trang Next.js (App Router). `src/styles/`: CSS theo từng khu vực.
 - `src/office/`: văn phòng 3D (three.js), chia module theo thư mục `core`, `scene`, `world`, `people`, `life`, `ui`, `interact`, `net`, `demo`, `replay`. Bản đồ module ở [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 - `bin/cli.mjs`: lệnh install / uninstall / doctor / start / pin. `hooks/hooks.json` + `.claude-plugin/`: cài dạng plugin. `hooks/status-line.mjs`: status line gửi hạn mức gói về văn phòng.
-- `tests/unit/` (node --test) và `tests/e2e/` (Playwright), chạy trên CI ở `.github/workflows/ci.yml`.
+- `tests/unit/` (node --test) và `tests/e2e/` (Playwright), chạy trên CI ở `.github/workflows/ci.yml` (e2e: nhóm @smoke), toàn bộ e2e chia nhiều máy ở `e2e-full.yml` (mỗi đêm và mỗi PR).
 - `data/` (không đưa lên git): `state.json`, `token`, `pin`, `todos.json`, `limits.json`, `totals.json`, `statusline-prev.json`, `owners.json`, `replay/YYYY-MM-DD.jsonl` (giữ 7 ngày), `otel/YYYY-MM-DD.json` (giữ 30 ngày), `actions.log`, `server.log`.
 
 ## Phát triển
