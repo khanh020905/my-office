@@ -17,8 +17,11 @@ import { photoOn } from './photo.js';
 import { dn, sessions } from '../people/workers.js';
 import { openTaskSheet, dictate, shrink } from './task-sheet.js';
 import { openBurn } from './burn.js';
+import { openVault } from './vault.js';
 import { toast } from './activity.js';
 import { loopCard, loopPeek } from './stuck.js';
+import { ciCard, ciPeek } from './ci-card.js';
+import { denyCard, denyPeek } from './denied-card.js';
 import { cacheWords } from './cache-words.js';
 import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
@@ -133,6 +136,8 @@ function content(m) {
   }
   if (m.kind === 'work') return workCard(m);
   if (m.kind === 'loop') return loopCard(m, redrawOne);   // (a session stuck in a loop: ui/stuck.js)
+  if (m.kind === 'deny') return denyCard(m, redrawOne);   // (a call auto mode refused: ui/denied-card.js)
+  if (m.kind === 'ci') return ciCard(m, redrawOne);   // (a repository's CI gone red, "Sửa luôn": ui/ci-card.js)
   if (bigEmoji(m.text)) return el('span', 'zc-bigemo', m.text);
   const t = el('span', 'zc-text');
   // @names in blue, the way the app shows a mention: the whole name of someone in the group (names have spaces), else one word
@@ -351,7 +356,7 @@ function peek(m) {
   if (chat.open || m.kind === 'sys' || m.from === 'me' || photoOn()) return;
   let p = $('zc-peek'); if (!p) { p = el('button', 'zc-peek'); p.id = 'zc-peek'; p.type = 'button'; p.addEventListener('click', () => toggle(true)); document.body.append(p); }
   if (m.kind === 'work') return;   // (a card at work: its answer is the news)
-  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
+  const txt = m.kind === 'loop' ? loopPeek(m) : m.kind === 'ci' ? ciPeek(m) : m.kind === 'deny' ? denyPeek(m) : m.kind === 'text' ? mask(m.text) : m.kind === 'poll' ? `📊 ${m.poll.q}` : m.kind === 'remind' ? `⏰ ${m.remind.title}` : m.kind === 'photo' ? tr('chat.photo') : tr('chat.sticker');
   const box = el('span', 'zc-peek-t'); box.append(el('b', null, tr('chat.group')), el('span', null, `${m.name}: ${txt}`));
   p.replaceChildren(groupAvatar(44), box);
   p.hidden = false; p.classList.remove('is-out'); clearTimeout(peekTimer);
@@ -450,13 +455,26 @@ setInterval(() => { if (root && !root.hidden) drawToCache(); }, 20_000);
 let quick = null;
 const QUICK0 = () => ['test', 'commit', 'deploy', 'today', 'errors'].map((k) => ({ label: tr(`chat.quick.${k}`), prompt: tr(`chat.quick.${k}Prompt`) }));
 async function loadQuick() { const r = await fetch(`/api/quick${tq()}`).then((x) => x.json()).catch(() => null); quick = r?.list?.length ? r.list : QUICK0(); drawQuick(); }
+let keepChip = null;   // "⭐ Lưu câu này": shown while what you are writing isn't one of them yet
+const canKeep = () => !!quick && input.value.trim().length >= 6 && !quick.some((q) => q.prompt === input.value.trim());
 function drawQuick() {
   if (!quickEl) return;
   quickEl.hidden = !target || !quick;
   if (quickEl.hidden) return;
   const chip = (label, fn, cls = '') => { const b = el('button', `zc-quick-c ${cls}`, label); b.type = 'button'; b.addEventListener('click', fn); return b; };
+  keepChip = chip(tr('chat.quick.keep'), keepQuick, 'is-keep'); keepChip.hidden = !canKeep();
+  keepChip.addEventListener('pointerdown', (e) => e.preventDefault());   // (the input keeps its focus and the keyboard)
   quickEl.replaceChildren(...quick.map((q) => chip(q.label, () => { input.value = q.prompt; syncBar(); input.dispatchEvent(new Event('input')); input.focus(); })),
-    chip('✎', editQuick, 'is-edit'));
+    keepChip, chip('✎', editQuick, 'is-edit'));
+}
+// what you are writing, kept as a quick command in one tap: named after its first words (✎ renames it)
+async function keepQuick() {
+  const text = input.value.trim(); if (!text || !quick) return;
+  if (quick.length >= 12) { toast(tr('chat.quick.full'), 5000); editQuick(); return; }
+  const first = text.split('\n')[0].trim(), label = first.length > 22 ? `${first.slice(0, 21).trimEnd()}…` : first;
+  const r = await fetch(`/api/quick${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ list: [...quick, { label, prompt: text }] }) }).then((x) => x.json()).catch(() => null);
+  if (!r?.ok) { toast(tr('drawer.unreachable')); return; }
+  quick = r.list.length ? r.list : QUICK0(); drawQuick(); toast(tr('chat.quick.kept', { label }), 5000);
 }
 function editQuick() {
   mentionEl.hidden = moreEl.hidden = stickersEl.hidden = true;
@@ -779,7 +797,10 @@ function drawMore() {
   // what eats the plan (ui/burn.js): from the chat too, so a phone reaches it
   const burn = el('button', 'zc-more-o'); burn.type = 'button'; burn.append(icon('chart'), el('span', null, tr('burn.open')));
   burn.addEventListener('click', () => { moreEl.hidden = true; openBurn(); });
-  moreEl.replaceChildren(task, burn, at, form);
+  // every conversation's words, kept after Claude Code deletes them (ui/vault.js)
+  const vault = el('button', 'zc-more-o'); vault.type = 'button'; vault.append(icon('book'), el('span', null, tr('vault.open')));
+  vault.addEventListener('click', () => { moreEl.hidden = true; openVault(); });
+  moreEl.replaceChildren(task, burn, vault, at, form);
 }
 function drawMembers() {
   const rows = [];
@@ -836,7 +857,7 @@ function build() {
   bar = el('form', 'zc-bar');
   input = el('textarea', 'zc-in'); input.rows = 1; input.maxLength = 600;
   input.placeholder = tr(matchMedia('(max-width: 640px)').matches ? 'chat.placeholder' : 'chat.placeholderPc', { group: tr('chat.group') });
-  input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; coachLater(); });
+  input.addEventListener('input', () => { syncBar(); mentions(); input.style.height = ''; input.style.height = `${Math.min(110, input.scrollHeight)}px`; coachLater(); if (keepChip) keepChip.hidden = !canKeep(); });
   input.addEventListener('keydown', (e) => { e.stopPropagation(); if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); send(); } if (e.key === 'Escape') { if (steerTo) setSteer(null); else if (replyTo) setReply(null); else toggle(false); } });
   // the phone's 🎤: speak into the input (the browser's speech recognition, in the office's language)
   let stopMic = null;

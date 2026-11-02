@@ -384,6 +384,33 @@
 .zc-loop-form[hidden] { display: none; }
 .zc-loop-in { flex: 1; min-width: 0; padding: 7px 10px; border: 1px solid var(--zc-line); border-radius: 8px; font: inherit; font-size: 13px; color: var(--zc-ink); background: #fff; }
 .zc-loop-in:focus { outline: 2px solid var(--zc-blue); outline-offset: -1px; }
+/* a repository's CI gone red, "Sửa luôn" (ui/ci-card.js): the stuck card's look, a link to the run */
+.zc-ci { display: grid; gap: 6px; min-width: 220px; max-width: 360px; padding-left: 9px; border-left: 3px solid #E5484D; }
+.zc-ci:not(.is-red) { border-left-color: #C9CED6; }
+.zc-ci.is-green { border-left-color: #2DA44E; }
+.zc-ci-h { display: flex; align-items: center; gap: 7px; }
+.zc-ci-h b { font-size: 14.5px; font-weight: 600; color: #C31818; }
+.zc-ci:not(.is-red) .zc-ci-h b { color: var(--zc-grey); }
+.zc-ci-ic { flex: none; font-style: normal; font-size: 13px; }
+.zc-ci-t { margin: 0; font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.zc-ci-link { justify-self: start; font-size: 12.5px; color: var(--zc-blue); text-decoration: none; }
+.zc-ci-link:hover { text-decoration: underline; }
+.zc-ci-note { color: var(--zc-grey); font-size: 12px; }
+.zc-ci-note.is-ok { color: #1A7F37; }
+.zc-ci-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+/* a call auto mode refused (ui/denied-card.js): red while Claude waits for you, grey once decided */
+.zc-deny { display: grid; gap: 6px; min-width: 220px; max-width: 380px; padding-left: 9px; border-left: 3px solid #C9CED6; }
+.zc-deny.is-held { border-left-color: #E5484D; }
+.zc-deny-h { display: flex; align-items: center; gap: 7px; }
+.zc-deny-h b { font-size: 14.5px; font-weight: 600; }
+.zc-deny.is-held .zc-deny-h b { color: #C31818; }
+.zc-deny-ic { flex: none; font-style: normal; font-size: 13px; }
+.zc-deny-t { margin: 0; font-size: 13.5px; line-height: 1.45; overflow-wrap: anywhere; }
+.zc-deny-t code { padding: 1px 5px; border-radius: 4px; background: #F1F3F6; font: 12.5px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace; }
+.zc-deny-why, .zc-deny-note, .zc-deny-left { color: var(--zc-grey); font-size: 12px; }
+.zc-deny-left { color: #C31818; font-weight: 600; }
+.zc-deny-note.is-ok { color: #1A7F37; }
+.zc-deny-acts { display: flex; flex-wrap: wrap; gap: 6px; }
 .zc .zc-work-btn.is-steer { background: #E5F1FF; color: var(--zc-blue); margin-left: auto; }
 .zc .zc-work-btn.is-steer + .is-stop { margin-left: 0; }
 .zc.is-steer .zc-reply-q { border-left-color: #F2A100; }
@@ -409,6 +436,8 @@
 .zc .zc-quick-c:hover { background: #E5F1FF; color: var(--zc-blue); }
 .zc .zc-quick-c.is-edit { color: var(--zc-grey); }
 .zc .zc-quick-c.is-save { background: var(--zc-blue); color: #fff; }
+.zc .zc-quick-c.is-keep { background: #FFF4D6; color: #8A5A00; }   /* "⭐ Lưu câu này": what you are writing, kept as one */
+.zc .zc-quick-c[hidden] { display: none; }   /* (all: unset above takes the browser's own [hidden] away) */
 .zc-quick-ed { display: grid; gap: 8px; }
 .zc-quick-row { display: grid; grid-template-columns: 1fr auto; gap: 4px; padding: 8px; border-radius: 8px; background: #F7F8FA; }
 .zc-quick-row textarea { grid-column: 1 / -1; resize: vertical; font: inherit; font-size: 13px; }

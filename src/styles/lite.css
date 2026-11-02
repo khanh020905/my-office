@@ -1,18 +1,67 @@
-/* List mode. */
-/* list mode */
-.is-lite #stage, .is-lite .toolbar .tb-seg, .is-lite .toolbar .tb-zoom, .is-lite .toolbar .tb-fp, .is-lite .toolbar .tb-sep, .is-lite #btn-full { display: none !important; }
-.lite { position: absolute; inset: 0; overflow-y: auto; padding: 16px 16px 110px; display: flex; flex-direction: column; gap: 8px; background: var(--bg); z-index: 1; }
-@media (max-width: 1100px) { .lite { padding-top: 70px; } }
-.lite-h { margin: 10px 2px 2px; font: 700 .66rem/1 var(--font); letter-spacing: .09em; text-transform: uppercase; color: var(--faint); }
-.lite-card { all: unset; --c: var(--muted); box-sizing: border-box; display: flex; flex-direction: column; gap: 4px; padding: 12px 14px; border-radius: 14px; background: var(--card); border: 1px solid var(--line); border-left: 4px solid var(--c); cursor: pointer; }
-.lite-card[data-status="wait"] { border-color: rgba(242, 181, 68, .6); background: rgba(242, 181, 68, .08); border-left-color: var(--amber); }
-.lite-card:hover { background: var(--card-2); }
-.lite-card:focus-visible { outline: 2px solid var(--accent); }
-.lite-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.lite-top i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); flex: none; }
-.lite-top b { font-size: .9rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lite-now { font-size: .8rem; color: var(--ink); overflow-wrap: anywhere; }
-.lite-task { font-size: .76rem; color: var(--muted); }
-.lite-card small { font-size: .7rem; color: var(--faint); }
-.lite-empty { color: var(--muted); font-size: .85rem; }
-.is-stream .lite-task, .is-stream .lite-now { filter: blur(5px); }
+/* The 2D view (ui/lite.js): the sessions as rows, no 3D. Quiet on purpose: one colour for state (the dot), the rest
+   in greys; numbers in the mono face so the columns line up. */
+.is-lite #stage, .is-lite .toolbar, .is-lite #btn-full, .is-lite .chips { display: none !important; }   /* (3D | 2D in the top bar turns it back) */
+/* the sessions are the page: the left list would say it twice (a phone keeps its own tabs: ui/phone.js) */
+:root:not(.is-phone) .is-lite #app { grid-template-columns: minmax(0, 1fr) 350px; grid-template-areas: "top top" "stage right"; }
+:root:not(.is-phone) .is-lite .side-left { display: none; }
+@media (max-width: 1100px) { :root:not(.is-phone) .is-lite #app { grid-template-columns: minmax(0, 1fr) 320px; } }
+@media (max-width: 720px) { :root:not(.is-phone) .is-lite #app { grid-template-columns: minmax(0, 1fr); grid-template-areas: "top" "stage"; } }
+.lite { position: absolute; inset: 0; overflow-y: auto; padding: 0 24px 120px; background: var(--bg); z-index: 1; container-type: inline-size; }
+.v2-head { position: sticky; top: 0; z-index: 2; display: grid; gap: 12px; padding: 18px 0 12px; background: var(--bg); }
+.v2-h1 h2 { margin: 0; font-size: 1.02rem; font-weight: 600; letter-spacing: -.01em; }
+.v2-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.v2-tabs { display: flex; gap: 2px; max-width: 100%; overflow-x: auto; scrollbar-width: none; padding: 2px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--side); }
+.v2-tab { all: unset; flex: none; display: flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 7px; font-size: .78rem; color: var(--muted); white-space: nowrap; cursor: pointer; }
+.v2-tab:hover { color: var(--ink); }
+.v2-tab:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.v2-tab[aria-selected="true"] { background: var(--card-3); color: var(--ink); }
+.v2-n { font: .7rem var(--mono); color: var(--faint); }
+.v2-tab.has-wait .v2-n { color: var(--amber); }
+.v2-search { width: min(320px, 100%); padding: 7px 11px; border: 1px solid var(--line-2); border-radius: 9px; background: var(--side); color: var(--ink); font: inherit; font-size: .8rem; }
+.v2-search:focus { outline: 2px solid var(--accent-line); outline-offset: -1px; }
+/* approvals first, in the flow of the page */
+.v2-perms .perm-stack { position: static; transform: none; width: auto; max-width: 680px; margin: 2px 0 6px; }
+.v2-group { margin-top: 16px; }
+.v2-gh { margin: 0 0 7px 2px; font-size: .68rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--faint); }
+.v2-rows { border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--side); }
+.v2-row { all: unset; box-sizing: border-box; width: 100%; display: grid; grid-template-columns: 8px minmax(150px, 1.15fr) minmax(0, 2fr) 40px 84px 62px 58px; align-items: center; gap: 0 14px; padding: 11px 14px; cursor: pointer; }
+.v2-rows > * + * { border-top: 1px solid var(--line); }
+.v2-row:hover { background: rgba(255, 255, 255, .03); }
+.v2-row:focus-visible { outline: 2px solid var(--accent-line); outline-offset: -2px; }
+.v2-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.v2-row.is-work .v2-dot { background: var(--green); box-shadow: 0 0 0 3px var(--green-soft); }
+.v2-row.is-wait .v2-dot { background: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+.v2-row.is-stuck .v2-dot { background: var(--red); box-shadow: 0 0 0 3px var(--red-soft); }
+.v2-main { display: grid; gap: 2px; min-width: 0; }
+.v2-title, .v2-sub, .v2-now span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-title { font-size: .84rem; font-weight: 600; }
+.v2-sub { font-size: .72rem; color: var(--muted); }
+.v2-now { display: flex; align-items: center; gap: 8px; min-width: 0; font-size: .8rem; }
+.v2-now svg { flex: none; width: 14px; height: 14px; color: var(--muted); }
+.v2-now.is-muted { color: var(--muted); }
+.v2-now.is-warn { color: #FF8B8B; }
+.v2-row.is-wait .v2-now { color: var(--amber); }
+.v2-todo, .v2-time, .v2-cost { font: .74rem/1 var(--mono); color: var(--muted); text-align: right; white-space: nowrap; }
+.v2-ctx { display: flex; align-items: center; gap: 6px; justify-content: flex-end; }
+.v2-ctx small { font: .7rem var(--mono); color: var(--faint); min-width: 28px; text-align: right; }
+.v2-track { width: 44px; height: 4px; border-radius: 2px; background: var(--line-2); overflow: hidden; }
+.v2-track i { display: block; height: 100%; background: var(--muted); }
+.v2-ctx[data-level="mid"] i { background: var(--amber); }
+.v2-ctx[data-level="high"] i { background: var(--red); }
+/* subagents out, under their session */
+.v2-subrow { display: flex; align-items: baseline; gap: 8px; min-width: 0; padding: 6px 14px 7px 36px; font-size: .74rem; color: var(--muted); background: rgba(255, 255, 255, .015); }
+.v2-rows > .v2-subrow { border-top-color: transparent; }
+.v2-subrow b { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.v2-subrow span:last-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v2-sub-arrow { color: var(--faint); }
+.v2-empty { margin-top: 28px; color: var(--muted); font-size: .85rem; }
+/* a narrower list (its own width, the activity column beside it or not): the time stays, the rest folds under the name */
+@media (max-width: 720px) { .lite { padding: 0 14px 120px; } }
+@container (max-width: 760px) {
+  .v2-row { grid-template-columns: 8px minmax(0, 1fr) auto; gap: 4px 12px; }
+  .v2-now { grid-column: 2 / 4; grid-row: 2; }
+  .v2-todo, .v2-ctx, .v2-cost { display: none; }
+  .v2-time { grid-row: 1; grid-column: 3; }
+  .v2-search { width: 100%; }
+}
+.is-stream .v2-now, .is-stream .v2-sub, .is-stream .v2-subrow span:last-child { filter: blur(5px); }

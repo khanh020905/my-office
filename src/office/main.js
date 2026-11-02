@@ -87,6 +87,7 @@ import * as uiSessionDrawer from './ui/session-drawer.js';
 import * as uiCameraBar from './ui/camera-bar.js';
 import * as uiMacDrawer from './ui/mac-drawer.js';
 import * as uiBurn from './ui/burn.js';
+import * as uiVault from './ui/vault.js';
 import * as uiTopbar from './ui/topbar.js';
 import * as interactProps from './interact/props.js';
 import * as interactPlaceChips from './interact/place-chips.js';
@@ -100,6 +101,7 @@ import * as uiTimelapse from './ui/timelapse.js';
 import * as uiGroupChat from './ui/group-chat.js';
 import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiStuck from './ui/stuck.js';
+import * as uiModels from './ui/models.js';
 import * as uiCacheWords from './ui/cache-words.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
@@ -205,6 +207,7 @@ const MODULES = [
   uiCameraBar,
   uiMacDrawer,
   uiBurn,
+  uiVault,
   uiTopbar,
   interactProps,
   interactPlaceChips,
@@ -218,6 +221,7 @@ const MODULES = [
   uiGroupChat,
   uiGroupChatView,
   uiStuck,
+  uiModels,
   uiCacheWords,
   uiTips,
   interactFirstPerson,

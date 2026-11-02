@@ -1,0 +1,46 @@
+/* "Kho lịch sử" (ui/vault.js): the search, the conversations newest first, one read in full. */
+.vl-search { padding: 12px 18px 0; }
+.vl-search input { width: 100%; padding: 9px 12px; border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); color: var(--ink); font: inherit; font-size: .84rem; }
+.vl-search input:focus { outline: 2px solid var(--accent-line); outline-offset: -1px; }
+.vl-list { display: grid; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.vl-row { all: unset; box-sizing: border-box; display: grid; gap: 3px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); cursor: pointer; }
+.vl-row:hover, .vl-row:focus-visible { border-color: var(--accent-line); }
+.vl-row:focus-visible { outline: 2px solid var(--accent-line); outline-offset: 1px; }
+.vl-row-h { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 8px; }
+.vl-row-t { font-size: .86rem; font-weight: 600; line-height: 1.35; overflow-wrap: anywhere; }
+.vl-row-m { margin: 0; font-size: .72rem; color: var(--muted); overflow-wrap: anywhere; }
+.vl-snip { font-size: .76rem; line-height: 1.45; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; overflow-wrap: anywhere; }
+.vl-badge { padding: 1px 7px; border-radius: 999px; background: var(--amber-soft); color: var(--amber); font-size: .64rem; font-weight: 700; }
+.vl-empty { margin-top: 6px; }
+.vl-note { margin: 14px 0 0; font-size: .68rem; line-height: 1.45; color: var(--faint); }
+/* one conversation */
+.vl-top { display: grid; gap: 6px; padding-bottom: 12px; margin-bottom: 12px; border-bottom: 1px solid var(--line); }
+.vl-back { justify-self: start; }
+.vl-title { margin: 4px 0 0; font-size: 1rem; line-height: 1.35; overflow-wrap: anywhere; }
+.vl-gone { margin: 0; padding: 8px 10px; border-radius: 10px; background: var(--amber-soft); color: var(--amber); font-size: .76rem; line-height: 1.45; }
+.vl-resume { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; font-size: .74rem; color: var(--muted); }
+.vl-resume code { flex: 1 1 220px; min-width: 0; padding: 5px 8px; border-radius: 8px; background: var(--card-2); color: var(--ink); font: .74rem/1.4 var(--mono); overflow-wrap: anywhere; }
+.vl-msgs { display: grid; gap: 10px; }
+.vl-msg { display: grid; gap: 4px; padding: 10px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line); }
+.vl-msg.is-u { background: var(--accent-soft); border-color: transparent; }
+.vl-who { font-size: .68rem; font-weight: 700; color: var(--muted); }
+.vl-txt { font-size: .84rem; line-height: 1.5; white-space: pre-wrap; overflow-wrap: anywhere; }
+.vl-md { font-size: .84rem; line-height: 1.55; overflow-wrap: anywhere; }
+/* the weekly prompt report */
+.vl-tabs { margin: 12px 18px 0; }
+.vr-hero { display: grid; gap: 3px; padding: 14px 16px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); }
+.vr-pct { font-size: 2.6rem; font-weight: 700; line-height: 1.05; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.vr-what { font-size: .82rem; font-weight: 600; }
+.vr-hero small { font-size: .74rem; color: var(--muted); }
+.vr-sec { margin-top: 14px; padding: 12px 14px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--card); display: grid; gap: 10px; }
+.vr-sec h3 { margin: 0; font-size: .8rem; font-weight: 700; }
+.vr-habit { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 10px; align-items: center; }
+.vr-habit b { font-size: .8rem; font-weight: 600; }
+.vr-n { font: .76rem var(--mono); color: var(--muted); text-align: right; }
+.vr-bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: var(--line-2); overflow: hidden; }
+.vr-bar i { display: block; height: 100%; background: var(--amber); }
+.vr-tip { grid-column: 1 / -1; font-size: .72rem; line-height: 1.45; color: var(--muted); }
+.vr-ex { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); }
+.vr-ex:first-of-type { padding-top: 0; border-top: 0; }
+.vr-quote { margin: 0; font-size: .82rem; line-height: 1.45; overflow-wrap: anywhere; }
+.vr-hint { font-size: .74rem; color: var(--amber); line-height: 1.45; }

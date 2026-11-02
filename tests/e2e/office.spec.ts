@@ -46,7 +46,8 @@ test('panels open and close', async ({ page }) => {
   await page.click('#tl-close');
   await page.click('#btn-lite');
   await expect(page.locator('#lite')).toBeVisible();
-  await page.click('#btn-lite');
+  await page.click('.tb-view [data-view="3d"]');   // (the toolbar is gone in 2D: the top bar's 3D | 2D brings the office back)
+  await expect(page.locator('#lite')).toBeHidden();
   expect(errors).toEqual([]);
 });
 
@@ -159,7 +160,7 @@ test('the group chat: people post, a poll, @ someone and they answer, a reply, r
   // (list mode: the office keeps going behind the chat, drawn once a second; a headless browser draws it slowly)
   await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); localStorage.setItem('office-lite', 'on'); if (!sessionStorage.getItem('e2e-chat')) { localStorage.removeItem('office-chat-demo'); sessionStorage.setItem('e2e-chat', '1'); } } catch { /* private mode */ } });   // (cleared once: not again on the reload below)
   await page.goto('/?demo&debug&layout=pro');
-  await expect(page.locator('#rail-list .ri').first()).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('#lite .v2-row').first()).toBeVisible({ timeout: 60_000 });
   type Eng = { poll: (from: string, q: string, o: string[]) => void, remind: (from: string, t: string, at: number, rep: string) => void };
   type Chat = { chat: { msgs: { kind: string, from: string, text: string }[] }, chatSay: (from: string, text: string, o?: object) => void, chatEngine: () => Eng,
     sessions: Map<string, { id: string, name: string, title?: string }>, pauseDemo: () => void };
@@ -485,6 +486,15 @@ test('giving Claude work from the chat: a folder or a tagged conversation, the r
   await zc.locator('.zc-quick-ed .zc-quick-c.is-save').click();
   await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Lint' })).toBeVisible();
   expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Run the linter.');
+  // ⭐ keeps what you are writing as one more, in one tap, named after its first words; not for one already kept
+  const keep = zc.locator('.zc-quick .zc-quick-c.is-keep');
+  await expect(keep).toBeHidden();
+  await zc.locator('.zc-in').fill('Check the bundle size of the landing page and list the three biggest imports');
+  await keep.click();
+  await expect(zc.locator('.zc-quick .zc-quick-c', { hasText: 'Check the bundle size…' })).toBeVisible();
+  expect((await (await request.get('/api/quick')).json()).list.at(-1).prompt).toBe('Check the bundle size of the landing page and list the three biggest imports');
+  await expect(keep).toBeHidden();   // (that text is one of them now)
+  await zc.locator('.zc-in').fill('');
   // a photo with what you write: from this device, made smaller, read by Claude from its path
   const chooser = page.waitForEvent('filechooser');
   await zc.locator('.zc-bar .zc-photo-btn, .zc-toolbar .zc-photo-btn').first().click();

@@ -14,7 +14,7 @@
 const MAX = 300, PHOTOS = 6, KEYS = 600;
 export const REACTIONS = ['❤️', '👍', '😆', '😮', '😭', '😡'];
 const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant', claude: '__claude' };
-const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work', 'loop']);   // (work: Claude at work on what you sent it, a live card; loop: a session stuck in a loop, server/loops.mjs)
+const KINDS = new Set(['text', 'sticker', 'photo', 'poll', 'remind', 'sys', 'work', 'loop', 'ci', 'deny']);   // (work: Claude at work on what you sent it, a live card; loop: a session stuck in a loop, server/loops.mjs; ci: a repository's CI gone red, "Sửa luôn")
 const short = (s, n = 60) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const rand = (a, b) => a + Math.random() * (b - a);
 const pickOne = (list) => list[Math.floor(Math.random() * list.length)];
@@ -97,6 +97,14 @@ export function createChatEngine(ctx) {
    *  'lost' | null, sess (its session), task (a run from the office) } */
   function loopCard(from, loop) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'loop', text: '', loop }); }
   function setLoop(id, loop) { const m = byId(id); if (!m || m.kind !== 'loop') return; m.loop = { ...m.loop, ...loop }; update(m); }
+  /** A repository's CI gone red (server/git.mjs), with "Sửa luôn": ci { repo, branch, wf (the workflow), url (its run),
+   *  sess (the session in that repository), state 'red' | 'green', fix 'sent' | 'note' | null (what "Sửa luôn" did) } */
+  function ciCard(from, ci) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'ci', text: '', ci }); }
+  function setCi(id, ci) { const m = byId(id); if (!m || m.kind !== 'ci') return; m.ci = { ...m.ci, ...ci }; update(m); }
+  /** A call auto mode refused (server/index.mjs onDenied): deny { sess, tool, label, cmd, shell, reason, retry (whether a
+   *  retry can be offered), state 'held' | 'retry' | 'kept', until (while held) } */
+  function denyCard(from, deny) { const p = who(from); if (!p) return null; return add({ from: p.key, name: p.name, kind: 'deny', text: '', deny }); }
+  function setDeny(id, deny) { const m = byId(id); if (!m || m.kind !== 'deny') return; m.deny = { ...m.deny, ...deny }; update(m); }
   /** Someone "typing" for as long as they work on what you asked them (Claude on a message sent to its conversation). */
   function working(from, on) { const p = who(from); if (!p) return; if (on) busy.set(p.key, p.name); else busy.delete(p.key); tick(); }
   /** A reaction ('me' for you); the same emoji again takes it back. */
@@ -219,5 +227,5 @@ export function createChatEngine(ctx) {
     for (const m of st.msgs) if (m.kind === 'remind' && !m.remind.done && m.remind.at <= ctx.now()) { m.remind.done = true; update(m); system(tr('chat.sys.remindNow', { title: m.remind.title })); }
   }
 
-  return { state: st, who, byId, say, system, send, working, workCard, setWork, loopCard, setLoop, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
+  return { state: st, who, byId, say, system, send, working, workCard, setWork, loopCard, setLoop, ciCard, setCi, denyCard, setDeny, react, vote, rsvp, poll, remind, pin, recall, photo, onEvent, onLeft, onMoved, clock, fresh };
 }

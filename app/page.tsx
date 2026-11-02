@@ -5,6 +5,7 @@ import ActivityPanel from '@/components/office/ActivityPanel';
 import SessionDrawer from '@/components/office/SessionDrawer';
 import MacDrawer from '@/components/office/MacDrawer';
 import BurnDrawer from '@/components/office/BurnDrawer';
+import VaultDrawer from '@/components/office/VaultDrawer';
 import PhoneModal from '@/components/office/PhoneModal';
 import WrappedModal from '@/components/office/WrappedModal';
 import Toast from '@/components/office/Toast';
@@ -22,6 +23,7 @@ export default function OfficePage() {
       <SessionDrawer />
       <MacDrawer />
       <BurnDrawer />
+      <VaultDrawer />
       <PhoneModal />
       <WrappedModal />
       <Toast />

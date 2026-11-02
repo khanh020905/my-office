@@ -343,6 +343,33 @@ Then open <http://localhost:4310>.
   gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
   without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
   failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Two sessions on one file, a port someone holds**: when a session is about to edit a file another session edited in
+  the last 20 minutes, its Claude is told first (read it again, don't overwrite the other's changes, ask if the work
+  clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
+  chat says which server holds it and whose it is, and that session's Claude is told not to kill it. Both go through
+  the stuck-loop hook, so they need nothing more installed.
+- **Pinned notes that survive compaction**: a session's drawer has a **Pinned** tab for what that conversation should
+  always keep in mind ("commit messages in Vietnamese", "never push without asking"). When Claude Code compacts a long
+  conversation, what you said along the way can be summed up away; right after each compaction the office says the
+  pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
+  `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
+  card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
+  **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
+  otherwise the refusal stands at once and the card keeps it on record. **Copy command** to run it yourself. Phones
+  answer only when the Mac lets them approve. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+- **Undo the last turn**: a resting session's drawer has **↶ Undo last turn**: the files Claude changed with its file
+  tools (Edit, Write…) in its last turn, put back as they were before it, a file it created removed. The office keeps
+  its own copies (the stuck-loop hook, which runs before every call, copies a file the first time a turn touches it,
+  before Claude Code writes it), so it needs nothing from Claude Code's internals. What a terminal command changed
+  (git, sed, a build) is not undone; a file changed again after the turn is left alone; what was there is kept in
+  `data/undo/`. You see each file and what will happen first, two clicks to do it, then **Tell Claude**. From a phone
+  only when work from phones is allowed.
+- **"Fix it" when CI goes red**: when the latest CI run of a repository a session works in fails (read with `gh`), the
+  team chat gets a card from that session with a link to the run and **Fix it**. It hands Claude the run: read the
+  failing step's log, fix it, run that check locally, report back, and don't push. A session at work gets it as a note
+  at its next step; a resting one carries its conversation on. The card says when the CI is green again. From a phone
+  only when work from phones is allowed.
 
 ### Your plan and your Mac
 
@@ -360,6 +387,25 @@ Then open <http://localhost:4310>.
   you write in it again (the office starts it there through the same script; its person waits at the desk meanwhile).
   A session in a terminal gets the command that resumes it there. With switching on, the sessions open on an account
   that runs out for a while (not a short rate limit) move by themselves too; a box under the switch turns that off.
+- **Models: coordinator and subagents** (Settings → More): the model a Claude session runs on (Opus, Sonnet or the
+  default) and the one its subagents run on (the same, Sonnet, Haiku or Opus), so a big task can be coordinated by Opus
+  while Sonnet does the parts. "Always this model for subagents" also overrides the model Claude picks for one
+  (`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`). "Ask Claude to split big tasks among subagents" adds a short note to
+  `~/.claude/CLAUDE.md`, taken out again when off. Written to `~/.claude/settings.json` (`model`,
+  `env.CLAUDE_CODE_SUBAGENT_MODEL`); the other accounts share it by a link. Sessions started from then on use it.
+- **Codex and Antigravity accounts too**: the plan card has a tab for each beside Claude's (as the phone window's two ways
+  in), each with the account in use's tightest limit and a dot coloured like the bars; only the picked tool's accounts show. **Codex**: the account
+  Codex is signed in with shows by itself, with its 5-hour and weekly usage (read by Codex's own `codex app-server`);
+  "Add a Codex account" opens the ChatGPT sign-in page without signing the current one out; "Use" puts that account's
+  sign-in into `~/.codex/auth.json` (the one there saved first: Codex rotates refresh tokens). A codex started after
+  that uses it; the Codex panel in an editor keeps the old one until you reload the window, and the card says so.
+  **Antigravity IDE**: each account with its quota per model family (the model picked in the agent panel first), as
+  the IDE saved it in its state database (read with `sqlite3`, read-only). The IDE reads its account only as it starts,
+  so with it open a switch happens when you close it, or, if you ask, the office closes and reopens it (on a Mac; never
+  while a Claude session in it is at work). Adding one takes the IDE's sign-in out (kept, not signed out) and opens it to
+  sign in again. With "Switch by itself when one runs out" on, both move to the next account with room. The sign-ins
+  stay in the office's own data folder (`data/codex`, `data/antigravity`, readable by you only). `OFFICE_AI_ACCOUNTS=0`
+  turns both off.
 - **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
   most) with one button to close every idle Claude session, and suggests the rest: stop a forgotten dev server, quit a
   heavy app, clear caches. Idle sessions can also be closed on a timer (off by default). Every action is checked first
@@ -398,7 +444,11 @@ Then open <http://localhost:4310>.
 - English or Vietnamese (Settings → Display).
 - Graphics: Auto, Low, Medium or High. Auto steps down by itself when frames come late, and remembers it per device.
 - Streamer mode blurs commands, paths and chat for recording.
-- List mode turns the 3D off and shows sessions as cards. It saves battery and works without WebGL.
+- **2D view** (3D | 2D in the top bar, or `?view=2d`): no 3D, just the sessions as rows, quiet on purpose. Approvals
+  sit on top with their buttons, then needs you, working and resting; tabs count and filter them, a search (`/`) finds
+  one by name, project or branch. Each row: the conversation, its project and branch (or the task it was given), what
+  it is doing now in words of the work, its checklist, context, time and cost, with its subagents under it; a click
+  opens it. Kept per browser. It saves battery and works without WebGL.
 - Open on your phone: same Wi-Fi, or anywhere through the Cloudflare tunnel (below), 6-digit PIN. Watching, plus
   approving if you turn on "Approve from a phone" on the Mac. Claude Code's own Remote Control (`/rc`) works too: the
   session's QR code in its drawer opens that conversation in the Claude app.
@@ -420,12 +470,26 @@ Then open <http://localhost:4310>.
   phone locked. Turned on on each phone (⚙ → More → 📱) over the https address; on an iPhone, add My Office to the home
   screen first (Share → Add to Home Screen: it becomes an app, full screen, with its icon). The Mac's phone window counts
   the phones and sends a test. Subscriptions are posted only to the browsers' own push services.
+- **History vault**: Claude Code deletes a conversation's transcript after 30 days (`cleanupPeriodDays`). The office
+  keeps its words in `data/vault`: what you wrote and what Claude answered, its title, folder and times, from every
+  account, read every 3 hours. No screenshots, commands or their output, so a month of transcripts (GBs) is a few MB.
+  The chat's ••• → **History vault**: search everything that was said (with or without Vietnamese accents), read a
+  conversation laid out, and copy `claude --resume <id>` while its transcript is still there. `OFFICE_VAULT=0` turns
+  it off.
+- **Weekly prompt report** (the vault's second tab, `?vault=report`): the last 7 days of what you wrote to Claude,
+  looked at with the chat's prompt-helper rules: how many were clear enough for Claude to act at once (against the
+  week before), the habits that cost a round trip (a screenshot with a word or two, "this one" with nothing to point
+  at, "make it different" with no criterion, several jobs in one message, too short) with a tip for each, and real
+  examples from the week. Worked out on this computer, no model involved; a line in the chat on Monday morning.
 - **Give work** (📋 in the team chat, or @ a conversation and tap "Give work"): pick a conversation, carried on with
   its whole context as a new branch of it (the one open in your editor is left as it is), or a folder a session has
   worked in, for a new one. Type or speak (🎤, the browser's speech recognition: over https or on the Mac itself), and
   add up to 4 photos. The Mac runs it as `claude -p`; its commands ask for approval like any session's, and its answer
   comes back to the chat. From a phone only once "Give Claude work from a phone" is on, on the Mac; at most 3 at a
   time and 12 an hour.
+- **Quick commands**: writing "To" a conversation, a row of chips over the input fills in a prompt you use often (run
+  the tests, commit and push, deploy…). ✎ edits them (up to 12, kept on the Mac, the same on your phone), and
+  **⭐ Save this** keeps what you are writing as one more in one tap, named after its first words.
 - **Phone work as background sessions** (the phone window, under "Give Claude work from a phone"; off by default): each
   piece of work is a Claude Code background session (`claude --bg`, agent view, Claude Code 2.1.257 or newer) instead of
   `claude -p`. Its card still shows its steps, Stop and its answer, from the session's own hooks; an approval or a

@@ -15,6 +15,7 @@ export default {
     yesterday: 'Hôm qua',
   },
   topBar: {
+    view: 'Giao diện', view3d: 'Văn phòng 3D', view2d: 'Danh sách phiên 2D: gọn, nhẹ máy',
     sampleData: 'dữ liệu giả lập',
     plan: 'Gói Claude',
     reading: 'đang đọc…',

@@ -5,6 +5,18 @@
 .pop-plan { width: 330px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }   /* (several accounts: it scrolls inside, never past the screen) */
 @media (max-width: 720px) { .pop-plan { max-height: calc(100dvh - 72px); } }
 .pop-plan .plan-card { display: grid; gap: 5px; }
+/* Claude, Codex, Antigravity as tabs (ai-accounts.js renderTabs): the phone window's two-way switch (.pm-tabs), with the
+   tool's state under its name; it stays at the top while its account list scrolls */
+.plan-pane { display: grid; gap: 5px; min-width: 0; }
+.pm-tabs.plan-tabs { position: sticky; top: -14px; z-index: 2; grid-template-columns: repeat(var(--n, 3), minmax(0, 1fr)); margin: 2px 0 8px; background: linear-gradient(var(--card), var(--card)) #151C27; }   /* (stuck flush with the window's top edge; solid: the list scrolls under it) */
+.plan-tabs .pm-tab { min-width: 0; padding: 7px 4px; font-size: .78rem; }
+.plan-tabs .pm-dot { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .66rem; }
+.plan-tabs .pm-dot.is-warn { color: var(--amber); }
+.plan-tabs .pm-dot.is-warn::before { background: var(--amber); box-shadow: 0 0 6px rgba(240, 180, 60, .6); }
+.plan-tabs .pm-dot.is-critical { color: var(--red); }
+.plan-tabs .pm-dot.is-critical::before { background: var(--red); box-shadow: 0 0 6px rgba(240, 80, 80, .6); }
+.plan-card.has-tabs .ai-sec { padding-top: 0; border-top: 0; }
+.plan-card.has-tabs .ai-head > b { display: none; }   /* (the tab says it) */
 .plan-foot { margin: 6px 0 0; padding-top: 8px; border-top: 1px solid var(--line); font-size: .66rem; line-height: 1.45; color: var(--faint); }
 .pop-acts { display: grid; gap: 6px; }
 .pop-acts:not(:has(.tb-btn:not([hidden]))) { display: none; }
@@ -113,3 +125,23 @@
 .acct-move { display: flex; align-items: flex-start; gap: 7px; font-size: .66rem; line-height: 1.45; color: var(--ink); cursor: pointer; }
 .acct-move input { flex: none; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .acct-knob, .acct-knob::after, .acct-use, .acct-pen { transition: none; } }
+/* the other AI tools' accounts (ai-accounts.js): Codex, Antigravity IDE, a section each under Claude's */
+.plan-ai { display: grid; gap: 12px; margin-top: 12px; min-width: 0; }
+.ai-sec { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); min-width: 0; }
+.ai-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; min-width: 0; }
+.ai-head b { flex: none; font-size: .8rem; color: var(--ink); }
+.ai-sub { min-width: 0; font-size: .64rem; line-height: 1.4; color: var(--muted); }
+.plan-card .ai-acct .hl-m { grid-template-columns: 112px 1fr 40px; }   /* (a model's name is longer than "5 h") */
+.ai-acct .plan-reset { margin-left: 120px; }   /* (under the bar: the name's column + the gap) */
+.ai-acct .acct-end { gap: 4px; }
+.acct-name.ai-name { cursor: default; }
+.acct-name.ai-name:hover { background: none; }
+.acct-use.ai-remove { display: inline-grid; place-items: center; padding: 4px 6px; border-color: var(--line); color: var(--muted); }
+.acct-use.ai-remove svg { width: 11px; height: 11px; }
+.acct-use.ai-remove.is-sure { opacity: 1; padding: 4px 9px; color: var(--red); border-color: var(--red); }
+.ai-pending, .ai-ask { display: grid; gap: 7px; margin: 2px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--amber-soft); font-size: .68rem; line-height: 1.45; color: var(--ink); }
+.ai-ask p { margin: 0; }
+.ai-older { display: block; }
+.ai-step { margin-top: 4px; }
+.ai-add { margin-top: 4px; }
+.is-stream .ai-sub, .is-stream .ai-name { filter: blur(4px); }
