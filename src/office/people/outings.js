@@ -174,7 +174,7 @@ function shopTrip(w, S, { key = '', night = false, why = '', version = '' } = {}
     if (door.open === false || (key && keyOf(door) !== key) || (!key && ['tgdd', 'highlands', 'dmx', 'katinat', 'phuclong', 'longchau', 'cong'].includes(keyOf(door))) || (night && door.h24 === false)) continue;   // (the phone shop and the café only when meant)
     for (const ex of S.exits(from.x, from.z)) {
       const r = S.route(ex, door), len = r && lengthOf(ex, r) + ex.d, score = len + (night && keyOf(door) !== 'circlek' ? 30 : 0);
-      if (r && len < 80 && (!best || score < best.score)) best = { door, ex, r, score };
+      if (r && len < 90 && (!best || score < best.score)) best = { door, ex, r, score };   // (90 m: Bách Hóa Xanh and Điện Máy Xanh by the door put Long Châu one front further, 81 m off in 'pro')
     }
   }
   if (!best) return false;
