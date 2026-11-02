@@ -404,6 +404,10 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   (`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`). "Ask Claude to split big tasks among subagents" adds a short note to
   `~/.claude/CLAUDE.md`, taken out again when off. Written to `~/.claude/settings.json` (`model`,
   `env.CLAUDE_CODE_SUBAGENT_MODEL`); the other accounts share it by a link. Sessions started from then on use it.
+- **My Office in the editor's side bar**: `install` also adds a small panel to each editor on the computer (Antigravity,
+  VS Code, Cursor, Windsurf…: its icon in the activity bar): who is working, who waits for you with "Allow / Deny" right
+  there, each tool's limit left; click a session to bring its window forward. It is the office's light page `/panel`
+  (no 3D), so it costs next to nothing; `--no-panel` leaves the editors alone, `uninstall` takes it out.
 - **Codex and Antigravity accounts too**: the plan card has a tab for each beside Claude's (as the phone window's two ways
   in), each with the account in use's tightest limit and a dot coloured like the bars; only the picked tool's accounts show. **Codex**: the account
   Codex is signed in with shows by itself, with its 5-hour and weekly usage (read by Codex's own `codex app-server`);

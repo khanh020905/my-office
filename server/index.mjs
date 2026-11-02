@@ -2784,6 +2784,14 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/panel/open') {   // the small panel's buttons: the office (or its list view) in the browser (this computer only)
+    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.openOnMac') }); return; }
+    readJson(req).then((b) => {
+      openUrl(`http://localhost:${PORT}/${b?.what === '2d' ? '?view=2d' : ''}`);
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/open') {
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.openOnMac') }); return; }
@@ -3092,8 +3100,9 @@ const server = http.createServer((req, res) => {
     sysSnapshot({ open: url.searchParams.has('open') }).then((snap) => json(res, 200, { ...snap, claude: claudeRows(snap.claude), auto: { hours: prefs.autoClose(), last: autoLast[0] || null } })).catch((err) => json(res, 500, { error: String(err.message || err) }));
     return;
   }
-  if (url.pathname === '/' || url.pathname === '/index.html') {
-    // the office page itself is rendered by Next.js (app/page.tsx); our headers go on before it starts the response
+  if (url.pathname === '/' || url.pathname === '/index.html' || url.pathname === '/panel') {
+    // the office page itself is rendered by Next.js (app/page.tsx), and the small panel (app/panel: the editor's side
+    // bar, the menu bar); our headers go on before it starts the response
     res.setHeader('Referrer-Policy', 'no-referrer');
     // a phone in by a token link gets a cookie; a remembered one, renewed once a month, so it stays while it's used
     const ck = isLoopback(req) ? null : pinCookieOf(req);
