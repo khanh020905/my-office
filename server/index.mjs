@@ -2346,7 +2346,14 @@ async function agRunning() {
   return false;
 }
 const agMac = process.platform === 'darwin' && process.env.OFFICE_AG_RESTART !== '0';
-async function agQuit() {
+// the app in front (lsappinfo: no permission needed), so that a quiet switch leaves it in front
+const frontApp = () => new Promise((r) => execFile('lsappinfo', ['front'], { timeout: 4000 }, (err, asn) => {
+  if (err || !String(asn).trim()) { r(''); return; }
+  execFile('lsappinfo', ['info', '-only', 'name', String(asn).trim()], { timeout: 4000 }, (e, out) => r(e ? '' : (/"LSDisplayName"="([^"]*)"/.exec(String(out)) || [])[1] || ''));
+}));
+let agFront = '';
+async function agQuit({ quiet = false } = {}) {
+  agFront = quiet ? await frontApp() : '';
   await new Promise((r) => execFile('osascript', ['-e', `tell application ${JSON.stringify(AG_APP)} to quit`], { timeout: 15_000 }, () => r()));
   for (let i = 0; i < 40; i++) { await new Promise((r) => setTimeout(r, 750)); if (!(await agRunning())) return true; }
   return false;   // (still open: a "save changes?" question, most likely)
@@ -2356,18 +2363,31 @@ async function agQuit() {
    terminals; the office then opens each folder once more with the IDE's own command, which only brings forward a window
    already open: none is lost even when the IDE starts on its sign-in after an account was taken out. */
 const agCli = () => { const d = `/Applications/${AG_APP}.app/Contents/Resources/app/bin`; try { const f = fs.readdirSync(d).find((x) => !x.endsWith('.cmd')); return f ? path.join(d, f) : null; } catch { return null; } };
-async function agLaunch() {
+// quiet (switched while you were away): opened behind, and the app that was in front put back in front at the end
+async function agLaunch({ quiet = false } = {}) {
   let wins = [];
   try { wins = windowsOf(JSON.parse(fs.readFileSync(path.join(path.dirname(agDbFile()), 'storage.json'), 'utf8'))).filter((p) => fs.existsSync(p)); } catch { /* none kept */ }
-  const ok = await new Promise((r) => execFile('open', ['-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
+  const back = quiet && agFront && agFront !== AG_APP ? agFront : '';
+  const ok = await new Promise((r) => execFile('open', [...(back ? ['-g'] : []), '-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
   const cli = agCli();
-  if (ok && cli && wins.length) {
+  if (ok && (back || (cli && wins.length))) {
     setTimeout(async () => {
-      for (const p of wins) await new Promise((r) => execFile(cli, [p], { timeout: 20_000 }, () => r()));
-      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} antigravity: ${wins.length} windows opened again\n`).catch(() => {});
+      if (cli) for (const p of wins) await new Promise((r) => execFile(cli, [p], { timeout: 20_000 }, () => r()));
+      if (back) execFile('open', ['-a', back], { timeout: 10_000 }, () => {});
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} antigravity: ${wins.length} windows opened again${back ? `, ${back} back in front` : ''}\n`).catch(() => {});
     }, 8000).unref();
   }
   return ok;
+}
+/* A quiet moment to switch in: no key or mouse touched for OFFICE_AG_AWAY_MIN minutes (10; a locked screen counts, nothing
+   touches it), no Claude session in the IDE at work, and Antigravity's own agent (its language server) not working */
+const AG_AWAY_MIN = Number(process.env.OFFICE_AG_AWAY_MIN) || 10;
+const idleSeconds = () => new Promise((r) => execFile('ioreg', ['-c', 'IOHIDSystem', '-d', '4'], { timeout: 6000, maxBuffer: 8 * 1024 * 1024 }, (err, out) => r(err ? 0 : Number((/"HIDIdleTime" = (\d+)/.exec(String(out)) || [])[1] || 0) / 1e9)));
+const agAgentCpu = () => new Promise((r) => execFile('ps', ['-axo', '%cpu=,args='], { timeout: 6000, maxBuffer: 16 * 1024 * 1024 }, (err, out) => r(err ? 0 : String(out).split('\n').filter((l) => l.includes(`${AG_APP}.app`) && /language_server/.test(l)).reduce((s, l) => s + (parseFloat(l) || 0), 0))));
+async function agAway() {
+  if (process.platform !== 'darwin' || (await idleSeconds()) < AG_AWAY_MIN * 60) return false;
+  if ((await agBusy()) || (await agAgentCpu()) >= 10) return false;
+  return true;
 }
 // the Claude sessions at work in the IDE (closing it would end them)
 async function agBusy() {
@@ -2375,14 +2395,14 @@ async function agBusy() {
   return [...sessions.values()].filter((s) => pids.has(s.pid) && (s.status !== 'rest' || s.busy)).length;
 }
 const ag = AI_OFF ? null : createAntigravityAccounts({
-  dir: path.join(DATA_DIR, 'antigravity'), db: agDb, app: { name: AG_APP, running: agRunning, ...(agMac && { quit: agQuit, launch: agLaunch }) }, busyIn: agBusy, log: (s) => console.log(s),
+  dir: path.join(DATA_DIR, 'antigravity'), db: agDb, app: { name: AG_APP, running: agRunning, ...(agMac && { quit: agQuit, launch: agLaunch }) }, busyIn: agBusy, away: agAway, awayMin: AG_AWAY_MIN, log: (s) => console.log(s),
   onChange: (what) => {
     aiSoon();
     const o = ag.out(), name = (id) => aiName(o.list.find((a) => a.id === id));
     if (what?.switched) {
       const sw = what.switched;
-      chat.system(tr(sw.when === 'restarted' ? 'chat.ai.agRestarted' : sw.when === 'closed' ? 'chat.ai.agClosed' : 'chat.ai.agUsed', { from: name(sw.from), to: name(sw.to), app: AG_APP }));
-    } else if (what?.waiting) chat.system(tr('chat.ai.agWaiting', { to: name(what.waiting.to), app: AG_APP, n: what.waiting.n }));
+      chat.system(tr({ restarted: 'chat.ai.agRestarted', closed: 'chat.ai.agClosed', away: 'chat.ai.agAway' }[sw.when] || 'chat.ai.agUsed', { from: name(sw.from), to: name(sw.to), app: AG_APP }));
+    } else if (what?.waiting) chat.system(tr('chat.ai.agWaiting', { from: name(what.waiting.from), to: name(what.waiting.to), app: AG_APP }));
   },
 });
 const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
@@ -2850,7 +2870,7 @@ const server = http.createServer((req, res) => {
         else if (op === 'later') r = ag.cancelPending();
         else if (op === 'remove') r = ag.remove(id);
         else if (op === 'rename') r = ag.rename(id, label);
-        else if (op === 'auto') r = ag.setAuto(b?.on === undefined ? undefined : !!b.on, b?.restart === undefined ? undefined : !!b.restart);
+        else if (op === 'auto') r = ag.setAuto(b?.on === undefined ? undefined : !!b.on, b?.away === undefined ? undefined : !!b.away);
         else if (op === 'order') r = ag.setOrder(b?.order);
       }
       json(res, 200, { ...r, ...(r?.code && { message: tr(`server.ai.${r.code}`, { n: r.n || 0, app: AG_APP }) }) });

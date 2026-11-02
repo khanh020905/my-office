@@ -4,9 +4,11 @@
 // .userStatus, protobuf records wrapped in base64. The office reads them (sqlite3, read-only) every few seconds and
 // keeps each account's pair as it last saw it. Using an account = its pair written back while the IDE is closed: the IDE
 // keeps that state in memory and writes it out when it quits, so a write while it runs would be lost. So with the IDE
-// open, a switch waits until you close it (or, asked to, the office closes it and opens it again: never while a Claude
-// session in it is at work). Adding an account: the IDE closed, its sign-in taken out (kept, not signed out: signing out
-// may revoke the token), opened again; you sign in, and the office keeps the new account.
+// open, a switch waits for a quiet moment: you close it, or you are away from the computer with nothing at work in it,
+// and the office closes it and opens it again quietly, behind whatever you had in front (every window, tab and Claude
+// conversation comes back). With switching on it starts before the model in use runs out (90% used). Adding an account:
+// the IDE closed, its sign-in taken out (kept, not signed out: signing out may revoke the token), opened again; you sign
+// in, and the office keeps the new account.
 import fs from 'node:fs';
 import fsp from 'node:fs/promises';
 import path from 'node:path';
@@ -16,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 export const KEYS = { token: 'antigravityUnifiedStateSync.oauthToken', status: 'antigravityUnifiedStateSync.userStatus', prefs: 'antigravityUnifiedStateSync.modelPreferences' };
 const EMPTY = 0.02;   // a model with this little left: the account is out of it until it resets
+const LOW = 0.10;     // this little: switching on moves on at the next quiet moment, before it runs out
 
 /* ---------- a little protobuf: enough to read the IDE's records (no schema: the field numbers the IDE writes) ---------- */
 function varint(b, i) { let n = 0, s = 0, c; do { c = b[i++]; n += (c & 0x7f) * 2 ** s; s += 7; } while (c >= 0x80 && i < b.length); return [n, i]; }
@@ -83,11 +86,13 @@ export function quotaRows(models, picked = 0, now = Date.now()) {
   }
   return [...fams.values()].sort((a, b) => b.picked - a.picked).map((f) => ({ ...f, pct: Math.round((1 - f.left) * 100) }));
 }
-/** Until when an account is out of the model in use (the picked one; else its first): 0 = it has room. */
-export function outUntil(a, picked = 0, now = Date.now()) {
+/** Until when an account is out of the model in use (the picked one; else its first): 0 = it has room. `level`: what
+ *  counts as out (LOW: nearly). */
+export function outUntil(a, picked = 0, now = Date.now(), level = EMPTY) {
   const ms = a.models || [], m = ms.find((x) => x.id === picked && x.left !== null) || ms.find((x) => x.left !== null);
-  return m && m.left <= EMPTY && m.resetsAt > now ? m.resetsAt : 0;
+  return m && m.left <= level && m.resetsAt > now ? m.resetsAt : 0;
 }
+export const lowUntil = (a, picked = 0, now = Date.now()) => outUntil(a, picked, now, LOW);
 
 /** The windows the IDE had open when it last quit (windowsState in its storage.json): their folders or workspace files,
  *  the one in front last, so that opening them again in this order leaves it in front. */
@@ -123,14 +128,15 @@ export function makeDb(file, sqlite = 'sqlite3') {
 }
 
 /**
- * @param {{ dir: string, db: () => ReturnType<typeof makeDb> | null, app: { name: string, running: () => Promise<boolean>, quit?: () => Promise<boolean>, launch?: () => Promise<boolean> },
- *   busyIn?: () => Promise<number>, now?: () => number, log?: (s: string) => void, onChange?: (what?: object) => void }} o
+ * @param {{ dir: string, db: () => ReturnType<typeof makeDb> | null, app: { name: string, running: () => Promise<boolean>, quit?: (o?: { quiet?: boolean }) => Promise<boolean>, launch?: (o?: { quiet?: boolean }) => Promise<boolean> },
+ *   busyIn?: () => Promise<number>, away?: () => Promise<boolean>, awayMin?: number, now?: () => number, log?: (s: string) => void, onChange?: (what?: object) => void }} o
+ * away: you are away from the computer and nothing is at work in the IDE (a quiet moment to switch in)
  */
-export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0, now = Date.now, log = () => {}, onChange = () => {} }) {
+export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0, away = async () => false, awayMin = 10, now = Date.now, log = () => {}, onChange = () => {} }) {
   const FILE = path.join(dir, 'accounts.json');
   /** list: [{ id, key, email, name, tier, tierName, label, token, status, models, at }]; pending: the account to switch to
-   *  once the IDE is closed; restart: the office may close and open the IDE by itself (switching on) */
-  let st = { list: [], order: [], auto: false, restart: false, pending: null };
+   *  at the next quiet moment; away: the office may close and open the IDE then (while you are away) */
+  let st = { list: [], order: [], auto: false, away: true, pending: null };
   try { st = { ...st, ...JSON.parse(fs.readFileSync(FILE, 'utf8')) }; } catch { /* none yet */ }
   const save = () => { try { fs.mkdirSync(dir, { recursive: true }); fs.writeFileSync(FILE, JSON.stringify(st), { mode: 0o600 }); } catch { /* read-only data */ } };
   const find = (id) => st.list.find((a) => a.id === id);
@@ -184,8 +190,24 @@ export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0
   async function idle() {
     const was = running; running = await app.running().catch(() => false);
     if (running !== was) onChange();
-    if (!running && st.pending && !busyMove) await applyPending();
-    else await autoSwitch();
+    if (busyMove) return;
+    if (!running && st.pending) { await applyPending(); return; }
+    await autoSwitch();
+    if (running && st.pending) await whileAway();
+  }
+  // a switch waiting, the IDE open: done while you are away and nothing in it is at work (asked every minute), quietly
+  let awayAt = 0;
+  async function whileAway() {
+    if (!st.away || !app.quit || !app.launch || switching || now() - awayAt < 60e3) return;
+    awayAt = now();
+    const a = find(st.pending);
+    if (!a?.token || !(await away().catch(() => false))) return;
+    switching = true;
+    try {
+      let from = null;
+      const r = await closeAndOpen(async () => { const w = await write(a); if (!w) return false; from = w.from; return true; }, { quiet: true });
+      if (r.ok) onChange({ switched: { from, to: a.id, why: st.pendingWhy || 'you', when: 'away' } });
+    } finally { switching = false; }
   }
 
   /** The account's pair written into the database (the IDE closed); a copy of the database kept first. */
@@ -212,21 +234,21 @@ export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0
     } finally { busyMove = false; }
   }
   // the IDE closed, then `fn` (writing the database), then opened again; not while a Claude session in it is at work
-  async function closeAndOpen(fn) {
+  async function closeAndOpen(fn, { quiet = false } = {}) {
     if (!app.quit || !app.launch) return { ok: false, code: 'noRestart' };
     const n = await busyIn().catch(() => 0);
     if (n) return { ok: false, code: 'busy', n };
     busyMove = true;
     try {
-      if (!(await app.quit())) return { ok: false, code: 'quitFailed' };
+      if (!(await app.quit({ quiet }))) return { ok: false, code: 'quitFailed' };
       const r = await fn();
-      if (r === false) { await app.launch(); return { ok: false, code: 'writeFailed' }; }
-      await app.launch();
+      if (r === false) { await app.launch({ quiet }); return { ok: false, code: 'writeFailed' }; }
+      await app.launch({ quiet });
       return { ok: true, restarted: true };
     } finally { busyMove = false; running = await app.running().catch(() => false); }
   }
 
-  /** An account into the IDE. With the IDE open: when it closes (`restart`: the office closes and opens it now). */
+  /** An account into the IDE. With the IDE open: at the next quiet moment (`restart`: the office closes and opens it now). */
   async function switchTo(id, { restart = false, why = 'you' } = {}) {
     const a = find(id); if (!a) return { ok: false, code: 'noAccount' };
     if (!a.token) return { ok: false, code: 'noToken' };
@@ -244,19 +266,19 @@ export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0
     if (r.ok) onChange({ switched: { from, to: id, why, when: 'restarted' } });
     return r;
   }
-  // with switching on: out of the model in use, the next account with room, at once if the IDE is closed, when it
-  // closes otherwise (or closed and opened by the office, when allowed and nothing in it is at work)
+  // with switching on: the model in use nearly used up (90%) or out, the next account with plenty left; at once if the
+  // IDE is closed, else at the next quiet moment (whileAway, or when you close it). Out already: said once in the chat.
   let switching = false;
   async function autoSwitch() {
-    const a = find(seatId);
-    if (!st.auto || !a || switching || busyMove || !outUntil(a, picked, now())) return;
-    const next = ordered().find((x) => x.id !== a.id && x.token && !outUntil(x, picked, now()));
+    const a = find(seatId), t = now();
+    if (!st.auto || !a || switching || busyMove) return;
+    const out = outUntil(a, picked, t);
+    if (!out && !lowUntil(a, picked, t)) return;
+    const next = ordered().find((x) => x.id !== a.id && x.token && !lowUntil(x, picked, t));
     if (!next || st.pending === next.id) return;
-    switching = true;
-    try {
-      const r = await switchTo(next.id, { restart: st.restart, why: 'auto' });
-      if (!r.ok && r.code === 'busy') { st.pending = next.id; st.pendingWhy = 'auto'; save(); onChange({ waiting: { to: next.id, n: r.n } }); }
-    } finally { switching = false; }
+    if (!running) { switching = true; try { await switchTo(next.id, { why: 'auto' }); } finally { switching = false; } return; }
+    st.pending = next.id; st.pendingWhy = 'auto'; save();
+    onChange(out ? { waiting: { from: a.id, to: next.id } } : undefined);
   }
 
   /** Adding an account: the IDE's sign-in taken out (the current one kept), the IDE opened to sign in again. */
@@ -281,7 +303,7 @@ export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0
     return { ok: true };
   }
   function rename(id, label) { const a = find(id); if (!a) return { ok: false }; a.label = String(label || '').slice(0, 24); save(); onChange(); return { ok: true }; }
-  function setAuto(on, restart) { if (on !== undefined) st.auto = !!on; if (restart !== undefined) st.restart = !!restart; save(); onChange(); autoSwitch(); return { ok: true }; }
+  function setAuto(on, quietly) { if (on !== undefined) st.auto = !!on; if (quietly !== undefined) st.away = !!quietly; save(); onChange(); autoSwitch(); return { ok: true }; }
   function cancelPending() { st.pending = null; save(); onChange(); return { ok: true }; }
   function setOrder(ids) {
     const all = st.list.map((a) => a.id);
@@ -292,7 +314,7 @@ export function createAntigravityAccounts({ dir, db, app, busyIn = async () => 0
   function out() {
     const t = now(), m = (find(seatId)?.models || []).find((x) => x.id === picked);
     return {
-      note, app: app.name, running, now: seatId, auto: !!st.auto, restart: !!st.restart, canRestart: !!(app.quit && app.launch), pending: st.pending, picked: m ? family(m.name) : '',
+      note, app: app.name, running, now: seatId, auto: !!st.auto, away: st.away !== false, awayMin, canRestart: !!(app.quit && app.launch), pending: st.pending, picked: m ? family(m.name) : '',
       adding: adding && { state: adding.state, name: adding.name || '' },
       list: ordered().map((a) => ({ id: a.id, email: a.email, name: a.name, tier: a.tier, tierName: a.tierName, label: a.label, at: a.at, rows: quotaRows(a.models, picked, t).slice(0, 3), until: outUntil(a, picked, t) })),
     };

@@ -412,9 +412,12 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   that uses it; the Codex panel in an editor keeps the old one until you reload the window, and the card says so.
   **Antigravity IDE**: each account with its quota per model family (the model picked in the agent panel first), as
   the IDE saved it in its state database (read with `sqlite3`, read-only). The IDE reads its account only as it starts,
-  so with it open a switch happens when you close it, or, if you ask, the office closes and reopens it (on a Mac; never
-  while a Claude session in it is at work). Adding one takes the IDE's sign-in out (kept, not signed out) and opens it to
-  sign in again. With "Switch by itself when one runs out" on, both move to the next account with room. The sign-ins
+  so with it open a switch waits for a quiet moment: when you close it, or while you are away (10 minutes without a key
+  or the mouse, or a locked screen) with no Claude session in it at work and its own agent idle, the office closes and
+  reopens it behind the app you had in front, every window, tab, unsaved file and Claude conversation back as it was
+  (on a Mac; `OFFICE_AG_AWAY_MIN` sets the minutes). You can also have it done now. Adding one takes the IDE's sign-in
+  out (kept, not signed out) and opens it to sign in again. With "Switch by itself when one runs out" on, both move to
+  the next account with room; Antigravity already at 90% used, so the switch is done before you run out. The sign-ins
   stay in the office's own data folder (`data/codex`, `data/antigravity`, readable by you only). `OFFICE_AI_ACCOUNTS=0`
   turns both off.
 - **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
