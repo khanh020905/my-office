@@ -8,6 +8,7 @@ import { isNightHour, night, setNight } from '../world/room-update.js';
 import { queueUi, renderFeed, toast } from './activity.js';
 import { renderChat, renderSessionHead, tab } from './session-drawer.js';
 import { renderLimits } from './mac-drawer.js';
+import { renderAi } from './ai-accounts.js';
 import { stickyNotes } from './whiteboard.js';
 import { setLook } from './look-switch.js';
 import { sfx } from '../audio/sfx.js';
@@ -54,7 +55,7 @@ function showTab(k, focus = false) {
 export function togglePop(open = popLook.hidden) { popLook.hidden = !open; btnLook.setAttribute('aria-expanded', String(open)); if (open) { togglePlan(false); showTab(tabNow); } }
 let popPlan;
 let btnPlan;
-export function togglePlan(open = popPlan.hidden) { popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); } }
+export function togglePlan(open = popPlan.hidden) { popPlan.hidden = !open; btnPlan.setAttribute('aria-expanded', String(open)); if (open) { togglePop(false); renderLimits(); renderAi(); } }
 function setStreamer(v) {
   state.streamer = v; document.body.classList.toggle('is-stream', v); state.boardDirty = true; for (const n of stickyNotes) if (n) n.key = '';
   try { localStorage.setItem('office-stream', v ? 'on' : 'off'); } catch { /* storage blocked */ }

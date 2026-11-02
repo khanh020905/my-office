@@ -32,6 +32,8 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `loops.mjs` | "Ngắt vòng lặp kẹt": a session going round in circles (the same call failing the same way N times, compaction after compaction, cost rising with nothing edited), from the hooks and the status line; the synchronous PreToolUse hook (`/hook/loop`) gets a deny, your hint or Stop back from it. |
 | `overlap.mjs` | "Chặn ghi đè và giành cổng": what each session edited, so another session about to edit the same file within 20 minutes is told first (with its next call, through the synchronous `/hook/loop`); the port a command says it couldn't have (EADDRINUSE, "Port 3000 is in use"), and a word kept for a session until its next call. Memory only. |
 | `undo.mjs` | "Hoàn tác lượt cuối": the office's own copy of each file a turn's file tools touch (made by /hook/loop before the write), per turn, the last 3; the plan (restore, delete, same, changed after, too big) and putting them back, what was there kept aside. |
+| `codex-accounts.mjs` | "Nhiều tài khoản Codex": the ChatGPT accounts Codex signs in with. Each has a copy of its sign-in (a Codex home of its own in data/codex) so `codex app-server` reads its usage; using one puts its auth.json into ~/.codex (the one there saved back first: refresh tokens rotate), adding one runs Codex's sign-in in a home of its own; switching by itself when the one in use runs out. Which account a running codex started on, from when each sat in ~/.codex. |
+| `antigravity-accounts.mjs` | "Nhiều tài khoản Antigravity": Antigravity IDE's sign-in and what it heard of the account (quota per model) from its state database (protobuf in base64, read with sqlite3); each account's pair kept in data/antigravity and written back while the IDE is closed (a switch waits for it to close, or the office closes and reopens it, never with a Claude session in it at work); adding one takes the sign-in out and opens the IDE. |
 | `otel.mjs` | "What eats your plan": an OpenTelemetry receiver for Claude Code's own cost and token counters and api_request events (OTLP/HTTP JSON at `/v1/metrics` and `/v1/logs`, loopback only). Delta and cumulative counters each counted once; a session is read from its counters, or from its events when it sent none; daily sums per session and attribution in `data/otel/`, 30 days. `src/shared/burn.js` sums them for `/api/burn` and the demo. |
 | `otel-setup.mjs` | The telemetry block `install` adds to `~/.claude/settings.json` (only when there is none of yours, tagged so `uninstall` removes exactly it), and how to tell whose telemetry it is. |
 | `tasks.mjs` | "Give work": a `claude -p` run on this Mac from the chat or a phone, carrying on a tagged conversation (`--resume --fork-session`) or new in a known folder; caps, photos, its answer back to the chat. |
@@ -110,7 +112,7 @@ engine switches to demo mode and talks to no API.
 | `core/optimize.js` | 141 | Merging static meshes into fewer draw calls, then starting. |
 | `core/state.js` | 3 | Values that more than one module assigns (the clock, the selection, mode switches…), on one shared object so any module can change them. |
 | `demo/demo-log.js` | 17 | The demo's conversation logs (a session's, shown in its drawer, and each subagent's steps), kept to what the drawer can show. |
-| `demo/demo.js` | 328 | Demo mode: fictional projects and a fictional Mac. |
+| `demo/demo.js` | 331 | Demo mode: fictional projects and a fictional Mac. |
 | `interact/first-person.js` | 263 | First person: walk the office as your own character, and (with the city outside) down the lift and out on the street: the pavements, the zebras (the traffic stops for you), the shops, the bánh mì cart. |
 | `interact/place-cards.js` | 201 | Place cards: what happens at each place. |
 | `interact/place-chips.js` | 182 | Place chips over the furniture and label decluttering. |
@@ -171,6 +173,7 @@ engine switches to demo mode and talks to no API.
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 91 | Renderer, cameras, orbit controls, post-processing and environment light. |
 | `ui/activity.js` | 301 | The activity column and the session list. |
+| `ui/ai-accounts.js` | 218 | The other AI tools' accounts, in the plan card under Claude's (server/codex-accounts.mjs, antigravity-accounts.mjs): Codex and Antigravity IDE, each with its accounts (usage, the one in use, out until when), adding one, using another, and switching by itself when the one in use runs out. |
 | `ui/burn.js` | 212 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
 | `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
 | `ui/camera-bar.js` | 58 | The camera toolbar. |
@@ -194,7 +197,7 @@ engine switches to demo mode and talks to no API.
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |
 | `ui/session-account.js` | 54 | "Change account" in a session's drawer (on this computer only): the accounts of the plan card, each with what it has left. |
 | `ui/session-drawer.js` | 396 | The session drawer: chat, steps, subagents. |
-| `ui/settings.js` | 124 | Settings popover: backdrop, floor plan, look, time, toggles. |
+| `ui/settings.js` | 125 | Settings popover: backdrop, floor plan, look, time, toggles. |
 | `ui/stranded.js` | 159 | "Việc bỏ quên" in the Mac drawer: the worktrees and checkouts of the repositories the office knows that still hold work (files not committed, commits not pushed, stashes), and worktrees with nothing left in them that could go. |
 | `ui/stuck.js` | 97 | Stuck sessions ("Ngắt vòng lặp kẹt", server/loops.mjs): the card in the group chat (what repeats, Stop, a hint for Claude) and the row in Settings → More (on or off, after how many failures, after how many minutes of spending with nothing edited). |
 | `ui/task-sheet.js` | 98 | "Giao việc": giving Claude work from the group chat (server/tasks.mjs runs it on the Mac). |

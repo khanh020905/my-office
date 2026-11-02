@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4398, base = `http://127.0.0.1:${PORT}`, data = fs.mkdtempSync(path.join(os.tmpdir(), 'office-smoke-'));
-const env = { ...process.env, NODE_ENV: 'production', OFFICE_PORT: String(PORT), OFFICE_DATA_DIR: data, OFFICE_USAGE: '0', OFFICE_CI: '0', OFFICE_TRANSLATE: '0' };
+const env = { ...process.env, NODE_ENV: 'production', OFFICE_PORT: String(PORT), OFFICE_DATA_DIR: data, OFFICE_USAGE: '0', OFFICE_CI: '0', OFFICE_TRANSLATE: '0', OFFICE_AI_ACCOUNTS: '0' };   // (AI_ACCOUNTS 0: never this computer's own Codex or Antigravity sign-ins)
 const server = spawn(process.execPath, [path.join(ROOT, 'server', 'index.mjs')], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
 let log = ''; server.stdout.on('data', (c) => { log += c; }); server.stderr.on('data', (c) => { log += c; });
 const step = (name) => console.log(`  ✓ ${name}`);

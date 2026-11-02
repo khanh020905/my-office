@@ -15,9 +15,12 @@ import { execFile, execFileSync, spawn } from 'node:child_process';
 import { sysSnapshot, sysAction, scanCleanups, trackOwners, startTrend, setI18n, fmtBytes as sysBytes, fmtDur as sysDur } from './system.mjs';
 import { createOverlap, EDIT_TOOLS, fileOf, portInUse } from './overlap.mjs';
 import { OS } from './platform/index.mjs';
+import { parseEtime } from './platform/shared.mjs';
 import { redact } from './redact.mjs';
 import { createUndo, EDIT_TOOLS as UNDO_TOOLS } from './undo.mjs';
 import { createVault } from './vault.mjs';
+import { createCodexAccounts } from './codex-accounts.mjs';
+import { createAntigravityAccounts, makeDb } from './antigravity-accounts.mjs';
 import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
@@ -2259,6 +2262,94 @@ setInterval(() => {
   for (const f of pinned()) { try { const p = path.join(PIN_DIR, f); if (Date.now() - fs.statSync(p).mtimeMs > PARK_MS) fs.rmSync(p, { force: true }); } catch { /* gone */ } }
 }, 3600e3).unref();
 
+/* ---------- the other AI tools' accounts: Codex and Antigravity IDE (server/codex-accounts.mjs, antigravity-accounts.mjs) ----------
+   Their accounts in the plan card under Claude's: each one's usage, which one is in use, adding one, using another, and
+   switching by itself when the one in use runs out. Codex: its sign-in file (~/.codex/auth.json) swapped, a codex
+   started after that uses the new account (the editor's panel: Reload Window). Antigravity IDE: its state database,
+   written while the IDE is closed. OFFICE_AI_ACCOUNTS=0 turns both off. */
+const AI_OFF = process.env.OFFICE_AI_ACCOUNTS === '0';
+let aiTimer = null;
+const aiSoon = () => { clearTimeout(aiTimer); aiTimer = setTimeout(() => broadcast({ k: 'ai', ai: aiOut() }), 250); };
+const aiName = (a) => (a ? a.label || String(a.email || '').split('@')[0] || a.name || a.id : '');
+const verNum = (f) => (/-(\d+)\.(\d+)\.(\d+)/.exec(f) || [0, 0, 0, 0]).slice(1).reduce((x, n) => x * 100000 + Number(n), 0);
+let codexBin = null;
+// Codex's program: OFFICE_CODEX_BIN, the PATH, else the one inside an editor's Codex extension (the newest)
+function findCodex() {
+  if (codexBin && fs.existsSync(codexBin)) return codexBin;
+  const exe = process.platform === 'win32' ? 'codex.exe' : 'codex', isFile = (f) => { try { return fs.statSync(f).isFile(); } catch { return false; } };
+  if (process.env.OFFICE_CODEX_BIN) return (codexBin = isFile(process.env.OFFICE_CODEX_BIN) ? process.env.OFFICE_CODEX_BIN : null);
+  for (const d of String(process.env.PATH || '').split(path.delimiter)) if (d && isFile(path.join(d, exe))) return (codexBin = path.join(d, exe));
+  const found = [];
+  for (const ide of ['.antigravity-ide', '.antigravity', '.vscode', '.vscode-insiders', '.cursor', '.windsurf', '.kiro', '.trae']) {
+    const base = path.join(os.homedir(), ide, 'extensions');
+    let names = []; try { names = fs.readdirSync(base).filter((e) => /^openai\.chatgpt-/.test(e)); } catch { /* not installed */ }
+    for (const e of names) { try { for (const p of fs.readdirSync(path.join(base, e, 'bin'))) if (isFile(path.join(base, e, 'bin', p, exe))) found.push(path.join(base, e, 'bin', p, exe)); } catch { /* no programs */ } }
+  }
+  return (codexBin = found.sort((a, b) => verNum(b) - verNum(a))[0] || null);
+}
+function openUrl(u) {
+  if (!/^https?:\/\//.test(u) || process.env.OFFICE_OPEN_URL === '0') return;   // (0: the tests, which never open a browser)
+  const [cmd, args] = process.platform === 'darwin' ? ['open', [u]] : process.platform === 'win32' ? ['cmd', ['/c', 'start', '""', u.replace(/&/g, '^&')]] : ['xdg-open', [u]];
+  try { spawn(cmd, args, { stdio: 'ignore', detached: true, windowsHide: true }).unref(); } catch { /* the card has the link */ }
+}
+// the processes' command lines, cheaply (OS.processes() also measures memory: a second of CPU on a Mac)
+async function procArgs() {
+  if (process.platform === 'win32') return [...(await OS.processes()).procs.values()].map((p) => ({ pid: p.pid, start: p.start, args: p.args || '' }));
+  const out = await new Promise((r) => execFile('ps', ['-axo', 'pid=,etime=,args='], { maxBuffer: 32 * 1024 * 1024, timeout: 10_000 }, (err, o) => r(err ? '' : o))), now = Date.now() / 1000;
+  return out.split('\n').map((l) => /^\s*(\d+)\s+(\S+)\s+(.*)$/.exec(l)).filter(Boolean).map((m) => ({ pid: +m[1], start: Math.round(now - parseEtime(m[2])), args: m[3] }));
+}
+const codexPs = async () => (process.env.OFFICE_CODEX_PROCS === '0' ? [] : (await procArgs()).filter((p) => /codex/i.test(p.args)));
+const codex = AI_OFF ? null : createCodexAccounts({
+  dir: path.join(DATA_DIR, 'codex'), seat: () => path.resolve(String(process.env.CODEX_HOME || path.join(os.homedir(), '.codex')).replace(/^~(?=$|[\\/])/, os.homedir())),
+  bin: findCodex, procs: codexPs, openUrl, log: (s) => console.log(s),
+  onChange: (what) => {
+    aiSoon();
+    const sw = what?.switched; if (!sw) return;
+    const o = codex.out(), name = (id) => aiName(o.list.find((a) => a.id === id)), older = o.older.filter((p) => p.where !== 'terminal').map((p) => p.where);
+    chat.system(tr(sw.why === 'auto' ? 'chat.ai.codexAuto' : 'chat.ai.codexUsed', { from: name(sw.from), to: name(sw.to), when: sw.until ? hhmmOf(sw.until) : '' })
+      + (older.length ? ` ${tr('chat.ai.codexReload', { where: [...new Set(older)].join(', ') })}` : ''));
+  },
+});
+// Antigravity IDE: its state database and whether it is open (on a Mac: closed and opened again through `open`/osascript)
+const AG_APP = process.env.OFFICE_AG_APP || 'Antigravity IDE';
+const AG_DOT = '.' + AG_APP.toLowerCase().replace(/\s+/g, '-');   // (its folder of extensions: where its Claude Code sessions run from)
+const agDbFile = () => process.env.OFFICE_AG_DB || path.join(process.platform === 'darwin' ? path.join(os.homedir(), 'Library', 'Application Support') : process.platform === 'win32' ? process.env.APPDATA || '' : path.join(os.homedir(), '.config'), AG_APP, 'User', 'globalStorage', 'state.vscdb');
+const agDb = () => (fs.existsSync(agDbFile()) ? makeDb(agDbFile(), process.env.OFFICE_SQLITE || 'sqlite3') : null);
+async function agRunning() {
+  const exe = AG_APP.toLowerCase().replace(/\s+/g, '-');
+  for (const p of await procArgs()) {
+    const a = p.args;
+    if (a.includes(`/${AG_APP}.app/Contents/MacOS/`) || new RegExp(`(^|[\\\\/])(${exe}|${AG_APP.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\.exe)( |$)`, 'i').test(a)) return true;
+  }
+  return false;
+}
+const agMac = process.platform === 'darwin' && process.env.OFFICE_AG_RESTART !== '0';
+async function agQuit() {
+  await new Promise((r) => execFile('osascript', ['-e', `tell application ${JSON.stringify(AG_APP)} to quit`], { timeout: 15_000 }, () => r()));
+  for (let i = 0; i < 40; i++) { await new Promise((r) => setTimeout(r, 750)); if (!(await agRunning())) return true; }
+  return false;   // (still open: a "save changes?" question, most likely)
+}
+const agLaunch = () => new Promise((r) => execFile('open', ['-a', AG_APP], { timeout: 15_000 }, (err) => r(!err)));
+// the Claude sessions at work in the IDE (closing it would end them)
+async function agBusy() {
+  const rows = (await sysSnapshot().catch(() => null))?.claude || [], pids = new Set(rows.filter((c) => c.editor === AG_DOT).map((c) => c.pid));
+  return [...sessions.values()].filter((s) => pids.has(s.pid) && (s.status !== 'rest' || s.busy)).length;
+}
+const ag = AI_OFF ? null : createAntigravityAccounts({
+  dir: path.join(DATA_DIR, 'antigravity'), db: agDb, app: { name: AG_APP, running: agRunning, ...(agMac && { quit: agQuit, launch: agLaunch }) }, busyIn: agBusy, log: (s) => console.log(s),
+  onChange: (what) => {
+    aiSoon();
+    const o = ag.out(), name = (id) => aiName(o.list.find((a) => a.id === id));
+    if (what?.switched) {
+      const sw = what.switched;
+      chat.system(tr(sw.when === 'restarted' ? 'chat.ai.agRestarted' : sw.when === 'closed' ? 'chat.ai.agClosed' : 'chat.ai.agUsed', { from: name(sw.from), to: name(sw.to), app: AG_APP }));
+    } else if (what?.waiting) chat.system(tr('chat.ai.agWaiting', { to: name(what.waiting.to), app: AG_APP, n: what.waiting.n }));
+  },
+});
+const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
+function aiOut() { return AI_OFF ? null : { codex: codex.out(), ag: ag.out() }; }
+codex?.start(); ag?.start();
+
 /* ---------- bring a session's own window to the front ----------
    Walk up from the session's claude process to the app that hosts it (the IDE, Terminal, iTerm…) and `open -a` it,
    with the session's folder for an editor so the right window comes forward. Idea from cubicle-crew (MIT, focus.js). */
@@ -2699,6 +2790,34 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && /^\/api\/ai\/(codex|ag)\/(use|add|cancel|remove|rename|auto|order|later|read)$/.test(url.pathname)) {   // (this computer only, from this page)
+    if (AI_OFF || !isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
+    readJson(req).then(async (b) => {
+      const [, tool, op] = /^\/api\/ai\/(\w+)\/(\w+)$/.exec(url.pathname), id = String(b?.id || '').slice(0, 40), label = clip(oneLine(b?.label), 24);
+      let r = { ok: false };
+      if (tool === 'codex') {
+        if (op === 'use') r = await codex.switchTo(id);
+        else if (op === 'add') { const L = codex.addStart(); r = { ok: L?.state === 'waiting', ...L, ...(L?.state === 'failed' && { code: L.note === 'noCli' ? 'noCli' : 'loginFailed' }) }; }
+        else if (op === 'cancel') { codex.addCancel(); r = { ok: true }; }
+        else if (op === 'remove') r = await codex.remove(id);
+        else if (op === 'rename') r = codex.rename(id, label);
+        else if (op === 'auto') r = codex.setAuto(!!b?.on);
+        else if (op === 'order') r = codex.setOrder(b?.order);
+        else if (op === 'read') { await codex.read(id); r = { ok: true }; }
+      } else {
+        if (op === 'use') r = await ag.switchTo(id, { restart: !!b?.restart });
+        else if (op === 'add') r = await ag.add({ restart: !!b?.restart });
+        else if (op === 'cancel') { ag.addCancel(); r = { ok: true }; }
+        else if (op === 'later') r = ag.cancelPending();
+        else if (op === 'remove') r = ag.remove(id);
+        else if (op === 'rename') r = ag.rename(id, label);
+        else if (op === 'auto') r = ag.setAuto(b?.on === undefined ? undefined : !!b.on, b?.restart === undefined ? undefined : !!b.restart);
+        else if (op === 'order') r = ag.setOrder(b?.order);
+      }
+      json(res, 200, { ...r, ...(r?.code && { message: tr(`server.ai.${r.code}`, { n: r.n || 0, app: AG_APP }) }) });
+    });
+    return;
+  }
   if (req.method === 'POST' && url.pathname === '/api/tenure') {   // this computer only: { op: 'config', days } (Settings → More), { op: 'farewell' | 'official', name } (the page held it)
     if (!authorized(req, url) || !sameOriginOf(req) || !isLoopback(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
     readJson(req).then((b) => {
@@ -2828,7 +2947,7 @@ const server = http.createServer((req, res) => {
   // everything as it is now, the first message a page gets (the Mac's own addresses and PIN only for the Mac)
   const snapNow = (local) => {
     const lanOn = lanIsOn();
-    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), trophies: trophies.pub(),
+    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, limits: limitsOut(), limitsNote: noteText(), ai: aiOut(), trophies: trophies.pub(),
       lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
       ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD, lift: liftService.pub() };
   };
