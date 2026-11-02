@@ -8,6 +8,7 @@ import path from 'node:path';
 import { spawn } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import { createPrefs } from '../server/prefs.mjs';
+import { dataDir } from '../server/data-dir.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = Number(process.env.OFFICE_PORT || 4310);
@@ -26,7 +27,7 @@ const body = JSON.stringify({ session_id: d.session_id, rate_limits: d.rate_limi
 const forward = fetch(`http://127.0.0.1:${PORT}/hook/status`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body, signal: AbortSignal.timeout(400) }).catch(() => {});
 
 let prev = null;
-try { prev = JSON.parse(fs.readFileSync(path.join(ROOT, 'data', 'statusline-prev.json'), 'utf8')); } catch { /* none */ }
+try { prev = JSON.parse(fs.readFileSync(path.join(dataDir(ROOT, {}), 'statusline-prev.json'), 'utf8')); } catch { /* none */ }
 const chained = prev?.command ? new Promise((resolve) => {
   const child = spawn(prev.command, { shell: true, stdio: ['pipe', 'pipe', 'ignore'], windowsHide: true });   // sh on macOS / Linux, cmd on Windows
   let out = '';
@@ -41,7 +42,7 @@ const [, prevOut] = await Promise.all([forward, chained]);
 if (prevOut.trim()) { process.stdout.write(prevOut); process.exit(0); }
 const pct = (v) => (typeof v === 'number' ? `${Math.round(v)}%` : null);
 const parts = [d.model?.display_name || 'Claude'];
-const { tr } = createPrefs(path.join(ROOT, 'data'));   // in the office's language
+const { tr } = createPrefs(dataDir(ROOT, {}));   // in the office's language
 const ctx = pct(d.context_window?.used_percentage); if (ctx) parts.push(tr('cli.status.context', { pct: ctx }));
 const five = pct(d.rate_limits?.five_hour?.used_percentage); if (five) parts.push(tr('cli.status.fiveHour', { pct: five }));
 const seven = pct(d.rate_limits?.seven_day?.used_percentage); if (seven) parts.push(tr('cli.status.week', { pct: seven }));

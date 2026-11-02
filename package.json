@@ -1,7 +1,6 @@
 {
   "name": "my-office",
   "version": "0.2.0",
-  "private": true,
   "description": "A 3D office for your Claude Code sessions that also looks after your Mac: live agents, approve from the office, RAM per session, forgotten dev servers, cleanup.",
   "license": "MIT",
   "repository": {
@@ -9,10 +8,41 @@
     "url": "https://github.com/khanh020905/my-office.git"
   },
   "homepage": "https://github.com/khanh020905/my-office#readme",
+  "bugs": {
+    "url": "https://github.com/khanh020905/my-office/issues"
+  },
+  "keywords": [
+    "claude-code",
+    "claude",
+    "anthropic",
+    "ai-agents",
+    "dashboard",
+    "office",
+    "3d",
+    "threejs",
+    "codex",
+    "developer-tools"
+  ],
   "type": "module",
   "bin": {
     "my-office": "bin/cli.mjs"
   },
+  "files": [
+    "bin/",
+    "server/",
+    "hooks/",
+    "src/i18n/",
+    "src/shared/",
+    "public/",
+    "next.config.mjs",
+    ".next/",
+    "!.next/cache/",
+    "!.next/dev/",
+    "!.next/trace",
+    "!.next/trace-build",
+    "!.next/diagnostics/",
+    "!.next/types/"
+  ],
   "scripts": {
     "dev": "node server/index.mjs --dev",
     "build": "next build",
@@ -23,7 +53,8 @@
     "test:e2e": "playwright test",
     "test:e2e:smoke": "playwright test --grep @smoke",
     "smoke": "node scripts/smoke.mjs",
-    "doctor": "node bin/cli.mjs doctor"
+    "doctor": "node bin/cli.mjs doctor",
+    "prepack": "node scripts/prepack.mjs"
   },
   "engines": {
     "node": ">=20.9"

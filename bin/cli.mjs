@@ -10,13 +10,15 @@ import { fileURLToPath } from 'node:url';
 import { createPrefs } from '../server/prefs.mjs';
 import { serviceFor } from './service.mjs';
 import { addOtel, collectorSnippet, managedEnvs, otelOwner, removeOtel } from '../server/otel-setup.mjs';
+import { dataDir } from '../server/data-dir.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = os.homedir();
 const PORT = Number(process.env.OFFICE_PORT || 4310);
 // Words in the office's language (data/prefs.json, picked in Settings; OFFICE_LANG until then), same folder as the server's.
-// the server's data folder (OFFICE_DATA_DIR for a second copy; the launchd service and the hooks always use data/)
-const DATA_DIR = process.env.OFFICE_DATA_DIR ? path.resolve(process.env.OFFICE_DATA_DIR) : path.join(ROOT, 'data');
+// the server's data folder (OFFICE_DATA_DIR for a second copy; the background service and the hooks always use the default
+// one: data/ here, or ~/.my-office when npm installed the office: server/data-dir.mjs)
+const DATA_DIR = dataDir(ROOT);
 const { tr } = createPrefs(DATA_DIR);
 const minutesAgo = (ms) => tr('time.ago', { time: tr('time.min', { n: Math.max(0, Math.round((Date.now() - ms) / 60000)) }) });
 const args = process.argv.slice(2), cmd = args[0] && !args[0].startsWith('-') ? args[0] : 'start';
@@ -47,13 +49,13 @@ const LOOP_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/loop --fast`
 const START_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/start --wait 3`
   : `curl -s -m 3 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}/hook/start || true`;
 // The status line feeds the plan's 5-hour / 7-day usage; an existing status line keeps running through ours.
-const STATUS_SCRIPT = path.join(ROOT, 'hooks', 'status-line.mjs'), STATUS_PREV = path.join(ROOT, 'data', 'statusline-prev.json');
+const STATUS_SCRIPT = path.join(ROOT, 'hooks', 'status-line.mjs'), STATUS_PREV = path.join(dataDir(ROOT, {}), 'statusline-prev.json');
 const STATUS_CMD = WIN ? `"${fwd(process.execPath)}" "${fwd(STATUS_SCRIPT)}"` : `"${process.execPath}" "${STATUS_SCRIPT}"`;
 const oursStatus = (s) => typeof s?.command === 'string' && s.command.includes('status-line.mjs') && (s.command.includes(ROOT) || s.command.includes(fwd(ROOT)));
 const ours = (h) => typeof h?.command === 'string' && h.command.includes(`127.0.0.1:${PORT}/`);
 // --lan opens the server to the home wifi so a phone can watch (QR code or PIN). Off by default.
 const LAN = args.includes('--lan');
-const service = () => serviceFor({ root: ROOT, server: path.join(ROOT, 'server', 'index.mjs'), log: path.join(ROOT, 'data', 'server.log'), host: LAN ? '0.0.0.0' : '127.0.0.1', port: PORT });
+const service = () => serviceFor({ root: ROOT, server: path.join(ROOT, 'server', 'index.mjs'), log: path.join(dataDir(ROOT, {}), 'server.log'), host: LAN ? '0.0.0.0' : '127.0.0.1', port: PORT });
 const ok = (s) => console.log(`  ✓ ${s}`), warn = (s) => console.log(`  ⚠ ${s}`), bad = (s) => console.log(`  ✗ ${s}`);
 
 async function readSettings() { try { return JSON.parse(await fsp.readFile(SETTINGS, 'utf8')); } catch (e) { if (e.code === 'ENOENT') return {}; throw new Error(tr('cli.readFailed', { file: SETTINGS, error: e.message })); } }
@@ -100,7 +102,7 @@ async function install() {
   if (otel.added) ok(tr('cli.install.otel', { file: SETTINGS }));
   if (otel.theirs) { warn(tr('cli.install.otelTheirs', { where: otel.theirs.join('; ') })); console.log(`\n${collectorSnippet(PORT).replace(/^/gm, '    ')}\n`); }
   if (args.includes('--service') && !opt('--settings')) {
-    await fsp.mkdir(path.join(ROOT, 'data'), { recursive: true });
+    await fsp.mkdir(dataDir(ROOT, {}), { recursive: true });
     ensureBuild();
     const svc = service();
     if (await svc.install()) ok(tr('cli.install.service', { file: svc.file })); else warn(tr('cli.install.noService'));

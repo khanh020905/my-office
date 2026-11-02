@@ -28,13 +28,22 @@ You need Node.js 20.9 or newer and Claude Code, on macOS, Linux or Windows. The 
 servers, cleanup) reads each system its own way; opening a session's IDE window and quitting apps are macOS only.
 
 ```bash
-git clone https://github.com/khanh020905/my-office.git && cd my-office
-npm install
-node bin/cli.mjs install --service   # adds the hooks to ~/.claude/settings.json and runs the office at login
-node bin/cli.mjs doctor              # checks Node, the server, every hook and the background service
+npm install -g my-office
+my-office install --service   # adds the hooks to ~/.claude/settings.json and runs the office at login
+my-office doctor              # checks Node, the server, every hook and the background service
 ```
 
-Then open <http://localhost:4310>.
+Then open <http://localhost:4310>. To try it without installing: `npx my-office start` (the hooks still need
+`npx my-office install`). An npm install keeps its data (settings, the phone PIN, the history vault) in `~/.my-office`,
+so upgrading (`npm install -g my-office@latest`) keeps it.
+
+From the source instead (to change the code):
+
+```bash
+git clone https://github.com/khanh020905/my-office.git && cd my-office
+npm install
+node bin/cli.mjs install --service   # the same commands as `my-office …`, its data in data/
+```
 
 - `install` backs up `settings.json` before changing it and only adds My Office's own hooks. Running it again adds
   nothing twice.

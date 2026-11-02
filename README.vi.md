@@ -17,10 +17,20 @@ Chạy được trên macOS, Linux và Windows (bảng máy đọc từng hệ �
 ## Cài
 
 ```bash
+npm install -g my-office
+my-office install --service   # thêm hook vào ~/.claude/settings.json + chạy nền khi đăng nhập
+my-office doctor              # kiểm tra Node, curl, server, đủ hook, dịch vụ nền
+```
+
+Thử không cần cài: `npx my-office start` (hook vẫn cần `npx my-office install`). Cài bằng npm thì dữ liệu (cài đặt, mã
+PIN điện thoại, kho lịch sử) nằm ở `~/.my-office`, nên nâng bản (`npm install -g my-office@latest`) không mất gì.
+
+Cài từ mã nguồn (để sửa code):
+
+```bash
 git clone https://github.com/khanh020905/my-office.git && cd my-office
 npm install
-node bin/cli.mjs install --service   # thêm hook vào ~/.claude/settings.json + chạy nền khi đăng nhập
-node bin/cli.mjs doctor              # kiểm tra Node, curl, server, đủ hook, dịch vụ nền
+node bin/cli.mjs install --service   # cùng các lệnh như `my-office …`, dữ liệu ở data/
 ```
 
 `install` sao lưu `settings.json` trước khi sửa và chỉ thêm hook của My Office (chạy lại không thêm trùng). Gỡ: `node bin/cli.mjs uninstall`.
