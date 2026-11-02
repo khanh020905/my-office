@@ -96,7 +96,7 @@ export function windowsOf(storage) {
   const front = uri(w.lastActiveWindow);
   const list = [...new Set((w.openedWindows || []).map(uri))].filter((u) => local(u) && u !== front);
   if (local(front)) list.push(front);
-  return list.map((u) => fileURLToPath(u));
+  return list.flatMap((u) => { try { return [fileURLToPath(u)]; } catch { return []; } });   // (one another system wrote: left out)
 }
 
 /* ---------- the IDE's database, through the sqlite3 program ---------- */
