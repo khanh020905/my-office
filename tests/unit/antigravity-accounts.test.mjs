@@ -14,9 +14,9 @@ try { execFileSync('sqlite3', ['-version'], { stdio: 'ignore' }); } catch { sqli
 function setup() {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), 'office-ag-')), file = path.join(root, 'state.vscdb');
   execFileSync('sqlite3', [file, 'CREATE TABLE ItemTable (key TEXT UNIQUE ON CONFLICT REPLACE, value BLOB);']);
-  const db = makeDb(file), ide = { open: false, quits: 0, launches: 0, busy: 0 }, changes = [];
-  const ag = createAntigravityAccounts({ dir: path.join(root, 'office'), db: () => db, busyIn: async () => ide.busy, onChange: (w) => changes.push(w || {}),
-    app: { name: 'Fake IDE', running: async () => ide.open, quit: async () => { ide.quits++; ide.open = false; return true; }, launch: async () => { ide.launches++; ide.open = true; return true; } } });
+  const db = makeDb(file), ide = { open: false, quits: 0, launches: 0, busy: 0, away: false, clock: Date.now(), quiet: [] }, changes = [];
+  const ag = createAntigravityAccounts({ dir: path.join(root, 'office'), db: () => db, busyIn: async () => ide.busy, away: async () => ide.away, now: () => ide.clock, onChange: (w) => changes.push(w || {}),
+    app: { name: 'Fake IDE', running: async () => ide.open, quit: async (o) => { ide.quits++; ide.quiet.push(!!o?.quiet); ide.open = false; return true; }, launch: async () => { ide.launches++; ide.open = true; return true; } } });
   const signIn = (who, left) => db.write({ [KEYS.token]: token(who), [KEYS.status]: status(who, left), [KEYS.prefs]: prefs(1319) });
   const seatWho = async () => tokenOf((await db.read([KEYS.token]))[KEYS.token])?.access.slice(5);
   return { ag, db, ide, changes, signIn, seatWho };
@@ -107,4 +107,25 @@ test('the windows the IDE had open: every folder once, the one in front last; no
   } };
   assert.deepEqual(windowsOf(w), [crm, lms, ielts]);
   assert.deepEqual(windowsOf({}), []);
+});
+
+test('the IDE open: nearly out, the switch waits for you to be away, then happens quietly', { skip: !sqlite && 'no sqlite3' }, async () => {
+  const { ag, ide, changes, signIn, seatWho } = setup();
+  await signIn('b'); await ag.scan();
+  await signIn('a'); await ag.scan();
+  const [a, b] = [idOf(ag, 'a'), idOf(ag, 'b')];
+  ide.open = true; ag.setAuto(true);
+  await signIn('a', 0.05); await ag.scan();   // (95% of Gemini used: not out yet)
+  assert.equal(ag.out().pending, b);
+  assert.ok(!changes.some((w) => w.waiting), 'nothing said: it is not out yet');
+  assert.equal(ide.quits, 0);   // (you are at the computer: left alone)
+  ide.away = true; await ag.scan();
+  assert.equal(ide.quits, 0);   // (asked once a minute)
+  ide.busy = 1; ide.clock += 61_000; await ag.scan();
+  assert.equal(ide.quits, 0);   // (away, but a Claude session in it is at work: not now)
+  ide.busy = 0; ide.clock += 61_000; await ag.scan();
+  assert.deepEqual([ide.quits, ide.launches, ide.quiet], [1, 1, [true]]);
+  assert.equal(await seatWho(), 'b'); assert.equal(ag.out().now, b); assert.equal(ag.out().pending, null);
+  assert.ok(changes.some((w) => w.switched?.when === 'away' && w.switched.from === a && w.switched.to === b));
+  ag.stop();
 });

@@ -172,10 +172,10 @@ function agSection(g) {
   if (state.isLocal && g.note !== 'noDb') s.append(agAdd(g));
   if (g.list.length > 1 || g.auto) {
     let extra = null;
-    if (g.canRestart) {
-      extra = el('label', 'acct-move'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = !!g.restart; cb.disabled = !state.isLocal;
-      cb.addEventListener('change', () => act('/api/ai/ag/auto', { restart: cb.checked }));
-      extra.append(cb, el('span', null, tr('ai.ag.restartOk', { app: g.app })));
+    if (g.canRestart) {   // (quietly while you are away: on unless turned off)
+      extra = el('label', 'acct-move'); const cb = el('input'); cb.type = 'checkbox'; cb.checked = g.away !== false; cb.disabled = !state.isLocal;
+      cb.addEventListener('change', () => act('/api/ai/ag/auto', { away: cb.checked }));
+      extra.append(cb, el('span', null, tr('ai.ag.awayOk', { app: g.app, min: g.awayMin || 10 })));
     }
     s.append(autoSwitch('ag', g.auto, tr(g.auto ? 'ai.ag.autoOn' : 'ai.ag.autoOff', { app: g.app }), extra));
   }
