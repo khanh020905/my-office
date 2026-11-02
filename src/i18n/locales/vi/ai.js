@@ -1,5 +1,7 @@
 // Tài khoản các công cụ AI khác trong thẻ giới hạn gói (src/office/ui/ai-accounts.js)
 export default {
+  title: 'Hạn mức gói',
+  tab: { signedOut: 'Chưa đăng nhập', apiKey: 'API key', pending: 'Chờ đổi', reading: 'Đang đọc…', out: 'Hết tới {when}' },
   count: '{n} tài khoản',
   signedInAs: 'đang đăng nhập {name}',
   out: 'hết tới {when}',

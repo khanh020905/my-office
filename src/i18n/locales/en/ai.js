@@ -1,5 +1,7 @@
 // The other AI tools' accounts in the plan card (src/office/ui/ai-accounts.js; server/codex-accounts.mjs, antigravity-accounts.mjs)
 export default {
+  title: 'Plan limits',
+  tab: { signedOut: 'Not signed in', apiKey: 'API key', pending: 'Switch waiting', reading: 'Reading…', out: 'Out until {when}' },
   count: { one: '{n} account', other: '{n} accounts' },
   signedInAs: 'signed in as {name}',
   out: 'out until {when}',

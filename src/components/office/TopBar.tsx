@@ -17,14 +17,18 @@ export default async function TopBar() {
           <button id="btn-plan" className="tb-btn mac-pill plan-pill" type="button" data-level="normal" aria-expanded="false" aria-controls="pop-plan" hidden><i className="lvl"></i><span className="mp-label">{t('ui.topBar.plan')}</span><span className="mp-val" id="plan-mini">{t('ui.topBar.reading')}</span><span className="mp-bar"><b id="plan-bar"></b></span></button>
           <div className="pop pop-plan" id="pop-plan" hidden role="dialog" aria-label={t('ui.topBar.planLimits')}>
             <div className="plan-card" id="plan-card">
-              <span className="hl-head"><b>{t('ui.topBar.planLimits')}</b><span className="pl-at" id="plan-at"></span></span>
-              <span className="plan-acct" id="plan-acct" hidden></span>
-              <div className="plan-rows" id="plan-rows"></div>
-              <div className="plan-add" id="plan-add"></div>
-              <div className="plan-ai" id="plan-ai" hidden></div>
-              <p className="plan-empty" id="plan-empty">{t('ui.topBar.planEmpty')}</p>
-              <button className="plan-burn" id="plan-burn" type="button" hidden></button>
-              <p className="plan-foot">{t('ui.topBar.planFoot')}</p>
+              <span className="hl-head"><b id="plan-title">{t('ui.topBar.planLimits')}</b><span className="pl-at" id="plan-at"></span></span>
+              {/* Claude, Codex, Antigravity as tabs when there is more than Claude (src/office/ui/ai-accounts.js) */}
+              <div className="pm-tabs plan-tabs" id="plan-tabs" role="tablist" hidden></div>
+              <div className="plan-pane" id="plan-pane-claude" role="tabpanel">
+                <span className="plan-acct" id="plan-acct" hidden></span>
+                <div className="plan-rows" id="plan-rows"></div>
+                <div className="plan-add" id="plan-add"></div>
+                <p className="plan-empty" id="plan-empty">{t('ui.topBar.planEmpty')}</p>
+                <button className="plan-burn" id="plan-burn" type="button" hidden></button>
+                <p className="plan-foot">{t('ui.topBar.planFoot')}</p>
+              </div>
+              <div className="plan-ai" id="plan-ai" role="tabpanel" hidden></div>
             </div>
           </div>
         </div>

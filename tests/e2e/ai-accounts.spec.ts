@@ -40,6 +40,13 @@ test.beforeEach(async ({ page }) => { await page.addInitScript(() => { try { loc
 test('Codex: the account signed in shows with its usage, another is added through the sign-in page, "Use" swaps the seat', async ({ page }) => {
   await page.goto(BASE);
   await page.locator('#btn-plan').click();
+  // the card's tabs: Claude's accounts first, Codex's a tap away, with the account in use's tightest limit on its tab
+  const tabs = page.locator('#plan-tabs');
+  await expect(tabs.locator('[data-tab="claude"]')).toHaveAttribute('aria-selected', 'true');
+  await expect(tabs.locator('[data-tab="codex"]')).toContainText('42%');
+  await expect(page.locator('#plan-pane-claude')).toBeVisible();
+  await tabs.locator('[data-tab="codex"]').click();
+  await expect(page.locator('#plan-pane-claude')).toBeHidden();
   const sec = page.locator('#plan-ai .ai-sec[data-tool="codex"]');
   const ana = sec.locator('.ai-acct', { hasText: 'ana' });
   await expect(ana.locator('.acct-badge--on')).toBeVisible();
@@ -66,6 +73,8 @@ test('Antigravity IDE: the account in the IDE with its quotas, another added by 
   test.skip(!sqlite, 'no sqlite3');
   await page.goto(BASE);
   await page.locator('#btn-plan').click();
+  await expect(page.locator('#plan-tabs [data-tab="ag"]')).toContainText('Gemini 60%');
+  await page.locator('#plan-tabs [data-tab="ag"]').click();
   const sec = page.locator('#plan-ai .ai-sec[data-tool="ag"]');
   await expect(sec.locator('.ai-head')).toContainText('Fake IDE E2E');
   await expect(sec.locator('.ai-head')).toContainText('Gemini 3.8 Flash');

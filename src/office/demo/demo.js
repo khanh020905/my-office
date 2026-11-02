@@ -9,7 +9,7 @@ import { setLiftService } from '../life/lift-service.js';
 import { addFeed, queueFeed, queueUi, renderFeed, toast } from '../ui/activity.js';
 import { closeSession, drM } from '../ui/session-drawer.js';
 import { acctLogin, acctMoved, acctSwitched, limitWarned, liveWindows, loadMac, renderLimits, renderMac } from '../ui/mac-drawer.js';
-import { setAi } from '../ui/ai-accounts.js';
+import { renderAi, setAi } from '../ui/ai-accounts.js';
 import { DEMO_TODOS, onTodos } from '../ui/whiteboard.js';
 import { TOKEN, freeDesk, removeSession, setConn, upsertSession } from '../net/live.js';
 import { onEvent } from '../life/incidents.js';
@@ -265,7 +265,7 @@ export function applyMsg(d, quiet = false) {
   else if (d.k === 'acctmove') { if (!quiet) acctMoved(d); }
   else if (d.k === 'chat') chatApply(d);   // (the group chat, the same on every page: server/index.mjs)
   else if (d.k === 'chatact') { if (!quiet) chatAct(d.what); }   // (open conversations moved over too)
-  else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); if (!drM.hidden) renderMac(); }
+  else if (d.k === 'limits') { state.limits = d.limits || null; state.limitsNote = d.note || ''; renderLimits(); renderAi(); if (!drM.hidden) renderMac(); }
   else if (d.k === 'ai') setAi(d.ai);
   else if (d.k === 'sysauto') { if (!quiet) { toast(d.message, 8000); loadMac(); } }   // (idle sessions closed on the drawer's timer)
   else if (d.k === 'trophies') setTrophies(d.t, quiet ? [] : d.earned || []);
