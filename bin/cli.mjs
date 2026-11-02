@@ -11,6 +11,7 @@ import { createPrefs } from '../server/prefs.mjs';
 import { serviceFor } from './service.mjs';
 import { addOtel, collectorSnippet, managedEnvs, otelOwner, removeOtel } from '../server/otel-setup.mjs';
 import { dataDir } from '../server/data-dir.mjs';
+import { buildVsix, installPanel, uninstallPanel, panelIn } from '../server/vsix.mjs';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const HOME = os.homedir();
@@ -108,7 +109,15 @@ async function install() {
     if (await svc.install()) ok(tr('cli.install.service', { file: svc.file })); else warn(tr('cli.install.noService'));
     LAN ? warn(tr('cli.install.lan')) : ok(tr('cli.install.local'));
   }
+  if (!args.includes('--no-panel') && !opt('--settings')) await panel();
   console.log(`\n${tr('cli.install.next', { port: PORT })}`);
+}
+// the small panel in the side bar of each editor on this computer (vscode-extension/, packed by server/vsix.mjs)
+async function panel() {
+  let vsix;
+  try { vsix = buildVsix(path.join(ROOT, 'vscode-extension'), path.join(dataDir(ROOT, {}), 'my-office-panel.vsix')); } catch { warn(tr('cli.install.noPanel')); return; }
+  const done = await installPanel(vsix);
+  for (const e of done) e.ok ? ok(tr('cli.install.panel', { app: e.app })) : warn(tr('cli.install.panelFailed', { app: e.app }));
 }
 async function uninstall() {
   console.log(tr('cli.uninstall.title'));
@@ -129,6 +138,7 @@ async function uninstall() {
   // The login service is machine-wide: only touch it when working on the real settings (not a --settings copy).
   if (!opt('--settings') && (await service().uninstall())) ok(tr('cli.uninstall.service'));
   if (!opt('--settings') && unwrapEditors()) ok(tr('cli.uninstall.editors'));
+  if (!opt('--settings')) for (const e of await uninstallPanel()) if (e.ok) ok(tr('cli.uninstall.panel', { app: e.app }));
 }
 // the editors' Claude Code started through the office's account script (the plan card's "Use" / switching): taken out,
 // or Claude Code wouldn't start once the office is gone
@@ -183,6 +193,8 @@ async function doctor() {
       else warn(tr('cli.doctor.statusSilent'));
     }
   }
+  const inEditors = panelIn();
+  inEditors.length ? ok(tr('cli.doctor.panel', { apps: inEditors.join(', ') })) : warn(tr('cli.doctor.noPanel'));
   const svc = service(), st = await svc.state();
   if (st === 'running') ok(tr('cli.doctor.serviceUp'));
   else if (st === 'stopped') warn(tr('cli.doctor.serviceDown', { restart: svc.restart }));

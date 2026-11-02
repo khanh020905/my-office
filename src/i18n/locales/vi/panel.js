@@ -1,0 +1,20 @@
+// Bảng gọn (app/panel, src/panel/main.js): thanh bên của trình soạn thảo, thanh menu của Mac
+export default {
+  connecting: 'Đang nối với văn phòng…',
+  open3d: 'Mở văn phòng',
+  open2d: 'Xem dạng danh sách',
+  now: 'vừa xong',
+  answerInOffice: 'Trả lời trong văn phòng',
+  until: 'Trả về IDE sau {s} giây',
+  failed: 'Chưa gửi được. Bấm lại nhé.',
+  openWindow: 'Đưa cửa sổ của phiên này lên trước',
+  status: { wait: 'Đang chờ bạn', work: 'Đang làm', done: 'Đã xong', rest: 'Đang nghỉ' },
+  subs: '{n} subagent đang làm',
+  working: '{n} đang làm',
+  waiting: '{n} chờ bạn',
+  quiet: 'Đang yên',
+  needsYou: 'Cần bạn duyệt ({n})',
+  sessions: 'Phiên',
+  noSessions: 'Chưa mở phiên Claude nào. Mở một phiên là hiện ở đây.',
+  offline: 'Văn phòng chưa chạy. Bật bằng lệnh: my-office start',
+};

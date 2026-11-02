@@ -3,6 +3,9 @@ export default {
   backedUp: 'Đã sao lưu: {file}',
   building: 'Đang build giao diện (một lần, khoảng một phút)…',
   install: {
+    panel: 'Đã thêm bảng My Office vào thanh bên của {app} (biểu tượng bên trái).',
+    panelFailed: 'Chưa thêm được bảng My Office vào {app}.',
+    noPanel: 'Không đóng gói được bảng My Office cho trình soạn thảo.',
     title: 'Cài hook cho Claude Code',
     statusKept: 'Status line cũ của bạn vẫn hiện như trước (My Office chạy nó bên trong)',
     added: 'Đã thêm {n} hook vào {file}',
@@ -16,6 +19,7 @@ export default {
     otelTheirs: 'Bạn đã gửi telemetry của Claude Code đi chỗ khác ({where}) nên văn phòng không đụng vào. Muốn xem thêm "Cái gì đang ăn gói", hãy thêm văn phòng làm exporter thứ hai trong OpenTelemetry Collector của bạn:',
   },
   uninstall: {
+    panel: 'Đã gỡ bảng My Office khỏi {app}.',
     editors: 'Đã bỏ cổng đổi tài khoản của văn phòng khỏi cài đặt trình soạn thảo',
     title: 'Gỡ My Office',
     removed: 'Đã gỡ {n} mục của My Office khỏi {file}',
@@ -24,6 +28,8 @@ export default {
     otelKept: 'Giữ nguyên các cài đặt telemetry này vì bạn đã sửa sau khi cài: {keys}',
   },
   doctor: {
+    panel: 'Có bảng My Office ở thanh bên của: {apps}',
+    noPanel: 'Chưa có bảng My Office trong trình soạn thảo nào. Chạy: my-office install',
     title: 'Kiểm tra My Office',
     nodeOld: 'Node {version}: cần Node 20 trở lên',
     curl: 'Có curl (hook dùng curl để báo sự kiện)',
@@ -62,7 +68,7 @@ export default {
     changed: 'Đã đổi mã PIN. Mọi điện thoại đang vào phải nhập mã mới.',
     show: 'Mã PIN: {pin}',
   },
-  usage: 'Dùng: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] | uninstall | doctor | pin [--new]] [--settings <đường dẫn>]',
+  usage: 'Dùng: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] [--no-panel] | uninstall | doctor | pin [--new]] [--settings <đường dẫn>]',
   status: { context: 'ngữ cảnh {pct}', fiveHour: '5 giờ {pct}', week: '7 ngày {pct}' },
   error: 'Lỗi: {message}',
 };
