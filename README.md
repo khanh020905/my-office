@@ -1,5 +1,7 @@
 # My Office
 
+[![npm](https://img.shields.io/npm/v/claude-my-office?label=npm&color=cb3837)](https://www.npmjs.com/package/claude-my-office) [![CI](https://github.com/khanh020905/my-office/actions/workflows/ci.yml/badge.svg)](https://github.com/khanh020905/my-office/actions/workflows/ci.yml) [![License: MIT](https://img.shields.io/badge/license-MIT-blue)](LICENSE)
+
 English · [Tiếng Việt](README.vi.md)
 
 A 3D office where your Claude Code sessions come to work. Each session is a character at a desk:
@@ -47,7 +49,7 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 - `install` backs up `settings.json` before changing it and only adds My Office's own hooks. Running it again adds
   nothing twice.
-- To remove everything: `node bin/cli.mjs uninstall`.
+- To remove everything: `my-office uninstall` (from the source: `node bin/cli.mjs uninstall`).
 
 | Command | What it does |
 | --- | --- |
@@ -58,8 +60,8 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 | `pin [--new]` | Shows the phone PIN; `--new` changes it and signs every phone out. |
 
 - Restart after changing the code: `launchctl kickstart -k gui/$(id -u)/com.my-office` (macOS) or
-  `systemctl --user restart my-office` (Linux). `node bin/cli.mjs doctor` prints the right command for your system.
-- Logs: `tail -f data/server.log`.
+  `systemctl --user restart my-office` (Linux). `my-office doctor` prints the right command for your system.
+- Logs: `tail -f ~/.my-office/server.log` (from the source: `data/server.log`).
 
 ## What's inside
 
@@ -351,7 +353,7 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   (Claude reads it with its next step; once its turn is over, the hint carries the conversation on), and your phone
   gets a notification. It also points out compaction after compaction and spending for 10 minutes with no file edited,
   without blocking anything. Anything you type to the session forgives it. Settings → More: on or off, after how many
-  failures, after how many minutes. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+  failures, after how many minutes. Older installs: run `my-office install` once more to add the hook.
 - **Two sessions on one file, a port someone holds**: when a session is about to edit a file another session edited in
   the last 20 minutes, its Claude is told first (read it again, don't overwrite the other's changes, ask if the work
   clashes) and the team chat says so. When a command can't have its port (`EADDRINUSE`, "Port 3000 is in use"), the
@@ -361,12 +363,12 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   always keep in mind ("commit messages in Vietnamese", "never push without asking"). When Claude Code compacts a long
   conversation, what you said along the way can be summed up away; right after each compaction the office says the
   pinned notes again (the `SessionStart` hook, source `compact`), and the team chat says so. Kept by conversation in
-  `data/pins.json`, 12 at most. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+  `data/pins.json`, 12 at most. Older installs: run `my-office install` once more to add the hook.
 - **Calls auto mode refused**: when auto mode refuses a call (Claude Code's `PermissionDenied` hook), the team chat gets a
   card: who, the command, the reason auto mode gave. While an office page is open, Claude Code waits up to 40 s for
   **Let Claude retry** (Claude is told it may try again; the call goes through auto mode again) or **Keep it refused**;
   otherwise the refusal stands at once and the card keeps it on record. **Copy command** to run it yourself. Phones
-  answer only when the Mac lets them approve. Older installs: run `node bin/cli.mjs install` once more to add the hook.
+  answer only when the Mac lets them approve. Older installs: run `my-office install` once more to add the hook.
 - **Undo the last turn**: a resting session's drawer has **↶ Undo last turn**: the files Claude changed with its file
   tools (Edit, Write…) in its last turn, put back as they were before it, a file it created removed. The office keeps
   its own copies (the stuck-loop hook, which runs before every call, copies a file the first time a turn touches it,
