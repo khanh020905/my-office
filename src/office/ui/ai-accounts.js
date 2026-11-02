@@ -3,10 +3,10 @@
 // and switching by itself when the one in use runs out. state.ai comes with the snapshot and { k: 'ai' }. The buttons
 // only on the Mac itself; a phone sees the usage.
 import { state } from '../core/state.js';
-import { $, el } from '../core/env.js';
+import { $, el, hhmm } from '../core/env.js';
 import { icon } from './icons.js';
 import { toast } from './activity.js';
-import { resetText } from './mac-drawer.js';
+import { liveWindows, resetText } from './mac-drawer.js';
 import { t as tr } from '../../i18n/index.js';
 
 const post = (url, body = {}) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json()).catch(() => ({ ok: false }));
@@ -206,13 +206,65 @@ function agAdd(g) {
   return card;
 }
 
-/** The section, drawn again on every change (not while a button in it is being pressed). */
+/* ---------- the tabs: Claude, Codex, Antigravity ----------
+   As the phone window's two ways in: each tool's name, and under it the one thing worth knowing (the tightest limit of
+   the account in use, out until when, a switch waiting), its dot coloured the way the limit bars are. Only the picked
+   tool's accounts show; the pick is kept in this browser. Claude alone: no tabs, the card as it always was. */
+const TAB_KEY = 'office-plan-tab';
+let tab = (() => { try { return localStorage.getItem(TAB_KEY) || 'claude'; } catch { return 'claude'; } })();
+const tight = (ws) => (ws || []).reduce((a, w) => (!a || w.pct > a.pct ? w : a), null);
+// (a tab is narrow: "out until 13:10", or with the day when it isn't today)
+const outShort = (t) => tr('ai.tab.out', { when: new Date(t).toDateString() === new Date().toDateString() ? hhmm(t) : `${tr('mac.plan.weekdays', null, 'list')[new Date(t).getDay()]} ${hhmm(t)}` });
+// a tab's line: [text, level] ('off': grey)
+function claudeLine() {
+  const until = state.limits?.until, top = tight(liveWindows());
+  if (until > Date.now()) return [outShort(until), 'critical'];
+  if (!top) return [state.limitsNote ? tr('mac.plan.unread') : tr('ai.tab.reading'), 'off'];
+  return [`${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%`, level(top.pct)];
+}
+function codexLine(c) {
+  const a = c.list.find((x) => x.id === c.now);
+  if (!a) return [tr(c.seat === 'apiKey' ? 'ai.tab.apiKey' : 'ai.tab.signedOut'), 'off'];
+  if (a.until) return [outShort(a.until), 'critical'];
+  const top = tight(a.windows);
+  return top ? [`${top.key === 'session' ? tr('mac.plan.fiveHour') : tr('mac.plan.week')} ${Math.round(top.pct)}%`, level(top.pct)] : [tr('ai.tab.reading'), 'off'];
+}
+function agLine(g) {
+  const a = g.list.find((x) => x.id === g.now);
+  if (g.pending) return [tr('ai.tab.pending'), 'warn'];
+  if (!a) return [tr('ai.tab.signedOut'), 'off'];
+  if (a.until) return [outShort(a.until), 'critical'];
+  const r = a.rows?.[0];
+  return r ? [`${r.label.split(' ')[0]} ${r.pct}%`, level(r.pct)] : [tr('ai.tab.reading'), 'off'];
+}
+function renderTabs(tools) {
+  const bar = $('plan-tabs'), card = $('plan-card'); if (!bar || !card) return;
+  const on = tools.length > 1, title = $('plan-title');
+  if (!tools.some((x) => x.k === tab)) tab = 'claude';
+  bar.hidden = !on; card.classList.toggle('has-tabs', on);
+  if (title) { title.dataset.claude ??= title.textContent; title.textContent = on ? tr('ai.title') : title.dataset.claude; }
+  $('plan-pane-claude').hidden = on && tab !== 'claude';
+  if ($('plan-at')) $('plan-at').hidden = on && tab !== 'claude';
+  if (!on) return;
+  bar.style.setProperty('--n', String(tools.length));
+  bar.replaceChildren(...tools.map(({ k, name, line: [text, lv] }) => {
+    const b = el('button', `pm-tab${k === tab ? ' is-sel' : ''}`); b.type = 'button'; b.dataset.tab = k;
+    b.setAttribute('role', 'tab'); b.setAttribute('aria-selected', String(k === tab));
+    b.append(el('span', null, name), el('i', `pm-dot${lv === 'off' ? '' : lv === 'normal' ? ' is-on' : ` is-${lv}`}`, text));
+    b.title = `${name}: ${text}`;
+    b.addEventListener('click', () => { tab = k; try { localStorage.setItem(TAB_KEY, k); } catch { /* private mode */ } renderAi(); });
+    return b;
+  }));
+}
+
+/** The tabs and the section, drawn again on every change (not while a button in it is being pressed). */
 export function renderAi() {
   const box = $('plan-ai'); if (!box) return;
   const ai = state.ai, showCodex = !!ai?.codex && (ai.codex.cli || ai.codex.list.length), showAg = !!ai?.ag && (ai.ag.note !== 'noDb' || ai.ag.list.length);
-  box.hidden = !showCodex && !showAg;
-  if (box.hidden) { box.replaceChildren(); return; }
+  renderTabs([{ k: 'claude', name: 'Claude', line: claudeLine() }, showCodex && { k: 'codex', name: 'Codex', line: codexLine(ai.codex) }, showAg && { k: 'ag', name: 'Antigravity', line: agLine(ai.ag) }].filter(Boolean));
+  box.hidden = (!showCodex && !showAg) || tab === 'claude';
+  if (!showCodex && !showAg) { box.replaceChildren(); return; }
   if (box.contains(document.activeElement) && document.activeElement.matches(':active')) return;
-  box.replaceChildren(...[showCodex && codexSection(ai.codex), showAg && agSection(ai.ag)].filter(Boolean));
+  box.replaceChildren(...[showCodex && tab === 'codex' && codexSection(ai.codex), showAg && tab === 'ag' && agSection(ai.ag)].filter(Boolean));
 }
 export function setAi(ai) { state.ai = ai || null; renderAi(); }

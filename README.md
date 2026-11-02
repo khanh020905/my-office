@@ -393,7 +393,8 @@ Then open <http://localhost:4310>.
   (`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`). "Ask Claude to split big tasks among subagents" adds a short note to
   `~/.claude/CLAUDE.md`, taken out again when off. Written to `~/.claude/settings.json` (`model`,
   `env.CLAUDE_CODE_SUBAGENT_MODEL`); the other accounts share it by a link. Sessions started from then on use it.
-- **Codex and Antigravity accounts too**: the plan card has a section for each, under Claude's. **Codex**: the account
+- **Codex and Antigravity accounts too**: the plan card has a tab for each beside Claude's (as the phone window's two ways
+  in), each with the account in use's tightest limit and a dot coloured like the bars; only the picked tool's accounts show. **Codex**: the account
   Codex is signed in with shows by itself, with its 5-hour and weekly usage (read by Codex's own `codex app-server`);
   "Add a Codex account" opens the ChatGPT sign-in page without signing the current one out; "Use" puts that account's
   sign-in into `~/.codex/auth.json` (the one there saved first: Codex rotates refresh tokens). A codex started after
