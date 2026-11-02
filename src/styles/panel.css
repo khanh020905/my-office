@@ -1,0 +1,55 @@
+/* The small panel (app/panel, src/panel/main.js): a narrow column in the editor's side bar or the menu bar's popover.
+   The office's colours; one scroller; nothing moves on its own. */
+.pn { box-sizing: border-box; height: 100dvh; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; background: var(--bg); color: var(--ink); font-size: 13px; }
+.pn-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px 12px; border-bottom: 1px solid var(--line); background: var(--bar); }
+.pn-brand { display: inline-flex; align-items: center; gap: 7px; font-size: .86rem; white-space: nowrap; }
+.pn-logo { width: 14px; height: 14px; border-radius: 4px; background: var(--accent); box-shadow: inset 0 -4px 0 rgba(0, 0, 0, .18); }
+.pn-sum { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .74rem; font-weight: 600; color: var(--muted); }
+.pn-sum[data-state="wait"] { color: var(--amber); }
+.pn-sum[data-state="work"] { color: var(--green-ink); }
+.pn-body { overflow-y: auto; overscroll-behavior: contain; padding: 4px 0 10px; scrollbar-width: thin; }
+.pn-sec { padding: 8px 12px 4px; }
+.pn-sec h2 { margin: 2px 0 8px; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.pn-empty { margin: 4px 0; color: var(--muted); font-size: .76rem; line-height: 1.5; }
+/* a request to approve */
+.pn-perm { display: grid; gap: 7px; margin-bottom: 8px; padding: 10px; border-radius: 10px; background: var(--amber-soft); border: 1px solid rgba(242, 181, 68, .28); }
+.pn-perm-h { font-size: .78rem; line-height: 1.4; color: var(--ink); }
+.pn-perm-h span { color: var(--muted); }
+.pn-detail { display: block; max-height: 7.5em; overflow: auto; padding: 6px 8px; border-radius: 7px; background: rgba(0, 0, 0, .3); font: 500 .7rem/1.5 var(--mono); white-space: pre-wrap; word-break: break-word; }
+.pn-warn { color: var(--red); font-size: .7rem; line-height: 1.45; }
+.pn-until { color: var(--faint); font-size: .66rem; }
+.pn-acts { display: flex; flex-wrap: wrap; gap: 6px; }
+.pn-btn { all: unset; box-sizing: border-box; padding: 6px 12px; border-radius: 8px; font-size: .74rem; font-weight: 700; line-height: 1.2; cursor: pointer; background: var(--card-2); color: var(--ink); border: 1px solid var(--line-2); }
+.pn-btn:hover { background: var(--card); }
+.pn-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pn-btn:disabled { opacity: .6; cursor: progress; }
+.pn-btn--ok { background: var(--green); color: #07130C; border-color: transparent; }
+.pn-btn--ok:hover { background: #5BE59A; }
+.pn-btn--no { color: var(--red); border-color: rgba(255, 95, 95, .35); }
+.pn-btn--ghost { background: transparent; }
+/* what each tool has left */
+.pn-q { display: flex; flex-wrap: wrap; gap: 6px; }
+.pn-qp { display: inline-flex; align-items: baseline; gap: 6px; padding: 4px 9px; border-radius: 999px; background: var(--card); font-size: .72rem; }
+.pn-qp b { font-weight: 600; color: var(--muted); }
+.pn-qp em { font: 700 .72rem/1 var(--mono); font-style: normal; color: var(--green-ink); }
+.pn-qp.is-warn em { color: var(--amber); }
+.pn-qp.is-critical em { color: var(--red); }
+/* a session: click to bring its window forward */
+.pn-sess { all: unset; box-sizing: border-box; display: grid; gap: 2px; width: 100%; margin: 0 0 2px; padding: 7px 8px; border-radius: 9px; cursor: pointer; }
+.pn-sess:hover:not(:disabled) { background: var(--card); }
+.pn-sess:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+.pn-sess:disabled { cursor: default; }
+.pn-sess-top { display: flex; align-items: center; gap: 8px; min-width: 0; }
+.pn-sess-top b { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .8rem; font-weight: 600; }
+.pn-sess-top small { flex: none; color: var(--faint); font-size: .66rem; }
+.pn-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
+.pn-sess.is-work .pn-dot { background: var(--green); box-shadow: 0 0 6px rgba(61, 220, 132, .6); }
+.pn-sess.is-wait .pn-dot { background: var(--amber); box-shadow: 0 0 6px rgba(242, 181, 68, .6); }
+.pn-sess-what, .pn-sess-sub { padding-left: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; color: var(--muted); }
+.pn-sess.is-wait .pn-sess-what { color: var(--amber); }
+.pn-sess-sub { color: var(--faint); }
+.pn-foot { display: flex; gap: 6px; padding: 9px 12px; border-top: 1px solid var(--line); background: var(--bar); }
+.pn-foot .pn-btn { flex: 1; text-align: center; }
+/* in the editor's side bar: its own top line already names it */
+:root[data-embed="ide"] .pn-head { padding-block: 7px; }
+@media (prefers-reduced-motion: reduce) { .pn-btn, .pn-sess { transition: none; } }

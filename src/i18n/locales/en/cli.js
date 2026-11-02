@@ -4,6 +4,9 @@ export default {
   backedUp: 'Backed up: {file}',
   building: 'Building the interface (once, about a minute)…',
   install: {
+    panel: 'The My Office panel is in {app}\'s side bar (its icon on the left).',
+    panelFailed: "Couldn't add the My Office panel to {app}.",
+    noPanel: "Couldn't pack the My Office panel for the editors.",
     title: 'Installing the Claude Code hooks',
     statusKept: 'Your old status line still shows as before (My Office runs it inside its own)',
     added: { one: 'Added {n} hook to {file}', other: 'Added {n} hooks to {file}' },
@@ -17,6 +20,7 @@ export default {
     otelTheirs: 'You already send Claude Code\'s telemetry somewhere ({where}), so it was left alone. To see "What eats your plan" as well, add the office as a second exporter in your OpenTelemetry Collector:',
   },
   uninstall: {
+    panel: 'Took the My Office panel out of {app}.',
     editors: "Took the office's account switch out of the editors' settings",
     title: 'Removing My Office',
     removed: { one: 'Removed {n} My Office entry from {file}', other: 'Removed {n} My Office entries from {file}' },
@@ -25,6 +29,8 @@ export default {
     otelKept: 'Left these telemetry settings in place, you changed them after install: {keys}',
   },
   doctor: {
+    panel: 'My Office panel in the side bar of: {apps}',
+    noPanel: 'No My Office panel in an editor yet. Run: my-office install',
     title: 'Checking My Office',
     nodeOld: 'Node {version}: needs Node 20 or newer',
     curl: 'curl found (the hooks use it to report events)',
@@ -63,7 +69,7 @@ export default {
     changed: 'PIN changed. Every phone that is signed in has to enter the new one.',
     show: 'PIN: {pin}',
   },
-  usage: 'Usage: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] | uninstall | doctor | pin [--new]] [--settings <path>]',
+  usage: 'Usage: my-office [start [--lan] | install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] [--no-panel] | uninstall | doctor | pin [--new]] [--settings <path>]',
   // the status line Claude Code shows under the prompt (hooks/status-line.mjs)
   status: { context: 'context {pct}', fiveHour: '5h {pct}', week: '7d {pct}' },
   error: 'Error: {message}',

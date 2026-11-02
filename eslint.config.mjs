@@ -12,7 +12,9 @@ export default defineConfig([
   { rules: { '@typescript-eslint/no-unused-vars': ['warn', { ignoreRestSiblings: true }] } },
   // a name used but never declared or imported fails here instead of in the office at runtime (Next's rules leave
   // no-undef to TypeScript, which never sees these files): a call to a function another module exports, say
-  { files: ['src/office/**/*.js', 'src/shared/**/*.js', 'server/**/*.mjs', 'bin/**/*.mjs', 'hooks/**/*.mjs'], rules: { 'no-undef': 'error' } },
+  { files: ['src/office/**/*.js', 'src/panel/**/*.js', 'src/shared/**/*.js', 'server/**/*.mjs', 'bin/**/*.mjs', 'hooks/**/*.mjs'], rules: { 'no-undef': 'error' } },
+  // the editors load an extension with require(): CommonJS, as VS Code wants it (vscode-extension/)
+  { files: ['vscode-extension/**/*.js'], languageOptions: { sourceType: 'commonjs', globals: { require: 'readonly', module: 'writable' } }, rules: { '@typescript-eslint/no-require-imports': 'off' } },
   // the dictionaries are plain `export default { … }` objects, one per area
   { files: ['src/i18n/locales/**'], rules: { 'import/no-anonymous-default-export': 'off' } },
 ]);
