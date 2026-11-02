@@ -71,6 +71,15 @@ export default {
   pins: { said: '📌 {name} vừa nén bộ nhớ: đã nhắc lại {n} điều bạn ghim.' },
   report: { monday: '📝 Phiếu điểm prompt tuần qua: {pct}% rõ ràng ({delta} so với tuần trước), {n} prompt. Xem ở ••• → Kho lịch sử → Phiếu điểm tuần.' },
   undo: { done: '↶ Đã hoàn tác lượt cuối của {name}: {n} file trở lại như trước.' },
+  ai: {
+    codexAuto: '🔁 Codex: {from} hết lượt (có lại lúc {when}), Codex chuyển sang đăng nhập {to}. Codex mở từ giờ sẽ dùng tài khoản này.',
+    codexUsed: '🔁 Codex chuyển sang đăng nhập {to}. Codex mở từ giờ sẽ dùng tài khoản này.',
+    codexReload: 'Khung Codex trong {where} vẫn ở tài khoản cũ tới khi bạn tải lại cửa sổ (⌘⇧P → Developer: Reload Window).',
+    agUsed: '🔁 Antigravity: lần mở tới {app} sẽ đăng nhập {to}.',
+    agClosed: '🔁 Antigravity: {app} vừa tắt nên đã đổi sang {to}, lần mở tới sẽ dùng tài khoản này.',
+    agRestarted: '🔁 Antigravity: đã tắt và mở lại {app}, giờ đăng nhập {to}.',
+    agWaiting: '⏳ Antigravity: tài khoản đang dùng đã hết lượt. Sẽ đổi sang {to} khi bạn tắt {app} (trong đó còn {n} phiên Claude đang làm nên văn phòng không tự tắt).',
+  },
   card: { stopped: 'Đã dừng', allow: 'Cho phép', deny: 'Từ chối', stop: '⏹ Dừng', askHere: '⏳ {what}', risky: 'Lệnh nguy hiểm: chỉ cho phép được trên Mac.', work: 'Đang làm', wait: 'Chờ bạn duyệt', done: 'Xong', fail: 'Gặp lỗi', meta: '{n} bước · {took}', ask: '⏳ {what} · thẻ duyệt hiện ở dưới (45 giây)', all: 'Xem cả {n} bước', show: 'Xem {n} bước đã làm', none: 'Không cần làm bước nào',
     attach: 'Về Mac gõ {cmd} để làm tiếp', waitMac: { perm: 'Đang chờ bạn duyệt ngay trên Mac', input: 'Đang chờ bạn trả lời ngay trên Mac', other: 'Đang chờ bạn trên Mac' } },
   steer: {

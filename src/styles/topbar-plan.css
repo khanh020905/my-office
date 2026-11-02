@@ -113,3 +113,23 @@
 .acct-move { display: flex; align-items: flex-start; gap: 7px; font-size: .66rem; line-height: 1.45; color: var(--ink); cursor: pointer; }
 .acct-move input { flex: none; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
 @media (prefers-reduced-motion: reduce) { .acct-knob, .acct-knob::after, .acct-use, .acct-pen { transition: none; } }
+/* the other AI tools' accounts (ai-accounts.js): Codex, Antigravity IDE, a section each under Claude's */
+.plan-ai { display: grid; gap: 12px; margin-top: 12px; min-width: 0; }
+.ai-sec { display: grid; gap: 4px; padding-top: 10px; border-top: 1px solid var(--line); min-width: 0; }
+.ai-head { display: flex; flex-wrap: wrap; align-items: baseline; column-gap: 8px; row-gap: 2px; min-width: 0; }
+.ai-head b { flex: none; font-size: .8rem; color: var(--ink); }
+.ai-sub { min-width: 0; font-size: .64rem; line-height: 1.4; color: var(--muted); }
+.plan-card .ai-acct .hl-m { grid-template-columns: 112px 1fr 40px; }   /* (a model's name is longer than "5 h") */
+.ai-acct .plan-reset { margin-left: 120px; }   /* (under the bar: the name's column + the gap) */
+.ai-acct .acct-end { gap: 4px; }
+.acct-name.ai-name { cursor: default; }
+.acct-name.ai-name:hover { background: none; }
+.acct-use.ai-remove { display: inline-grid; place-items: center; padding: 4px 6px; border-color: var(--line); color: var(--muted); }
+.acct-use.ai-remove svg { width: 11px; height: 11px; }
+.acct-use.ai-remove.is-sure { opacity: 1; padding: 4px 9px; color: var(--red); border-color: var(--red); }
+.ai-pending, .ai-ask { display: grid; gap: 7px; margin: 2px 0 4px; padding: 8px 10px; border-radius: 10px; background: var(--amber-soft); font-size: .68rem; line-height: 1.45; color: var(--ink); }
+.ai-ask p { margin: 0; }
+.ai-older { display: block; }
+.ai-step { margin-top: 4px; }
+.ai-add { margin-top: 4px; }
+.is-stream .ai-sub, .is-stream .ai-name { filter: blur(4px); }

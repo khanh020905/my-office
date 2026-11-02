@@ -387,6 +387,18 @@ Then open <http://localhost:4310>.
   you write in it again (the office starts it there through the same script; its person waits at the desk meanwhile).
   A session in a terminal gets the command that resumes it there. With switching on, the sessions open on an account
   that runs out for a while (not a short rate limit) move by themselves too; a box under the switch turns that off.
+- **Codex and Antigravity accounts too**: the plan card has a section for each, under Claude's. **Codex**: the account
+  Codex is signed in with shows by itself, with its 5-hour and weekly usage (read by Codex's own `codex app-server`);
+  "Add a Codex account" opens the ChatGPT sign-in page without signing the current one out; "Use" puts that account's
+  sign-in into `~/.codex/auth.json` (the one there saved first: Codex rotates refresh tokens). A codex started after
+  that uses it; the Codex panel in an editor keeps the old one until you reload the window, and the card says so.
+  **Antigravity IDE**: each account with its quota per model family (the model picked in the agent panel first), as
+  the IDE saved it in its state database (read with `sqlite3`, read-only). The IDE reads its account only as it starts,
+  so with it open a switch happens when you close it, or, if you ask, the office closes and reopens it (on a Mac; never
+  while a Claude session in it is at work). Adding one takes the IDE's sign-in out (kept, not signed out) and opens it to
+  sign in again. With "Switch by itself when one runs out" on, both move to the next account with room. The sign-ins
+  stay in the office's own data folder (`data/codex`, `data/antigravity`, readable by you only). `OFFICE_AI_ACCOUNTS=0`
+  turns both off.
 - **The Mac pill** opens RAM, swap, CPU and disk. It says why the Mac is slow (memory spilled to disk, who holds the
   most) with one button to close every idle Claude session, and suggests the rest: stop a forgotten dev server, quit a
   heavy app, clear caches. Idle sessions can also be closed on a timer (off by default). Every action is checked first
