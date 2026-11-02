@@ -31,6 +31,18 @@ export default {
   weatherOff: 'Tắt',
   notify: 'Điện thoại và thông báo',
   behaviour: 'Cách hoạt động',
+  models: {
+    title: 'Model: người điều phối và subagent',
+    note: 'Việc lớn có thể chia cho subagent: phiên chính điều phối bằng một model, subagent làm bằng model khác (Sonnet rẻ hơn Opus). Áp dụng cho các phiên Claude mở từ giờ, ở mọi tài khoản.',
+    main: 'Phiên chính (điều phối)', sub: 'Subagent',
+    opt: { opus: 'Opus', sonnet: 'Sonnet', haiku: 'Haiku', default: 'Mặc định', same: 'Như phiên chính' },
+    force: 'Luôn dùng model này cho subagent (kể cả khi Claude chọn model khác)',
+    split: 'Nhắc Claude chia việc lớn cho subagent',
+    splitNote: 'Một đoạn ngắn trong ~/.claude/CLAUDE.md, tắt là gỡ ra.',
+    other: 'Đang đặt: {model} (đặt tay)',
+    saved: 'Đã lưu. Phiên Claude mở từ giờ sẽ dùng; phiên đang mở giữ model cũ.',
+    readOnly: 'Không đọc được ~/.claude/settings.json (có thể có chú thích): đặt model trong đó bằng tay nhé.',
+  },
   loop: {
     title: 'Vòng lặp kẹt',
     on: 'Ngắt vòng lặp kẹt',
