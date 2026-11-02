@@ -404,6 +404,10 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   (`CLAUDE_CODE_SUBAGENT_MODEL_FORCE`). "Ask Claude to split big tasks among subagents" adds a short note to
   `~/.claude/CLAUDE.md`, taken out again when off. Written to `~/.claude/settings.json` (`model`,
   `env.CLAUDE_CODE_SUBAGENT_MODEL`); the other accounts share it by a link. Sessions started from then on use it.
+- **My Office in the Mac's menu bar**: `install` also builds a small menu bar app (the building icon by the clock; it
+  needs Xcode's command line tools): the number of sessions waiting for you, or at work, coloured when a plan's limit
+  runs low; a click opens the same small panel as the editor's, a right-click opens the office; a notification when a
+  session starts waiting for you or finishes. The office starts it with itself. `--no-menubar` leaves it out.
 - **My Office in the editor's side bar**: `install` also adds a small panel to each editor on the computer (Antigravity,
   VS Code, Cursor, Windsurf…: its icon in the activity bar): who is working, who waits for you with "Allow / Deny" right
   there, each tool's limit left; click a session to bring its window forward. It is the office's light page `/panel`

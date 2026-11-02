@@ -2407,6 +2407,25 @@ const ag = AI_OFF ? null : createAntigravityAccounts({
 });
 const hhmmOf = (t) => new Date(t).toLocaleTimeString(prefs.lang() === 'vi' ? 'vi-VN' : 'en-GB', { hour: '2-digit', minute: '2-digit' });
 function aiOut() { return AI_OFF ? null : { codex: codex.out(), ag: ag.out() }; }
+/* ---------- the Mac's menu bar (menubar/MyOfficeBar.swift, built by `my-office install`) ----------
+   What its icon shows, read every 3 seconds: how many sessions wait for you and how many are at work, the tightest limit
+   of each tool's account in use as a level, and each session's state (a notification when one starts waiting or
+   finishes), with the words in the office's language. The office starts it when it starts, if it was built. */
+function panelOut() {
+  const now = Date.now(), waitingFor = new Set([...pending.values()].map((p) => p.sess));
+  const list = [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name, status: s.status === 'wait' || waitingFor.has(s.id) ? 'wait' : s.status === 'work' ? 'work' : 'rest' }));
+  const tight = (ws) => Math.max(0, ...(ws || []).filter((w) => !w.resetsAt || w.resetsAt > now).map((w) => w.pct || 0));
+  const ai = aiOut(), cx = ai?.codex?.list?.find((a) => a.id === ai.codex.now), ag2 = ai?.ag?.list?.find((a) => a.id === ai.ag.now);
+  const top = Math.max(tight(limitsOut()?.windows), tight(cx?.windows), ag2?.rows?.[0]?.pct || 0);
+  const working = list.filter((s) => s.status === 'work').length, waiting = list.filter((s) => s.status === 'wait').length;
+  return { ok: true, working, waiting, level: top >= 95 ? 'critical' : top >= 80 ? 'warn' : 'ok', sessions: list,
+    summary: [working && tr('panel.working', { n: working }), waiting && tr('panel.waiting', { n: waiting })].filter(Boolean).join(' · ') || tr('panel.quiet'),
+    words: { wait: tr('panel.bar.wait'), done: tr('panel.bar.done'), open: tr('panel.open3d'), list: tr('panel.open2d'), quit: tr('panel.bar.quit'), off: tr('panel.offline') } };
+}
+const MENUBAR_APP = path.join(DATA_DIR, 'menubar', 'My Office.app');
+if (process.platform === 'darwin' && process.env.OFFICE_MENUBAR !== '0' && fs.existsSync(MENUBAR_APP)) {
+  execFile('pgrep', ['-f', 'My Office.app/Contents/MacOS/MyOfficeBar'], (err) => { if (err) execFile('open', ['-g', MENUBAR_APP, '--args', String(PORT)], () => {}); });
+}
 codex?.start(); ag?.start();
 
 /* ---------- bring a session's own window to the front ----------
@@ -2782,6 +2801,11 @@ const server = http.createServer((req, res) => {
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${req.socket.remoteAddress} ${JSON.stringify(body)} -> ${JSON.stringify(result)}\n`).catch(() => {});
       json(res, 200, result);
     });
+    return;
+  }
+  if (url.pathname === '/api/panel' && req.method === 'GET') {   // the menu bar's reading (menubar/): this computer only
+    if (!isLoopback(req)) { json(res, 403, { ok: false }); return; }
+    json(res, 200, panelOut());
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/panel/open') {   // the small panel's buttons: the office (or its list view) in the browser (this computer only)

@@ -110,7 +110,39 @@ async function install() {
     LAN ? warn(tr('cli.install.lan')) : ok(tr('cli.install.local'));
   }
   if (!args.includes('--no-panel') && !opt('--settings')) await panel();
+  if (!args.includes('--no-menubar') && !opt('--settings') && process.platform === 'darwin') menubar();
   console.log(`\n${tr('cli.install.next', { port: PORT })}`);
+}
+/* The Mac's menu bar icon (menubar/MyOfficeBar.swift): built here with the Swift compiler of Xcode's command line tools
+   into an app of its own in the data folder (no Dock icon; it may talk to 127.0.0.1), signed for this Mac only, and
+   started; the office starts it again each time it starts. */
+const MENUBAR_APP = path.join(dataDir(ROOT, {}), 'menubar', 'My Office.app'), MENUBAR_BIN = 'My Office.app/Contents/MacOS/MyOfficeBar';
+const PLIST = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+  <key>CFBundleIdentifier</key><string>com.my-office.menubar</string>
+  <key>CFBundleName</key><string>My Office</string>
+  <key>CFBundleDisplayName</key><string>My Office</string>
+  <key>CFBundleExecutable</key><string>MyOfficeBar</string>
+  <key>CFBundlePackageType</key><string>APPL</string>
+  <key>CFBundleVersion</key><string>1</string>
+  <key>LSMinimumSystemVersion</key><string>12.0</string>
+  <key>LSUIElement</key><true/>
+  <key>NSAppTransportSecurity</key><dict><key>NSAllowsLocalNetworking</key><true/></dict>
+</dict></plist>
+`;
+function menubar() {
+  try { execFileSync('xcrun', ['--find', 'swiftc'], { stdio: 'ignore' }); } catch { warn(tr('cli.install.noSwift')); return; }
+  const mac = path.join(MENUBAR_APP, 'Contents', 'MacOS');
+  try {
+    fs.mkdirSync(mac, { recursive: true });
+    execFileSync('xcrun', ['swiftc', '-O', '-o', path.join(mac, 'MyOfficeBar'), path.join(ROOT, 'menubar', 'MyOfficeBar.swift')], { stdio: 'ignore', timeout: 300_000 });
+    fs.writeFileSync(path.join(MENUBAR_APP, 'Contents', 'Info.plist'), PLIST);
+    execFileSync('codesign', ['-s', '-', '--force', MENUBAR_APP], { stdio: 'ignore' });
+  } catch { warn(tr('cli.install.menubarFailed')); return; }
+  try { execFileSync('pkill', ['-f', MENUBAR_BIN], { stdio: 'ignore' }); } catch { /* not running */ }
+  try { execFileSync('open', ['-g', MENUBAR_APP, '--args', String(PORT)], { stdio: 'ignore', timeout: 15_000 }); } catch { /* the office starts it next time */ }
+  ok(tr('cli.install.menubar'));
 }
 // the small panel in the side bar of each editor on this computer (vscode-extension/, packed by server/vsix.mjs)
 async function panel() {
@@ -139,6 +171,10 @@ async function uninstall() {
   if (!opt('--settings') && (await service().uninstall())) ok(tr('cli.uninstall.service'));
   if (!opt('--settings') && unwrapEditors()) ok(tr('cli.uninstall.editors'));
   if (!opt('--settings')) for (const e of await uninstallPanel()) if (e.ok) ok(tr('cli.uninstall.panel', { app: e.app }));
+  if (!opt('--settings') && fs.existsSync(MENUBAR_APP)) {
+    try { execFileSync('pkill', ['-f', MENUBAR_BIN], { stdio: 'ignore' }); } catch { /* not running */ }
+    fs.rmSync(path.dirname(MENUBAR_APP), { recursive: true, force: true }); ok(tr('cli.uninstall.menubar'));
+  }
 }
 // the editors' Claude Code started through the office's account script (the plan card's "Use" / switching): taken out,
 // or Claude Code wouldn't start once the office is gone
@@ -195,6 +231,7 @@ async function doctor() {
   }
   const inEditors = panelIn();
   inEditors.length ? ok(tr('cli.doctor.panel', { apps: inEditors.join(', ') })) : warn(tr('cli.doctor.noPanel'));
+  if (process.platform === 'darwin') fs.existsSync(MENUBAR_APP) ? ok(tr('cli.doctor.menubar')) : warn(tr('cli.doctor.noMenubar'));
   const svc = service(), st = await svc.state();
   if (st === 'running') ok(tr('cli.doctor.serviceUp'));
   else if (st === 'stopped') warn(tr('cli.doctor.serviceDown', { restart: svc.restart }));

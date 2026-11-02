@@ -33,6 +33,7 @@
     "hooks/",
     "src/i18n/",
     "src/shared/",
+    "menubar/",
     "vscode-extension/",
     "public/",
     "next.config.mjs",

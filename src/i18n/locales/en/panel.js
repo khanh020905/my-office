@@ -12,6 +12,7 @@ export default {
   subs: { one: '{n} subagent at work', other: '{n} subagents at work' },
   working: '{n} working',
   waiting: { one: '{n} waits for you', other: '{n} wait for you' },
+  bar: { wait: '{name} is waiting for you', done: '{name} is done', quit: 'Hide this icon (until the office starts again)' },
   quiet: 'All quiet',
   needsYou: 'Needs you ({n})',
   sessions: 'Sessions',

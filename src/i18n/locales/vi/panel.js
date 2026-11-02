@@ -12,6 +12,7 @@ export default {
   subs: '{n} subagent đang làm',
   working: '{n} đang làm',
   waiting: '{n} chờ bạn',
+  bar: { wait: '{name} đang chờ bạn duyệt', done: '{name} đã xong việc', quit: 'Ẩn biểu tượng này (tới lần văn phòng khởi động sau)' },
   quiet: 'Đang yên',
   needsYou: 'Cần bạn duyệt ({n})',
   sessions: 'Phiên',
