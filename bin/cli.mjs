@@ -115,7 +115,8 @@ async function install() {
 }
 /* The Mac's menu bar icon (menubar/MyOfficeBar.swift): built here with the Swift compiler of Xcode's command line tools
    into an app of its own in the data folder (no Dock icon; it may talk to 127.0.0.1), signed for this Mac only, and
-   started; the office starts it again each time it starts. */
+   started; the office starts it again each time it starts. Its logo (menubar/AppIcon.icns, the building of app/icon.svg)
+   is what macOS shows on its notifications. */
 const MENUBAR_APP = path.join(dataDir(ROOT, {}), 'menubar', 'My Office.app'), MENUBAR_BIN = 'My Office.app/Contents/MacOS/MyOfficeBar';
 const PLIST = `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -124,6 +125,7 @@ const PLIST = `<?xml version="1.0" encoding="UTF-8"?>
   <key>CFBundleName</key><string>My Office</string>
   <key>CFBundleDisplayName</key><string>My Office</string>
   <key>CFBundleExecutable</key><string>MyOfficeBar</string>
+  <key>CFBundleIconFile</key><string>AppIcon</string>
   <key>CFBundlePackageType</key><string>APPL</string>
   <key>CFBundleVersion</key><string>1</string>
   <key>LSMinimumSystemVersion</key><string>12.0</string>
@@ -138,8 +140,12 @@ function menubar() {
     fs.mkdirSync(mac, { recursive: true });
     execFileSync('xcrun', ['swiftc', '-O', '-o', path.join(mac, 'MyOfficeBar'), path.join(ROOT, 'menubar', 'MyOfficeBar.swift')], { stdio: 'ignore', timeout: 300_000 });
     fs.writeFileSync(path.join(MENUBAR_APP, 'Contents', 'Info.plist'), PLIST);
+    fs.mkdirSync(path.join(MENUBAR_APP, 'Contents', 'Resources'), { recursive: true });
+    fs.copyFileSync(path.join(ROOT, 'menubar', 'AppIcon.icns'), path.join(MENUBAR_APP, 'Contents', 'Resources', 'AppIcon.icns'));
     execFileSync('codesign', ['-s', '-', '--force', MENUBAR_APP], { stdio: 'ignore' });
   } catch { warn(tr('cli.install.menubarFailed')); return; }
+  // tell macOS the app changed, so notifications pick up the new logo instead of the blank one it remembered
+  try { execFileSync('/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister', ['-f', MENUBAR_APP], { stdio: 'ignore', timeout: 15_000 }); } catch { /* only the logo waits */ }
   try { execFileSync('pkill', ['-f', MENUBAR_BIN], { stdio: 'ignore' }); } catch { /* not running */ }
   try { execFileSync('open', ['-g', MENUBAR_APP, '--args', String(PORT)], { stdio: 'ignore', timeout: 15_000 }); } catch { /* the office starts it next time */ }
   ok(tr('cli.install.menubar'));
