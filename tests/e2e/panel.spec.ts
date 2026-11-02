@@ -31,5 +31,9 @@ test('the panel: who works, who rests, a request to approve, allowed from it', a
   await card.locator('.pn-btn--ok').click();
   expect(await (await asked).text()).toContain('allow');
   await expect(card).toHaveCount(0);
+  // what the menu bar reads (menubar/): the counts, each session's state, the words for its notifications
+  const bar = await (await request.get('/api/panel')).json();
+  expect(bar.sessions.find((s: { name: string }) => s.name.startsWith('panel-api'))?.status).toMatch(/work|rest/);
+  expect(bar.words.wait).toContain('{name}');
   for (const sid of ['panel-api', 'panel-docs']) await request.post('/event', { data: { ...at(sid), hook_event_name: 'SessionEnd', reason: 'other' } });
 });
