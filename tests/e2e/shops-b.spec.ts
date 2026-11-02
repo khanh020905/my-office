@@ -118,10 +118,10 @@ test('the fronts too far off to walk into: painted, no door, and you cannot get 
   const fronts = await page.evaluate(() => (window as unknown as Win).__office!.street!.shop.fronts());
   const chains = fronts.filter((f) => f.room || f.far);
   expect(fronts.length).toBeGreaterThanOrEqual(10);
-  expect(chains.filter((f) => f.room).length).toBe(8);   // (WALK_INS: the nearest eight chains are rooms)
-  expect(chains.slice(0, 8).every((f) => f.room)).toBe(true);
-  expect(chains.slice(8).every((f) => f.far && !f.room)).toBe(true);
-  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.doors().length)).toBe(8);
+  expect(chains.filter((f) => f.room).length).toBe(10);   // (WALK_INS_AT: in Ho Chi Minh City the nearest ten chains are rooms)
+  expect(chains.slice(0, 10).every((f) => f.room)).toBe(true);
+  expect(chains.slice(10).every((f) => f.far && !f.room)).toBe(true);
+  expect(await page.evaluate(() => (window as unknown as Win).__office!.street!.doors().length)).toBe(10);
   const at = atFront(page, { far: true });
   await at(0, 6.5); await page.waitForTimeout(2000);
   await shot(page, 'far-front.png');

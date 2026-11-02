@@ -92,7 +92,7 @@ test('walking into Thế Giới Di Động: the yellow sign, the dancer at the d
 });
 
 test('the day\'s first cà phê at the Highlands, and "lên đời" at Thế Giới Di Động when Claude Code moves to a new version', async ({ page }) => {
-  test.setTimeout(300_000);
+  test.setTimeout(380_000);
   const errors = watchErrors(page);
   await page.addInitScript(() => { try { localStorage.setItem('office-quality', 'low'); localStorage.setItem('office-tips', 'seen'); } catch { /* private mode */ } });
   await page.goto('/?demo&debug&layout=pro&at=08:00');
@@ -102,7 +102,7 @@ test('the day\'s first cà phê at the Highlands, and "lên đời" at Thế Gi�
   let trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
   expect(trip?.shop).toBe('Highlands Coffee');
   expect(trip?.item).toBe('cup');
-  await expect.poll(() => page.evaluate(() => !(window as unknown as Win).__office!.outing), { timeout: 170_000 }).toBe(true);   // (back up with it: the café is further than the nearest store, ~2 min at 6×)
+  await expect.poll(() => page.evaluate(() => !(window as unknown as Win).__office!.outing), { timeout: 250_000 }).toBe(true);   // (back up with it: the café is further than the nearest stores, Bách Hóa Xanh and Điện Máy Xanh among them, ~2–3 min at 6×)
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.goOut('upgrade', '2.1.313')), { timeout: 45_000 }).toBe(true);
   trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
   expect(trip?.shop).toBe('Thế Giới Di Động');

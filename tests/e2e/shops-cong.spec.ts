@@ -116,14 +116,14 @@ async function resting(page: Page, time: string) {
 }
 
 test('a weekday afternoon: "Cộng for a coconut coffee, anyone?", someone resting goes for one', async ({ page }) => {
-  test.setTimeout(150_000);
+  test.setTimeout(210_000);
   const errors = watchErrors(page);
   await resting(page, '2026-11-04T15:00');   // (a Wednesday)
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.goOut('cong')), { timeout: 45_000 }).toBe(true);
   const trip = await page.evaluate(() => (window as unknown as Win).__office!.outing);
   expect([trip?.shop, trip?.item]).toEqual(['Cộng Cà Phê', 'cup']);
   await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.chat.msgs.some((m) => /Cộng/.test(m.text || ''))), { timeout: 20_000 }).toBe(true);
-  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.outing?.stage), { timeout: 90_000 }).toBe('in');   // (at the counter)
+  await expect.poll(() => page.evaluate(() => (window as unknown as Win).__office!.outing?.stage), { timeout: 140_000 }).toBe('in');   // (at the counter: in Ho Chi Minh City two fronts further than it was, past Bách Hóa Xanh and Điện Máy Xanh)
   expect(errors).toEqual([]);
 });
 

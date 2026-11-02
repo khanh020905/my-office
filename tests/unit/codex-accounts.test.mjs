@@ -92,7 +92,7 @@ test('switching by itself: the account in use runs out, the next one with room s
 
 test('a codex started on the old account: shown as still on it, and its account not read meanwhile', async () => {
   let started = 0;
-  const { c, fake } = setup('a@example.com', { procs: async () => (started ? [{ pid: 4242, start: started, args: '/h/.antigravity-ide/extensions/openai.chatgpt-1/bin/x/codex app-server' }] : []) });
+  const { c, fake, root } = setup('a@example.com', { procs: async () => (started ? [{ pid: 4242, start: started, args: '/h/.antigravity-ide/extensions/openai.chatgpt-1/bin/x/codex app-server' }] : []) });
   await c.syncSeat();
   const a = idOf(c, 'a@example.com');
   fs.writeFileSync(path.join(fake, 'next-login'), 'b@example.com'); c.addStart();
@@ -104,6 +104,8 @@ test('a codex started on the old account: shown as still on it, and its account 
   assert.deepEqual(c.out().older, [{ where: 'Antigravity IDE', id: a }]);
   fs.writeFileSync(path.join(fake, 'calls.log'), '');
   await c.read(a);
-  assert.ok(!fs.readFileSync(path.join(fake, 'calls.log'), 'utf8').includes('rateLimits'), 'not read while the old panel may refresh it');
+  // (B's own first reading, due a moment after the switch, may land in the log meanwhile: only A's home counts)
+  const ofA = fs.readFileSync(path.join(fake, 'calls.log'), 'utf8').split('\n').filter((l) => l.startsWith(`${path.join(root, 'office', a)} `));
+  assert.ok(!ofA.some((l) => l.includes('rateLimits')), 'not read while the old panel may refresh it');
   c.stop();
 });
