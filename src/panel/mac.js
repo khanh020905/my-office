@@ -1,6 +1,7 @@
 // The Mac, in the panel: RAM, swap, CPU and disk, why it is slow in one sentence, and the few fixes that help most with
 // the same buttons as the office's drawer (src/office/ui/mac-drawer.js: confirm first, a stuck process asks again to be
-// forced). Read only while the panel is on screen, every 10 s (/api/sys runs `ps`; the server keeps a reading 3 s).
+// forced). Read only while the panel is on screen: every 10 s opened, every minute folded (only its RAM % shows then; an
+// editor's side bar counts as on screen all day, and /api/sys runs `ps`; the server keeps a reading 3 s).
 import { t as tr } from '../i18n/index.js';
 import { GB, el, fmtBytes } from './fmt.js';
 
@@ -71,7 +72,7 @@ function render() {
     const sum = el('span', 'pn-mac-sum', `RAM ${ram}%`); sum.dataset.level = lv; head.append(sum);
   }
   head.append(el('i', 'pn-mac-chev'));
-  head.addEventListener('click', () => { open = !open; try { localStorage.setItem(KEY, open ? '1' : '0'); } catch { /* private mode */ } render(); if (open) poll(); });
+  head.addEventListener('click', () => { open = !open; try { localStorage.setItem(KEY, open ? '1' : '0'); } catch { /* private mode */ } render(); sync(); });
   const parts = [head];
   if (open) {
     if (!snap?.mem) parts.push(el('p', 'pn-empty', tr('mac.measuring')));
@@ -123,7 +124,7 @@ async function poll() {
 function sync() {
   clearInterval(timer); timer = 0;
   if (document.visibilityState !== 'visible') { ctl?.abort(); return; }
-  poll(); timer = setInterval(poll, 10_000);
+  poll(); timer = setInterval(poll, open ? 10_000 : 60_000);
 }
 /** the section's own element (kept by the page across its redraws); ctx = { q } adds the access token to a path */
 export function startMac(node, c) {
