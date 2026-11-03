@@ -21,6 +21,9 @@ test('a session on Opus sends out an Explore subagent that runs on Sonnet: "Sonn
   await request.post('/event', { data: { ...base, hook_event_name: 'PreToolUse', agent_id: aid, agent_type: 'Explore', tool_name: 'Read', tool_input: { file_path: path.join(HOME_DIR, 'submodel', 'cart.ts') } } });
   await page.goto('/');
   await expect(page.locator('.v2-sub-model', { hasText: 'Sonnet' })).toBeVisible({ timeout: 30_000 });
-  await expect(page.locator('.tag-model', { hasText: 'Sonnet' })).toHaveCount(1);
+  // (opened in 2D the office has no 3D people yet: the name tag comes with them, once 3D is asked for)
+  await expect(page.locator('.tag-model')).toHaveCount(0);
+  await page.click('.tb-view [data-view="3d"]');
+  await expect(page.locator('.tag-model', { hasText: 'Sonnet' })).toHaveCount(1, { timeout: 60_000 });
   await request.post('/event', { data: { ...base, hook_event_name: 'SessionEnd', reason: 'other' } });   // (the next test's office has only its own)
 });

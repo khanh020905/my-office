@@ -100,7 +100,8 @@ test('phone work as a background session: its steps, an approval that waits past
   await page.goto(`${BASE}/`);
   await page.locator('.ph-tabs .ph-tab').nth(4).click();
   const onPhone = page.locator('#zchat .zc-work', { has: page.locator('.zc-work-attach') }).first();
-  await onPhone.scrollIntoViewIfNeeded();
+  // (the chat is drawn again once its history is in, which can swap the card under the scroll: try again then)
+  await expect(async () => { await onPhone.scrollIntoViewIfNeeded({ timeout: 5000 }); }).toPass({ timeout: 30_000 });
   await expect(onPhone.locator('.zc-work-attach code')).toBeVisible({ timeout: 30_000 });
   await page.screenshot({ path: path.join(OUT, 'card-phone.png') });
   expect(await onPhone.evaluate((el) => el.scrollWidth <= el.clientWidth + 1)).toBe(true);

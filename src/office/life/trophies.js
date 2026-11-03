@@ -1,5 +1,6 @@
 // The trophy cabinet and the opening plaque.
 import * as THREE from 'three';
+import { state } from '../core/state.js';
 import { chatLife } from '../ui/group-chat.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import { PRO, pad2, reduceMotion } from '../core/env.js';
@@ -83,7 +84,7 @@ function buildShelf() {
   renderer.shadowMap.needsUpdate = true;
 }
 export function setTrophies(t, fresh = []) {
-  trophyData = t; buildShelf();
+  trophyData = t; if (state.world) buildShelf();   // (the 2D list: the shelf when the world is built)
   if (plcState.id === 'director') renderPlace();
   let party = false;
   for (const id of fresh) {
@@ -116,4 +117,5 @@ export function setup() {
     put(g, rbox(0.012, 1.48, 0.02, metal, 0.004), 0, 1.25, 0.222);
     trophyG.position.copy(g.position); trophyG.rotation.y = CAB.ry;
   }
+  buildShelf();   // (what the 2D list was told before the world was built, if anything)
 }

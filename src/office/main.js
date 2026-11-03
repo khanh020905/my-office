@@ -1,5 +1,9 @@
 // Boots the office. Every module's setup() runs once, in this order (the order the page always ran in): the scene,
-// the furniture and people, then the panels, the live connection and the render loop.
+// the furniture and people, then the panels, the live connection and the render loop. A page that opens in the 2D list
+// runs only what the list needs (LIST) and the rest the first time the 3D world is asked for (core/world-boot.js): the
+// world is most of the page's memory, about 1 GB in a browser against about 0.1 GB without it.
+import { state } from './core/state.js';
+import { setWorldBuilder } from './core/world-boot.js';
 import * as coreEnv from './core/env.js';
 import * as uiEventText from './ui/event-text.js';
 import * as uiIcons from './ui/icons.js';
@@ -106,6 +110,7 @@ import * as uiCacheWords from './ui/cache-words.js';
 import * as uiTips from './ui/tips.js';
 import * as interactFirstPerson from './interact/first-person.js';
 import * as netLive from './net/live.js';
+import * as uiTicks from './ui/ticks.js';
 import * as lifeYourTurn from './life/your-turn.js';
 import * as lifeIncidents from './life/incidents.js';
 import * as audioSfx from './audio/sfx.js';
@@ -226,6 +231,7 @@ const MODULES = [
   uiTips,
   interactFirstPerson,
   netLive,
+  { setup: netLive.setupTeams },   // (the teams' name chips over the pods: part of the world)
   lifeYourTurn,
   lifeIncidents,
   audioSfx,
@@ -236,13 +242,32 @@ const MODULES = [
   replayReplay,
   replayTimeline,
   worldBackdropsIndex,
+  uiTicks,
   coreLoop,
   coreOptimize,
 ];
 
+// what the 2D list needs (its rows, the top bar and drawers, the group chat, the live connection or the demo)
+const LIST = new Set([coreEnv, uiEventText, uiIcons, peopleWorkers, uiLite, uiActivity, uiSessionDrawer, uiMacDrawer, uiBurn, uiVault, uiTopbar,
+  interactPlaceCards, uiSettings, uiGroupChat, uiGroupChatView, uiStuck, uiModels, uiCacheWords, netLive, lifeYourTurn, audioSfx, uiPermissions,
+  uiPhone, uiNotify, demoDemo, replayReplay, replayTimeline, uiTicks]);
+const done = new Set();
 let started = false;
 export function startOffice() {
   if (started) return;
   started = true;
-  for (const m of MODULES) m.setup();
+  setWorldBuilder(buildWorld);
+  if (!uiLite.listAtStart()) { buildWorld(); return; }
+  for (const m of MODULES) if (LIST.has(m)) { m.setup(); done.add(m); }
+  uiSettings.syncToggles(); uiLite.setLite(true);
+}
+// everything not started yet, in the same order; a list that opened first then seats its sessions (no walking in)
+function buildWorld() {
+  if (state.world) return;
+  state.world = true;
+  const late = done.size > 0;
+  for (const m of MODULES) if (!done.has(m)) { m.setup(); done.add(m); }
+  if (!late) return;
+  for (const s of [...peopleWorkers.sessions.values()]) netLive.upsertSession(s, false);
+  uiMacDrawer.loadMac();
 }

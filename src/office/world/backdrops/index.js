@@ -1,16 +1,12 @@
 // Choosing the backdrop: city, countryside or beach.
 import * as THREE from 'three';
 import { state } from '../../core/state.js';
-import { $, hhmm, officeNow } from '../../core/env.js';
 import { scene } from '../../scene/renderer.js';
 import { buildCity } from './city.js';
 import { buildCountry } from './countryside.js';
 import { buildBeach } from './beach.js';
 import { cityDay, cityNight, viewTex } from '../windows.js';
-import { wxChip } from '../../life/weather.js';
 import { isNightHour, night, setNight } from '../room-update.js';
-import { renderSessionHead } from '../../ui/session-drawer.js';
-import { loadMac, pollMac } from '../../ui/mac-drawer.js';
 import { buildGrid, fp } from '../../interact/first-person.js';
 import { t as tr } from '../../../i18n/index.js';
 
@@ -38,12 +34,5 @@ export function setup() {
   THEME = THEMES.city;
   { let saved = 'city'; try { saved = localStorage.getItem('office-scene') || 'city'; } catch { /* storage blocked */ } setScene(THEMES[saved] ? saved : 'city', false); }
   if (!state.nightManual) setNight(isNightHour()); else setNight(night);
-  setInterval(() => {
-    { const v = hhmm(officeNow().getTime()) + wxChip(), c = $('clock'); if (c.textContent !== v) c.textContent = v; }   // (changes once a minute)
-    if (!state.nightManual && night !== isNightHour()) setNight(isNightHour());
-    if (state.selectedId) renderSessionHead();
-  }, 1000);
-  $('clock').textContent = hhmm(officeNow().getTime()) + wxChip();
-  loadMac();
-   state.macTimer = setInterval(pollMac, 30000);
+  setInterval(() => { if (!state.nightManual && night !== isNightHour()) setNight(isNightHour()); }, 1000);   // (the clock chip and the Mac's readings: ui/ticks.js)
 }
