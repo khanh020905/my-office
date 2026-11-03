@@ -9,7 +9,7 @@ export default async function PanelPage() {
   return (
     <div id="panel" className="pn">
       <header className="pn-head">
-        <b className="pn-brand"><span className="pn-logo" aria-hidden="true"></span>My Office</b>
+        <b className="pn-brand"><svg className="pn-logo" viewBox="0 0 32 32" width="16" height="16" aria-hidden="true"><rect width="32" height="32" rx="7" fill="#121822" /><path transform="translate(4 4.5)" fill="#EF8A5F" fillRule="evenodd" d="M7 2h10a3 3 0 0 1 3 3v17H4V5a3 3 0 0 1 3-3zM7.5 6h3v3h-3zM13.5 6h3v3h-3zM7.5 11h3v3h-3zM13.5 11h3v3h-3zM10.2 17h3.6v5h-3.6z" /></svg>My Office</b>
         <span className="pn-sum" id="pn-sum">{t('panel.connecting')}</span>
       </header>
       <main id="pn-body" className="pn-body" aria-live="polite"></main>
