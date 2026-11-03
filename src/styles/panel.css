@@ -50,6 +50,7 @@
 .pn-pop-bar i.is-warn { background: var(--amber); }
 .pn-pop-bar i.is-critical { background: var(--red); }
 .pn-pop-row small { min-height: 1em; color: var(--faint); font-size: .66rem; }
+.pn-pop-note { color: var(--faint); font-size: .7rem; line-height: 1.4; }
 /* the Mac: closed it is one line (RAM), open it has the meters and the fixes */
 .pn-mac { padding-top: 4px; }
 .pn-mac-h { all: unset; box-sizing: border-box; display: flex; align-items: center; gap: 8px; width: 100%; padding: 7px 0; cursor: pointer; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
