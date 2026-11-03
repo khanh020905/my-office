@@ -1,11 +1,14 @@
-// The 2D view: every session as a row, no 3D (the office keeps a frame a second behind it). Approvals on top, then
+// The 2D view: every session as a row, no 3D (a page that opens in it builds no 3D world until asked, core/world-boot.js;
+// switched to later, the office keeps a frame a second behind it). Approvals on top, then
 // needs you → working → resting; filter tabs, a search, and per row the conversation, its project and branch, what it
 // is doing now, its checklist, its context, its time and its cost. A click opens the session's drawer. Kept per
 // browser (office-lite); the top bar's 3D | 2D switch and the toolbar's list button both turn it on and off. Saves the
 // battery on a phone and works without WebGL. First idea from agent-office's lite page (MIT).
+import { state } from '../core/state.js';
 import { $, el, fmtAgo, fmtClock, nowMs, short } from '../core/env.js';
+import { needWorld } from '../core/world-boot.js';
 import { dn, sessions } from '../people/workers.js';
-import { fmtUsd } from './activity.js';
+import { fmtUsd, toast } from './activity.js';
 import { cacheWords } from './cache-words.js';
 import { icon, TYPE_ICON } from './icons.js';
 import { verb } from './event-text.js';
@@ -99,6 +102,8 @@ function build() {
   box.replaceChildren(head, permHost, listEl, emptyEl);
 }
 export function setLite(on) {
+  // opened in 2D: the 3D world is built now, a few seconds (the toast gets a frame to show first)
+  if (!on && !state.world) { toast(tr('lite.building')); setTimeout(() => { needWorld(); setLite(false); }, 50); return; }
   lite = on; document.body.classList.toggle('is-lite', on); $('lite').hidden = !on; $('btn-lite').setAttribute('aria-pressed', String(on));
   for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String((b.dataset.view === '2d') === on));
   try { localStorage.setItem('office-lite', on ? 'on' : 'off'); } catch { /* storage blocked */ }
@@ -130,9 +135,13 @@ export function renderLite() {
   $('lite').scrollTop = top;
 }
 
+/** Whether the page opens in the 2D list (kept per browser, or ?view=2d): main.js then leaves the 3D world for later. */
+export function listAtStart() {
+  let on = false; try { on = localStorage.getItem('office-lite') === 'on'; } catch { /* storage blocked */ }
+  return on || new URLSearchParams(location.search).get('view') === '2d';
+}
 export function setup() {
-  try { lite = localStorage.getItem('office-lite') === 'on'; } catch { /* storage blocked */ }
-  if (new URLSearchParams(location.search).get('view') === '2d') lite = true;
+  lite = listAtStart();
   $('btn-lite').addEventListener('click', () => setLite(!lite));
   for (const b of document.querySelectorAll('[data-view]')) b.addEventListener('click', () => setLite(b.dataset.view === '2d'));
   // "/" finds a session in 2D (not while typing somewhere)

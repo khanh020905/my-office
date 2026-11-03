@@ -43,7 +43,8 @@ export function who(from) {
 }
 /** The sessions' people in the office now (not out on the street), optionally only those resting. */
 export function people(resting = false) {
-  return [...sessions.values()].filter((s) => workers.has(s.id) && !workers.get(s.id).offstage && (!resting || s.status === 'rest')).map((s) => s.id);
+  // (the 2D list opened first: no 3D people yet, every session is in)
+  return [...sessions.values()].filter((s) => (!state.world || (workers.has(s.id) && !workers.get(s.id).offstage)) && (!resting || s.status === 'rest')).map((s) => s.id);
 }
 
 /* ---------- the conversation: the server's, or (the demo) this browser's own engine ---------- */

@@ -18,7 +18,7 @@ import { closeSession, openSession } from '../ui/session-drawer.js';
 import { PROPS, activateProp, propHint } from './props.js';
 import { t as tr } from '../../i18n/index.js';
 
-export let fp;
+export let fp = { on: false };   // (filled in by setup: the 2D list may read it before the world is built)
 let FPB;
 const CELL = 0.1, SIT_H = 0.49;   // (the chair seat the rig sits on: on a stool its feet hang this far below the seat)
 export function buildGrid() {

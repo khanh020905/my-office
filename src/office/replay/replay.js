@@ -1,5 +1,6 @@
 // Replay and recording.
 import { state } from '../core/state.js';
+import { needWorld } from '../core/world-boot.js';
 import { $, fmtClock, hhmm, replay, officeNow } from '../core/env.js';
 import { icon } from '../ui/icons.js';
 import { leaving, leavingIds, sessions } from '../people/workers.js';
@@ -31,6 +32,7 @@ export function rangeOf(r) {
 export async function startReplay(range = replay.range) {
   if (DEMO) { toast(tr('replay.demoNothing')); return; }
   if (replay.loading) return;
+  needWorld();   // (a replay is the office's people moving: the 2D list opened first builds the world now)
   replay.range = range; replay.loading = true; renderReplay();
   const { from, to } = rangeOf(range);
   let items = [];

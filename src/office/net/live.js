@@ -66,6 +66,7 @@ export function freeDesk(id) {
 }
 export let teamTags;
 export function updateTeamTags() {
+  if (!teamTags) return;
   const here = teamTags.map((_, u) => [...sessions.values()].filter((s) => s.desk >= 0 && unitOfDesk[s.desk] === u));
   const nameOf = (u) => rowTeam.get(u) || [...new Set(here[u].map(projOf))][0] || '';
   teamTags.forEach((tg, u) => {
@@ -88,6 +89,8 @@ export function updateTeamTags() {
   });
 }
 export function upsertSession(s, walkIn = true) {
+  // (no 3D yet, the 2D list opened first: no desk and nobody at it; core/world-boot.js seats everyone once it is built)
+  if (!state.world) { s.desk = -1; sessions.set(s.id, s); queueUi(); return; }
   s.desk = proDesk(s);   // (every layout: the project's area)
   const had = sessions.has(s.id);
   sessions.set(s.id, s);
@@ -138,6 +141,9 @@ export function setup() {
   /* ---------- live connection ---------- */
   TOKEN = new URLSearchParams(location.search).get('k') || '';
   state.connectedOnce = false;
+}
+// (part of the 3D world: main.js runs it with the world)
+export function setupTeams() {
   // a name chip over each team's pod (a department room: over the gap between its two pods): "Team website-ielts · 3"
   teamTags = UNITS.map((u) => {
     const t = el('div', 'team-tag'); const dot = el('i'), txt = el('span'); t.append(dot, txt);

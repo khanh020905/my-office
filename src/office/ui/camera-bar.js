@@ -18,7 +18,7 @@ export function panTo(w) {
   focusTarget.set(w.pos.x, 0.9, w.pos.y);
   clearTimeout(panTimer); panTimer = setTimeout(() => { if (panBack && !state.selectedId) focusTarget.copy(panBack); panBack = null; }, 7000);
 }
-export function goView(v) { const V = VIEWS[v]; focusTarget.set(...V.t); state.zoomGoal = V.z * BASE_ZOOM; setView(v); }
+export function goView(v) { const V = VIEWS?.[v]; if (!V || !focusTarget) return; focusTarget.set(...V.t); state.zoomGoal = V.z * BASE_ZOOM; setView(v); }
 
 export function setup() {
   /* ---------- camera toolbar ---------- */

@@ -1,5 +1,6 @@
 // Phone modal, notifications, the night switch.
 import { state } from '../core/state.js';
+import { needWorld } from '../core/world-boot.js';
 import { $, el, replay, small } from '../core/env.js';
 import { dn } from '../people/workers.js';
 import { night, setNight } from '../world/room-update.js';
@@ -219,7 +220,7 @@ export function setup() {
     bellOn = !bellOn; try { localStorage.setItem('office-bell', bellOn ? '1' : '0'); } catch { /* ignore */ }
     renderBell(); toast(tr(bellOn ? 'topbar.bellOn' : 'topbar.bellOff'));
   });
-  $('btn-night').addEventListener('click', () => { state.nightManual = true; setNight(!night); });
+  $('btn-night').addEventListener('click', () => { needWorld(); state.nightManual = true; setNight(!night); });
   document.addEventListener('click', (ev) => {
     const c = ev.target.closest('[data-close]'); if (!c) return;
     if (c.closest('#dr-session')) closeSession(); else if (c.closest('#dr-mac')) closeMac(); else if (c.closest('#phone-modal')) $('phone-modal').hidden = true;

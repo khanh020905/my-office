@@ -1,5 +1,6 @@
 // Settings popover: backdrop, floor plan, look, time, toggles.
 import { state } from '../core/state.js';
+import { needWorld } from '../core/world-boot.js';
 import { $, LAYOUT, PLANS, STATIC } from '../core/env.js';
 import { bubbleText } from './event-text.js';
 import { labels } from '../scene/renderer.js';
@@ -107,12 +108,12 @@ export function setup() {
   popLook.addEventListener('click', (e) => {
     const tb = e.target.closest('[data-st-tab]'); if (tb) { showTab(tb.dataset.stTab); return; }
     if (e.target.closest('#st-close')) { togglePop(false); btnLook.focus(); return; }
-    const sc = e.target.closest('[data-scene]'); if (sc) { setScene(sc.dataset.scene); return; }
+    const sc = e.target.closest('[data-scene]'); if (sc) { needWorld(); setScene(sc.dataset.scene); return; }   // (the 2D list opened first: these change the 3D world)
     const lk = e.target.closest('[data-look]'); if (lk) { setLook(lk.dataset.look); return; }
     const ly = e.target.closest('[data-layout]'); if (ly) { setLayout(ly.dataset.layout); return; }
     const lg = e.target.closest('[data-lang]'); if (lg) { setLang(lg.dataset.lang); return; }
-    const tm = e.target.closest('[data-time]'); if (tm) { setTimeMode(tm.dataset.time); return; }
-    const qb = e.target.closest('[data-quality]'); if (qb) { setQuality(qb.dataset.quality); return; }
+    const tm = e.target.closest('[data-time]'); if (tm) { needWorld(); setTimeMode(tm.dataset.time); return; }
+    const qb = e.target.closest('[data-quality]'); if (qb) { needWorld(); setQuality(qb.dataset.quality); return; }
     const tg = e.target.closest('[data-tgl]'); if (tg) setToggle(tg.dataset.tgl, tg.getAttribute('aria-checked') !== 'true');
   });
   document.body.classList.toggle('is-stream', state.streamer);

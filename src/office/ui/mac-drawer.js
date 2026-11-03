@@ -25,12 +25,12 @@ export const pollMac = () => { if (document.visibilityState === 'visible') loadM
 // button that no longer exists (the next reading draws it)
 let pressing = false;
 export async function loadMac() {
-  if (DEMO) { macSnap = demoMac(); renderMacButton(); syncDevBoxes(macSnap); if (!drM.hidden && !pressing && !strandedHolding()) renderMac(); return; }
+  if (DEMO) { macSnap = demoMac(); renderMacButton(); if (state.world) syncDevBoxes(macSnap); if (!drM.hidden && !pressing && !strandedHolding()) renderMac(); return; }
   try {
     const q = new URLSearchParams(TOKEN ? { k: TOKEN } : {}); if (!drM.hidden) q.set('open', '1');   // (open: fresh memory footprints)
     const r = await fetch(`/api/sys${String(q) ? `?${q}` : ''}`);
     macSnap = await r.json();
-    renderMacButton(); syncDevBoxes(macSnap);
+    renderMacButton(); if (state.world) syncDevBoxes(macSnap);   // (the dev servers' boxes on the desks: 3D only)
     if (!drM.hidden && !pressing && !strandedHolding()) renderMac();   // (nor while a form is open in "Việc bỏ quên")
   } catch { /* server busy; next poll */ }
 }

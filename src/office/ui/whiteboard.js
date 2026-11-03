@@ -7,7 +7,7 @@ import { BASE_ZOOM, camera, composer, fpCam, renderer, scene } from '../scene/re
 import { mat } from '../scene/blocks.js';
 import { STICKY_COLORS, STICKY_SLOTS, board, boardFace } from '../world/furniture/board.js';
 import { ADJ, DESK_SPOTS, NODES, STATIONS, route, standBy, wayTo } from '../people/navigation.js';
-import { colorOf, dn, leaving, sessions, subs, workers } from '../people/workers.js';
+import { colorOf, dn, leaving, sessions, subs } from '../people/workers.js';
 import { director } from '../people/director.js';
 import { applyWeather, wx } from '../life/weather.js';
 import { toast } from './activity.js';
@@ -21,9 +21,10 @@ import * as gatherings from '../people/gatherings.js';
 import { PLACES, chipCovered } from '../interact/place-chips.js';
 import { agoText, closePlace, openPlace, plButton, plEmpty, plGroup, plRow, plcState, renderPlace } from '../interact/place-cards.js';
 import { blocked, fp, toStreet } from '../interact/first-person.js';
-import { TOKEN, upsertSession } from '../net/live.js';
+import { TOKEN } from '../net/live.js';
 import { sfx } from '../audio/sfx.js';
-import { DEMO, applyMsg, demoTimers } from '../demo/demo.js';
+import { DEMO } from '../demo/demo.js';
+import { addHook } from './ticks.js';
 import { focusTarget } from '../core/loop.js';
 import { napOn } from '../life/nap.js';
 import { sendParcel, staff, startCleaner } from '../people/staff.js';
@@ -222,7 +223,8 @@ let downAt = null;
 
 export function setup() {
   /* ---------- the whiteboard: agents' tasks as a checklist, your own to-dos as sticky notes ---------- */
-  state.todos = []; state.boardDirty = true; state.boardPulse = { id: null, until: 0 };
+  state.todos ||= []; state.boardDirty = true;   // (the 2D list may have them already: core/world-boot.js)
+  state.boardPulse = { id: null, until: 0 };
   boardCanvas = document.createElement('canvas');
    boardCanvas.width = BW;
    boardCanvas.height = BH;
@@ -234,9 +236,9 @@ export function setup() {
   buildProps();
   const deskSession = (i) => [...sessions.values()].filter((s) => s.desk >= 0).sort((a, b) => a.desk - b.desk)[i];
   const fake = (s, type, label, extra = {}) => onEvent({ id: Date.now() + Math.random(), ts: Date.now(), sess: s.id, name: s.name, type, label, ...extra });
-  if (new URLSearchParams(location.search).has('debug')) window.__office = { THREE, PROPS, PLACES, camera, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get workers() { return workers; }, get sessions() { return sessions; }, get subs() { return subs; }, get leaving() { return leaving; }, upsert: (x) => upsertSession(x, true), emit: (m) => applyMsg(m), get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id), get feed() { return state.feed; },
+  if (new URLSearchParams(location.search).has('debug')) addHook({ THREE, PROPS, PLACES, camera, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get subs() { return subs; }, get leaving() { return leaving; }, get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id),
     view: (x, y, z, zoom) => { focusTarget.set(x, y, z); state.zoomGoal = zoom * BASE_ZOOM; state.lastUserCam = performance.now(); }, renderer, composer, get director() { return director; }, STATIONS, nav: { route, NODES, ADJ, DESK_SPOTS, blocked, standBy, wayTo }, floorLamps, errands, gatherings,
-    goOut, get outing() { return outing(); }, get street() { return THEME?.live?.street; }, fpToStreet: () => toStreet(), speed: (n) => { state.speed = n; }, pauseDemo: () => { demoTimers.forEach(clearTimeout); demoTimers.clear(); },
+    goOut, get outing() { return outing(); }, get street() { return THEME?.live?.street; }, fpToStreet: () => toStreet(), speed: (n) => { state.speed = n; },
     limitOut: (min) => { state.quotaTest = min > 0 ? Date.now() + min * 60e3 : 0; }, get napOn() { return napOn; },
     parcel: () => sendParcel(), clean: () => startCleaner(), get staff() { return staff(); },
     standup: () => mondayStandup(true), teatime: () => teatime(true),
@@ -244,7 +246,7 @@ export function setup() {
     testRun: (ok = true, i = 0) => { const s = deskSession(i); if (!s) return false; fake(s, 'test', 'npm test', { runner: 'npm test' }); setTimeout(() => fake(s, ok ? 'testok' : 'testfail', 'npm test'), 3500); return s.id; },
     commit: (i = 0) => { const s = deskSession(i); if (!s) return false; fake(s, 'commit', 'fix: the cart’s last page'); return s.id; },
     push: (i = 0) => { const s = deskSession(i); if (!s) return false; fake(s, 'push', 'main', { branch: 'main' }); return s.id; },
-    get tests() { return Object.fromEntries([...runs].map(([id, r]) => [id, r.st])); }, get post() { return postState(); } };
+    get tests() { return Object.fromEntries([...runs].map(([id, r]) => [id, r.st])); }, get post() { return postState(); } });
   /* picking chibis */
   ndc = new V2();
   renderer.domElement.addEventListener('pointerdown', (e) => { downAt = [e.clientX, e.clientY]; });
