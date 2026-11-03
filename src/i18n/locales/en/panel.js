@@ -16,6 +16,7 @@ export default {
   quiet: 'All quiet',
   needsYou: 'Needs you ({n})',
   sessions: 'Sessions',
+  mac: { title: '{Mac}' },
   noSessions: 'No Claude session open. Start one and it shows here.',
   offline: "The office isn't running. Start it with: my-office start",
 };

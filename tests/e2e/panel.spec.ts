@@ -37,3 +37,46 @@ test('the panel: who works, who rests, a request to approve, allowed from it', a
   expect(bar.words.wait).toContain('{name}');
   for (const sid of ['panel-api', 'panel-docs']) await request.post('/event', { data: { ...at(sid), hook_event_name: 'SessionEnd', reason: 'other' } });
 });
+
+// The panel's logo, the cards its quota pills open (hover / focus / tap) and the Mac section, against a fake stream and
+// a fake reading of the Mac (no plan or process list needed).
+test('the panel: logo, quota card on hover and focus, the Mac meters and a fix', async ({ page }) => {
+  const day = 86400e3, soon = Date.now() + 3600e3;
+  await page.addInitScript((d) => {
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], ai: null, limits: d }) }); }, 0); } close() { /* none */ } }
+    (window as unknown as { EventSource: unknown }).EventSource = FakeES;
+  }, { windows: [
+    { key: 'session', label: '5 giờ', pct: 9, resetsAt: soon },
+    { key: 'weekly', label: 'Tuần', pct: 30, resetsAt: soon + 2 * day, active: false },
+    { key: 'weekly_scoped:Fable', label: 'Fable (tuần)', pct: 85, resetsAt: soon + 3 * day },
+  ], others: [] });
+  const mac = { at: Date.now(), mem: { used: 12 * 1024 ** 3, total: 16 * 1024 ** 3, swapUsed: 0, swapTotal: 0, pressure: 'normal' }, cpu: { percent: 20, cores: 8, load: 1.2 }, disk: { used: 100 * 1024 ** 3, total: 500 * 1024 ** 3, free: 400 * 1024 ** 3 }, tight: false, diskTight: false, apps: [], devServers: [], claude: [{ pid: 4242, mem: 600 * 1024 ** 2 }],
+    tips: [{ id: 'idle:4242', action: 'kill', target: 4242, start: 1, gain: 600 * 1024 ** 2, title: 'Idle', verb: 'Close' }], auto: { hours: 0 } };
+  let acted = 0;
+  await page.route('**/api/sys/action*', (r) => { acted++; return r.fulfill({ json: { ok: true, message: 'Closed it.' } }); });
+  await page.route('**/api/sys', (r) => r.fulfill({ json: mac }));
+  await page.setViewportSize({ width: 260, height: 700 });
+  await page.goto('/panel?embed=ide');
+  await expect(page.locator('.pn-logo')).toBeVisible();
+  const pill = page.locator('.pn-qp', { hasText: 'Claude' });
+  await pill.hover();
+  const pop = page.locator('.pn-pop');
+  for (const w of ['5 giờ', 'Tuần', 'Fable (tuần)']) await expect(pop).toContainText(w);
+  const box = await pop.boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= 260).toBe(true);
+  await page.mouse.move(200, 600);
+  await expect(pop).toBeHidden();
+  await pill.focus();   // (keyboard)
+  await expect(pop).toContainText('Fable (tuần)');
+  await page.keyboard.press('Escape');
+  await expect(pop).toBeHidden();
+  // the Mac: closed it is one line; open it has the meters and the idle-sessions fix, asked twice
+  await page.locator('.pn-mac-h').click();
+  await expect(page.locator('.pn-meter')).toHaveCount(4);
+  const fix = page.locator('.pn-fixes .pn-btn').first();
+  await fix.click();
+  expect(acted).toBe(0);
+  await fix.click();
+  await expect(page.locator('.pn-note')).toContainText('Closed it.');
+  expect(acted).toBe(1);
+});

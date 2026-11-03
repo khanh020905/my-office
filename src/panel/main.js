@@ -4,16 +4,17 @@
 // on the office page itself: this one reports itself looked at when it is on screen and has the focus.
 import { t as tr } from '../i18n/index.js';
 import { dangerKey } from '../shared/danger.js';
+import { el, level } from './fmt.js';
+import { attach, liveWindows, refreshQuota, startQuota } from './quota.js';
+import { startMac } from './mac.js';
 
 const $ = (id) => document.getElementById(id);
-const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; };
 const clip = (s, n) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
 const TOKEN = new URLSearchParams(location.search).get('k') || '';
 const q = (path) => `${path}${TOKEN ? `${path.includes('?') ? '&' : '?'}k=${encodeURIComponent(TOKEN)}` : ''}`;
 const post = (path, body) => fetch(q(path), { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((r) => r.json()).catch(() => ({ ok: false }));
 const PAGE = Math.random().toString(36).slice(2, 10);
 const PERM_VERB = new Set(['bash', 'edit', 'write', 'web', 'fetch', 'mcp', 'agent', 'read']);
-const level = (pct) => (pct >= 95 ? 'critical' : pct >= 80 ? 'warn' : 'ok');
 
 const S = { sessions: new Map(), perms: new Map(), limits: null, ai: null, local: false, live: false };
 const armed = new Set();   // (a risky command's "allow", pressed once: the second press sends it)
@@ -28,13 +29,17 @@ const nameOf = (s) => s?.title || s?.name || '';
 /* ---------- what each tool has left (the account in use): Claude's tightest limit, Codex's, Antigravity's model ---------- */
 function quotas() {
   const now = Date.now(), out = [];
-  const tight = (ws) => (ws || []).filter((w) => !w.resetsAt || w.resetsAt > now).reduce((a, w) => (!a || w.pct > a.pct ? w : a), null);
+  const live = (ws) => (ws || []).filter((w) => !w.resetsAt || w.resetsAt > now);
+  const tight = (ws) => live(ws).reduce((a, w) => (!a || w.pct > a.pct ? w : a), null);
   const c = tight(S.limits?.windows);
-  if (c) out.push({ name: 'Claude', pct: c.pct });
+  if (c) out.push({ name: 'Claude', pct: c.pct, detail: () => ({ groups: [
+    { rows: liveWindows(S.limits.windows) },
+    ...(S.limits.others || []).map((o) => ({ title: o.label || o.name, rows: liveWindows(o.windows) })).filter((g) => g.rows.length),
+  ] }) });
   const cx = S.ai?.codex, ca = cx?.list?.find((a) => a.id === cx.now), cw = tight(ca?.windows);
-  if (cw) out.push({ name: 'Codex', pct: cw.pct });
+  if (cw) out.push({ name: 'Codex', pct: cw.pct, detail: () => ({ groups: [{ rows: liveWindows(ca.windows) }] }) });
   const ag = S.ai?.ag, aa = ag?.list?.find((a) => a.id === ag.now), r = aa?.rows?.[0];
-  if (r) out.push({ name: r.label.split(' ')[0] || 'Antigravity', pct: r.pct });
+  if (r) out.push({ name: r.label.split(' ')[0] || 'Antigravity', pct: r.pct, detail: () => ({ groups: [{ rows: aa.rows }] }) });
   return out;
 }
 
@@ -91,6 +96,7 @@ function tick() {
   for (const u of document.querySelectorAll('.pn-until[data-until]')) u.textContent = tr('panel.until', { s: Math.max(0, Math.round((Number(u.dataset.until) - Date.now()) / 1000)) });
 }
 let drawSoon = 0;
+const macBox = el('section', 'pn-sec pn-mac');
 function draw() {
   cancelAnimationFrame(drawSoon);
   drawSoon = requestAnimationFrame(() => {
@@ -110,14 +116,17 @@ function draw() {
     const qs = quotas();
     if (qs.length) {
       const sec = el('section', 'pn-sec pn-quota'), row = el('div', 'pn-q');
-      for (const x of qs) { const pill = el('span', `pn-qp is-${level(x.pct)}`); pill.append(el('b', null, x.name), el('em', null, `${Math.round(x.pct)}%`)); row.append(pill); }
+      for (const x of qs) { const pill = el('button', `pn-qp is-${level(x.pct)}`); pill.type = 'button'; pill.append(el('b', null, x.name), el('em', null, `${Math.round(x.pct)}%`)); attach(pill, x.name, x.detail); row.append(pill); }
       sec.append(row); parts.push(sec);
     }
     const sec = el('section', 'pn-sec'); sec.append(el('h2', null, tr('panel.sessions')));
     if (!sessions.length) sec.append(el('p', 'pn-empty', S.live ? tr('panel.noSessions') : tr('panel.connecting')));
     for (const s of sessions.slice(0, 30)) sec.append(sessionRow(s));
-    parts.push(sec);
+    parts.push(sec, macBox);   // (the Mac's section keeps its own state: the same element each time)
+    const focusQ = body.contains(document.activeElement) ? document.activeElement.dataset?.q : null;
     body.replaceChildren(...parts);
+    if (focusQ) body.querySelector(`[data-q="${CSS.escape(focusQ)}"]`)?.focus({ preventScroll: true });
+    refreshQuota();
     document.querySelector('.pn-foot').hidden = !S.local;
     tick();
   });
@@ -157,6 +166,7 @@ export function startPanel() {
   addEventListener('pagehide', () => { try { navigator.sendBeacon(q('/api/presence'), new Blob([JSON.stringify({ page: PAGE, focused: false })], { type: 'application/json' })); } catch { /* gone */ } });
   setInterval(() => { if (document.hasFocus()) presence(); }, 2000);
   setInterval(tick, 1000);
+  startQuota(); startMac(macBox, { q });
   setInterval(draw, 30_000);   // ("2 min ago")
   connect(); draw(); presence();
 }

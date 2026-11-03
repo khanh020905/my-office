@@ -16,6 +16,7 @@ export default {
   quiet: 'Đang yên',
   needsYou: 'Cần bạn duyệt ({n})',
   sessions: 'Phiên',
+  mac: { title: '{Mac}' },
   noSessions: 'Chưa mở phiên Claude nào. Mở một phiên là hiện ở đây.',
   offline: 'Văn phòng chưa chạy. Bật bằng lệnh: my-office start',
 };
