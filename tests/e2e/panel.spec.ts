@@ -132,3 +132,75 @@ test('the panel: a session’s project on its row, the details on its card', asy
   await page.mouse.move(5, 5);   // (the header: no card)
   await expect(pop).toBeHidden();
 });
+
+// A question or a plan answered in the panel: picks, own words, a note; kept over redraws; the exact bodies the office sends.
+test('the panel: a question and a plan answered right in it', async ({ page }) => {
+  const now = Date.now();
+  const sess = { id: 's1', name: 'shop-1', title: 'Shop', status: 'wait', lastAt: now };
+  const perms = [
+    { id: 'q1', kind: 'ask', sess: 's1', name: 'shop-1', questions: [
+      { header: 'Style', question: 'Which style?', multi: false, options: [{ label: 'Plain', description: 'No frills' }, { label: 'Fancy', description: 'With animations' }] },
+      { header: 'Extras', question: 'Which extras?', multi: true, options: [{ label: 'Tests' }, { label: 'Docs' }, { label: 'Types' }] }] },
+    { id: 'p1', kind: 'plan', sess: 's1', name: 'shop-1', plan: '# The plan\n\n- add an index\n- **measure** again\n\n1. first\n2. second\n\nSome `code` here <b>not html</b>.' },
+  ];
+  await page.addInitScript((d) => {
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [d.sess], perms: d.perms, ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    (window as unknown as { EventSource: unknown }).EventSource = FakeES;
+  }, { sess, perms });
+  const bodies: Record<string, unknown>[] = [];
+  await page.route('**/api/sys', (r) => r.fulfill({ json: {} }));
+  await page.route('**/api/perm*', (r) => { bodies.push(r.request().postDataJSON()); return r.fulfill({ json: { ok: true } }); });
+  const push = (m: object) => page.evaluate((x) => (window as unknown as { __es: { onmessage: (m: { data: string }) => void } }).__es.onmessage({ data: JSON.stringify(x) }), m);
+  const noOverflow = async () => expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth && document.querySelector('.pn-body')!.scrollWidth <= document.querySelector('.pn-body')!.clientWidth)).toBe(true);
+  for (const [w, h] of [[260, 700], [360, 560]]) {
+    await page.setViewportSize({ width: w, height: h });
+    await page.goto('/panel?embed=ide');
+    await expect(page.locator('.pn-perm')).toHaveCount(2);
+    await noOverflow();
+  }
+  const ask = page.locator('.pn-perm[data-id="q1"]'), plan = page.locator('.pn-perm[data-id="p1"]');
+  await expect(ask.locator('.pn-chip')).toHaveText(['Style', 'Extras']);
+  await expect(ask.locator('.pn-opt small').first()).toHaveText('No frills');
+  const send = ask.locator('.pn-btn--ok');
+  await expect(send).toBeDisabled();
+  await ask.locator('.pn-opt', { hasText: 'Fancy' }).click();
+  await expect(send).toBeDisabled();   // (the second question still has no answer)
+  // a redraw while typing keeps the picks, the words, the focus and the caret
+  const other = ask.locator('.pn-other').nth(1);
+  await other.click(); await page.keyboard.type('Lint rules please');
+  await page.keyboard.press('ArrowLeft'); await page.keyboard.press('ArrowLeft');
+  await push({ k: 'sess', s: { ...sess, lastAt: Date.now() + 1 } });
+  await page.waitForTimeout(300);
+  await expect(other).toHaveValue('Lint rules please');
+  await expect(other).toBeFocused();
+  await page.keyboard.type('X');
+  await expect(other).toHaveValue('Lint rules pleaXse');
+  await expect(ask.locator('.pn-opt', { hasText: 'Fancy' })).toHaveAttribute('aria-pressed', 'true');
+  await other.fill('Lint rules please');
+  await ask.locator('.pn-opt', { hasText: 'Docs' }).click(); await ask.locator('.pn-opt', { hasText: 'Types' }).click();
+  await expect(send).toBeEnabled();
+  await page.screenshot({ path: path.join(SHOTS, 'panel-ask.png') });
+  await send.click();
+  await expect(ask).toHaveCount(0);
+  expect(bodies[0]).toEqual({ id: 'q1', choice: 'answer', answers: [{ q: 0, pick: [1], other: '' }, { q: 1, pick: [1, 2], other: 'Lint rules please' }] });
+  // the plan: markdown as text, never as html
+  await expect(plan.locator('.pn-plan h4')).toHaveText('The plan');
+  await expect(plan.locator('.pn-plan li')).toHaveCount(4);
+  await expect(plan.locator('.pn-plan strong')).toHaveText('measure');
+  await expect(plan.locator('.pn-plan b')).toHaveCount(0);
+  await expect(plan).toContainText('<b>not html</b>');
+  const note = plan.locator('.pn-other');
+  await note.click(); await page.keyboard.type('smaller steps');
+  await push({ k: 'sess', s: { ...sess, lastAt: Date.now() + 2 } });
+  await page.waitForTimeout(300);
+  await expect(note).toHaveValue('smaller steps'); await expect(note).toBeFocused();
+  await page.screenshot({ path: path.join(SHOTS, 'panel-plan.png') });
+  await plan.locator('.pn-btn', { hasText: 'Keep revising' }).click();
+  await expect(plan).toHaveCount(0);
+  expect(bodies[1]).toEqual({ id: 'p1', choice: 'revise', note: 'smaller steps' });
+  // approve
+  await push({ k: 'perm', p: { ...perms[1], id: 'p2' } });
+  await page.locator('.pn-perm[data-id="p2"] .pn-btn--ok').click();
+  await expect(page.locator('.pn-perm')).toHaveCount(0);
+  expect(bodies[2]).toEqual({ id: 'p2', choice: 'approve' });
+});
