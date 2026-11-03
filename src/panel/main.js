@@ -7,6 +7,7 @@ import { dangerKey } from '../shared/danger.js';
 import { el, level } from './fmt.js';
 import { attach, liveWindows, refreshQuota, startQuota } from './quota.js';
 import { startMac } from './mac.js';
+import { projectOf, sessionCard } from './session-card.js';
 
 const $ = (id) => document.getElementById(id);
 const clip = (s, n) => { s = String(s ?? ''); return s.length > n ? `${s.slice(0, n - 1)}…` : s; };
@@ -82,10 +83,14 @@ function sessionRow(s) {
   const waiting = s.status === 'wait' || [...S.perms.values()].some((p) => p.sess === s.id);
   const st = waiting ? 'wait' : s.status === 'work' ? 'work' : 'rest';
   const row = el('button', `pn-sess is-${st}`); row.type = 'button';
-  row.title = S.local ? tr('panel.openWindow') : '';
   const what = st === 'wait' ? tr('panel.status.wait') : st === 'work' ? (s.last?.label || tr('panel.status.work')) : (s.doneAt ? tr('panel.status.done') : tr('panel.status.rest'));
   const top = el('span', 'pn-sess-top'); top.append(el('i', 'pn-dot'), el('b', null, clip(nameOf(s), 48)), el('small', null, ago(s.lastAt || 0)));
-  row.append(top, el('span', 'pn-sess-what', clip(what, 80)));
+  // which project and branch it works in; the rest on its card (hover / focus)
+  const where = [projectOf(s), s.git?.branch].filter(Boolean).join(' · ');
+  row.append(top);
+  if (where) row.append(el('span', 'pn-sess-dir', where));
+  row.append(el('span', 'pn-sess-what', clip(what, 80)));
+  attach(row, `sess:${s.id}`, () => ({ node: sessionCard(s, st, S.local ? tr('panel.openWindow') : '') }), { passive: true });
   const subs = (s.subs || []).length;
   if (subs && st === 'work') row.append(el('span', 'pn-sess-sub', tr('panel.subs', { n: subs })));
   if (S.local) row.addEventListener('click', () => post('/api/open', { id: s.id }));

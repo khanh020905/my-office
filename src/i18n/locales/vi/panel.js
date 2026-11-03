@@ -7,7 +7,16 @@ export default {
   answerInOffice: 'Trả lời trong văn phòng',
   until: 'Trả về IDE sau {s} giây',
   failed: 'Chưa gửi được. Bấm lại nhé.',
-  openWindow: 'Đưa cửa sổ của phiên này lên trước',
+  openWindow: 'Bấm: đưa cửa sổ của phiên này lên trước',
+  // a session's card (src/panel/session-card.js)
+  card: {
+    dir: 'Thư mục', branch: 'Nhánh', model: 'Model', cost: 'Chi phí', cache: 'Bộ nhớ đệm', acct: 'Tài khoản', did: 'Đã làm',
+    dirty: '{n} thay đổi chưa commit', ahead: '{n} commit chưa push', ciGreen: 'CI xanh', ciRed: 'CI đỏ',
+    ctx: 'ngữ cảnh {pct}% ({used}/{max})', costApi: '≈ {usd} (quy ra giá API)',
+    warm: 'còn ấm {time}', cold: 'đã nguội', counts: '{read} lần đọc · {edit} lần sửa · {cmd} lệnh',
+    asked: 'Bạn giao', doing: 'Đang làm', reply: 'Trả lời gần nhất',
+    todos: 'Checklist {done}/{n}', subs: 'Subagent ({n})', bg: 'Việc nền ({n})', more: '+{n} nữa',
+  },
   status: { wait: 'Đang chờ bạn', work: 'Đang làm', done: 'Đã xong', rest: 'Đang nghỉ' },
   subs: '{n} subagent đang làm',
   working: '{n} đang làm',

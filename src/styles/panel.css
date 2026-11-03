@@ -39,6 +39,27 @@
 /* the card a pill opens: every window of that tool (one card for the page, in <body>) */
 .pn-pop { position: fixed; z-index: 20; box-sizing: border-box; display: grid; gap: 10px; padding: 10px 12px; border-radius: 10px; background: var(--card-2); border: 1px solid var(--line-2); box-shadow: 0 8px 24px rgba(0, 0, 0, .45); max-height: calc(100dvh - 16px); overflow: hidden; }
 .pn-pop[hidden] { display: none; }
+.pn-pop.is-passive { pointer-events: none; }   /* (a session's card: the mouse goes on to the rows under it) */
+/* a session's card (src/panel/session-card.js) */
+.pn-sc { display: grid; gap: 8px; min-width: 0; font-size: .72rem; }
+.pn-sc-head { display: grid; gap: 2px; }
+.pn-sc-head b { font-size: .8rem; font-weight: 700; overflow-wrap: anywhere; }
+.pn-sc-head small { color: var(--faint); font-size: .68rem; }
+.pn-sc-head small.is-work { color: var(--green-ink); }
+.pn-sc-head small.is-wait { color: var(--amber); }
+.pn-sc-facts { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 3px 10px; margin: 0; }
+.pn-sc-facts dt { color: var(--faint); white-space: nowrap; }
+.pn-sc-facts dd { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
+.pn-sc-sec { display: grid; gap: 3px; }
+.pn-sc-sec h3 { margin: 0; font-size: .64rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
+.pn-sc-sec p { margin: 0; color: var(--ink); line-height: 1.45; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 5; overflow: hidden; }
+.pn-sc-list { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; color: var(--muted); }
+.pn-sc-list li { display: flex; gap: 6px; min-width: 0; overflow-wrap: anywhere; }
+.pn-sc-list li i { flex: none; width: 1em; font-style: normal; color: var(--faint); }
+.pn-sc-list li.is-done, .pn-sc-list li.is-completed { color: var(--faint); }
+.pn-sc-list li.is-doing i, .pn-sc-list li.is-in_progress i { color: var(--green-ink); }
+.pn-sc-more { color: var(--faint); }
+.pn-sc-hint { color: var(--faint); font-size: .66rem; border-top: 1px solid var(--line); padding-top: 6px; }
 .pn-pop-grp { display: grid; gap: 8px; }
 .pn-pop-grp h3 { margin: 0; font-size: .66rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--faint); }
 .pn-pop-row { display: grid; gap: 3px; }
@@ -93,6 +114,7 @@
 .pn-dot { flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--faint); }
 .pn-sess.is-work .pn-dot { background: var(--green); box-shadow: 0 0 6px rgba(61, 220, 132, .6); }
 .pn-sess.is-wait .pn-dot { background: var(--amber); box-shadow: 0 0 6px rgba(242, 181, 68, .6); }
+.pn-sess-dir { padding-left: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font: .66rem/1.35 var(--mono); color: var(--faint); }
 .pn-sess-what, .pn-sess-sub { padding-left: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; color: var(--muted); }
 .pn-sess.is-wait .pn-sess-what { color: var(--amber); }
 .pn-sess-sub { color: var(--faint); }

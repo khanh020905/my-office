@@ -93,3 +93,42 @@ test('the panel: logo, quota card on hover and focus, the Mac meters and a fix',
   await expect(page.locator('.pn-note')).toContainText('Closed it.');
   expect(acted).toBe(1);
 });
+
+// A session's row says which project and branch it works in; its card (hover, after a short stay) has the rest: the
+// folder, what is not committed or pushed, the model and context, the cost, what you asked, what it does, its checklist
+// and subagents. The mouse goes through the card to the next row.
+test('the panel: a session’s project on its row, the details on its card', async ({ page }) => {
+  const now = Date.now();
+  const sessions = [
+    { id: 's1', name: 'shop-1', title: 'Faster cart', status: 'work', dir: '~/code/shop', lastAt: now, taskStart: now - 15 * 60e3,
+      git: { repo: 'shop', branch: 'main', dirty: 3, ahead: 1, ci: 'green' }, usage: { model: 'claude-opus-5-5', ctx: 450000, ctxMax: 1000000, cost: 12.5 },
+      lastPrompt: 'make the cart page faster', last: { type: 'edit', label: 'src/cart.ts' }, cache: { until: now + 40 * 60e3, ttl: '1h' },
+      todos: [{ status: 'done', text: 'find the slow query' }, { status: 'doing', text: 'add an index' }, { status: 'todo', text: 'measure again' }],
+      subs: [{ id: 'a1', type: 'Explore', model: 'claude-sonnet-5-5', desc: 'where the cart is saved' }] },
+    { id: 's2', name: 'docs-2', title: 'Docs', status: 'rest', dir: '~/code/docs', lastAt: now - 3600e3, doneAt: now - 3600e3, lastReply: 'Docs updated for the new API.' },
+  ];
+  await page.addInitScript((d) => {
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d, perms: [], ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    (window as unknown as { EventSource: unknown }).EventSource = FakeES;
+  }, sessions);
+  await page.route('**/api/sys', (r) => r.fulfill({ json: {} }));
+  await page.setViewportSize({ width: 360, height: 560 });
+  await page.goto('/panel?embed=menubar');
+  const row = (t: string) => page.locator('.pn-sess', { hasText: t });
+  await expect(row('Faster cart').locator('.pn-sess-dir')).toHaveText('shop · main');
+  await expect(row('Docs').locator('.pn-sess-dir')).toHaveText('docs');
+  await row('Faster cart').hover();
+  const pop = page.locator('.pn-pop');
+  await expect(pop).toBeVisible();
+  for (const t of ['~/code/shop', 'main · 3 changes not committed · 1 commit not pushed · CI green', 'Opus 5.5 · context 45% (450k/1M)', '$12.50',
+    'make the cart page faster', 'src/cart.ts', 'Checklist 1/3', 'add an index', 'Explore · Sonnet 5.5 — where the cart is saved', 'warm for']) await expect(pop).toContainText(t);
+  await page.screenshot({ path: path.join(SHOTS, 'panel-card.png') });
+  const box = await pop.boundingBox();
+  expect(box && box.x >= 0 && box.x + box.width <= 360 && box.y >= 0 && box.y + box.height <= 560).toBe(true);
+  // the next row, even under the card: its own card
+  await row('Docs').hover();
+  await expect(pop).toContainText('Docs updated for the new API.');
+  await expect(pop).not.toContainText('~/code/shop');
+  await page.mouse.move(5, 5);   // (the header: no card)
+  await expect(pop).toBeHidden();
+});
