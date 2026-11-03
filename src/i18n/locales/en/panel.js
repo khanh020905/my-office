@@ -7,7 +7,17 @@ export default {
   answerInOffice: 'Answer in the office',
   until: 'Back to the IDE in {s} s',
   failed: "Couldn't send. Try again.",
-  openWindow: 'Bring its window to the front',
+  openWindow: 'Click: bring its window to the front',
+  // a session's card (src/panel/session-card.js)
+  card: {
+    dir: 'Folder', branch: 'Branch', model: 'Model', cost: 'Cost', cache: 'Prompt cache', acct: 'Account', did: 'Done so far',
+    dirty: { one: '{n} change not committed', other: '{n} changes not committed' }, ahead: { one: '{n} commit not pushed', other: '{n} commits not pushed' },
+    ciGreen: 'CI green', ciRed: 'CI red',
+    ctx: 'context {pct}% ({used}/{max})', costApi: '≈ {usd} (at API prices)',
+    warm: 'warm for {time}', cold: 'cold', counts: '{read} reads · {edit} edits · {cmd} commands',
+    asked: 'You asked', doing: 'Doing now', reply: 'Last reply',
+    todos: 'Checklist {done}/{n}', subs: 'Subagents ({n})', bg: 'Background jobs ({n})', more: '+{n} more',
+  },
   status: { wait: 'Waiting for you', work: 'Working', done: 'Done', rest: 'Resting' },
   subs: { one: '{n} subagent at work', other: '{n} subagents at work' },
   working: '{n} working',
