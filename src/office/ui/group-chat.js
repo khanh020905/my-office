@@ -32,12 +32,15 @@ export const byId = (id) => chat.msgs.find((m) => m.id === id);
 
 /* ---------- who is in the group (for faces, @ and the member list) ---------- */
 const STAFF = { reception: '__reception', hr: '__hr', cleaner: '__cleaner', guard: '__guard', director: '__director', courier: '__courier', accountant: '__accountant' };
+const STAFF_NAME = { __reception: 'people.staff.receptionist', __hr: 'people.staff.hr', __cleaner: 'people.staff.cleaner', __guard: 'people.guard.name', __director: 'people.director', __courier: 'people.staff.shipper', __accountant: 'people.accountant.name' };
+// a staff member's name: from their person in the office, or (the 2D list opened first, no 3D people yet) the words
+const staffName = (key) => npcs.find((x) => x.id === key)?.cfg.name || (!state.world && STAFF_NAME[key] ? tr(STAFF_NAME[key]) : null);
 const lookOf = (cfg) => cfg && { shirt: cfg.shirt, hair: cfg.hair, style: cfg.style, acc: cfg.acc ?? null, outfit: cfg.outfit, skin: cfg.skin };
 /** { key, name, look } for a sender as the office knows them now (the face comes from their chibi), or null. */
 export function who(from) {
   if (from === 'me') return { key: 'me', name: tr('chat.boss'), look: null };
   const key = STAFF[from] || from;
-  if (key?.startsWith('__')) { const n = npcs.find((x) => x.id === key); return n ? { key, name: n.cfg.name, look: lookOf(n.cfg), staff: true } : null; }
+  if (key?.startsWith('__')) { const n = npcs.find((x) => x.id === key), name = staffName(key); return name ? { key, name, look: lookOf(n?.cfg), staff: true } : null; }
   const s = sessions.get(key); if (!s) return null;
   return { key, name: dn(s), look: lookOf(workers.get(key)?.cfg) };
 }
@@ -198,7 +201,7 @@ export function setup() {
     engine = createChatEngine({
       tr, now: () => officeNow().getTime(),
       members: () => people().map((id) => { const s = sessions.get(id); return { id, name: dn(s), status: s.status, task: s.lastPrompt || '', last: s.last, project: (s.dir || '').split('/').pop() }; }),
-      staffName: (key) => npcs.find((x) => x.id === key)?.cfg.name || null,
+      staffName,
       store: { load: () => { try { return JSON.parse(localStorage.getItem(KEY) || 'null'); } catch { return null; } }, save: (d) => { try { localStorage.setItem(KEY, JSON.stringify(d)); } catch { /* full or blocked */ } } },
       emit: (op, x) => { chat.pinned = engine?.state.pinned ?? chat.pinned; if (op === 'add') applyAdd(x); else if (op === 'update') applyUpdate(x); else if (op === 'typing') { chat.typing = x; emit('typing'); } else emit('all'); },
       act: chatAct,
