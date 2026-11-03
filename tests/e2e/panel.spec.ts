@@ -43,13 +43,16 @@ test('the panel: who works, who rests, a request to approve, allowed from it', a
 test('the panel: logo, quota card on hover and focus, the Mac meters and a fix', async ({ page }) => {
   const day = 86400e3, soon = Date.now() + 3600e3;
   await page.addInitScript((d) => {
-    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], ai: null, limits: d }) }); }, 0); } close() { /* none */ } }
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: [], perms: [], ai: null, limits: d }) }); }, 0); } close() { /* none */ } }
     (window as unknown as { EventSource: unknown }).EventSource = FakeES;
   }, { windows: [
     { key: 'session', label: '5 giờ', pct: 9, resetsAt: soon },
     { key: 'weekly', label: 'Tuần', pct: 30, resetsAt: soon + 2 * day, active: false },
     { key: 'weekly_scoped:Fable', label: 'Fable (tuần)', pct: 85, resetsAt: soon + 3 * day },
-  ], others: [] });
+  ], others: [
+    { name: 'phu', label: '', windows: [{ key: 'session', label: '5 giờ', pct: 40, resetsAt: soon }] },
+    { name: 'max20x', label: '', windows: [], note: 'Read again in 46 minutes.' },
+  ] });
   const mac = { at: Date.now(), mem: { used: 12 * 1024 ** 3, total: 16 * 1024 ** 3, swapUsed: 0, swapTotal: 0, pressure: 'normal' }, cpu: { percent: 20, cores: 8, load: 1.2 }, disk: { used: 100 * 1024 ** 3, total: 500 * 1024 ** 3, free: 400 * 1024 ** 3 }, tight: false, diskTight: false, apps: [], devServers: [], claude: [{ pid: 4242, mem: 600 * 1024 ** 2 }],
     tips: [{ id: 'idle:4242', action: 'kill', target: 4242, start: 1, gain: 600 * 1024 ** 2, title: 'Idle', verb: 'Close' }], auto: { hours: 0 } };
   let acted = 0;
@@ -62,6 +65,16 @@ test('the panel: logo, quota card on hover and focus, the Mac meters and a fix',
   await pill.hover();
   const pop = page.locator('.pn-pop');
   for (const w of ['5 giờ', 'Tuần', 'Fable (tuần)']) await expect(pop).toContainText(w);
+  // every account, the one with nothing to show yet too (with why)
+  for (const w of ['Main account', 'Account phu', '40%', 'Account max20x', 'Read again in 46 minutes.']) await expect(pop).toContainText(w);
+  // reading the card (the mouse on it) while the list is drawn again (a session's news): it stays open. (Over the pill
+  // instead, Chromium's own hover check after the redraw would open it again anyway; WebKit, the menu bar's, doesn't.)
+  const card = await pop.boundingBox();
+  await page.mouse.move(card!.x + card!.width / 2, card!.y + card!.height / 2);
+  await page.evaluate(() => { const es = (window as unknown as { __es: { onmessage: (m: { data: string }) => void } }).__es; es.onmessage({ data: JSON.stringify({ k: 'sess', s: { id: 'x1', name: 'news', status: 'work', lastAt: Date.now() } }) }); });
+  await page.waitForTimeout(400);
+  await expect(pop).toBeVisible();
+  await expect(pop).toContainText('Account max20x');
   const box = await pop.boundingBox();
   expect(box && box.x >= 0 && box.x + box.width <= 260).toBe(true);
   await page.mouse.move(200, 600);

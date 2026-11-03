@@ -33,8 +33,9 @@ function quotas() {
   const tight = (ws) => live(ws).reduce((a, w) => (!a || w.pct > a.pct ? w : a), null);
   const c = tight(S.limits?.windows);
   if (c) out.push({ name: 'Claude', pct: c.pct, detail: () => ({ groups: [
-    { rows: liveWindows(S.limits.windows) },
-    ...(S.limits.others || []).map((o) => ({ title: o.label || o.name, rows: liveWindows(o.windows) })).filter((g) => g.rows.length),
+    { title: S.limits.others?.length ? S.limits.label || tr('mac.plan.mainAccount') : '', rows: liveWindows(S.limits.windows) },
+    // every other account, also one with nothing to show now (never read yet, or its readings past their reset): why
+    ...(S.limits.others || []).map((o) => { const rows = liveWindows(o.windows); return { title: o.label || tr('mac.plan.otherAccount', { name: o.name }), rows, note: rows.length ? '' : o.note || tr('mac.plan.loading') }; }),
   ] }) });
   const cx = S.ai?.codex, ca = cx?.list?.find((a) => a.id === cx.now), cw = tight(ca?.windows);
   if (cw) out.push({ name: 'Codex', pct: cw.pct, detail: () => ({ groups: [{ rows: liveWindows(ca.windows) }] }) });

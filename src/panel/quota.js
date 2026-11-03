@@ -19,6 +19,7 @@ let pop = null, cur = null, hover = false, lastType = '';   // cur = { pill, bui
 function place() {
   if (!pop || !cur?.pill.isConnected) { close(); return; }
   const r = cur.pill.getBoundingClientRect(), vw = document.documentElement.clientWidth, vh = document.documentElement.clientHeight;
+  if (r.bottom < 0 || r.top > vh) { close(); return; }   // (its pill scrolled out of sight)
   pop.style.width = `${Math.min(300, vw - 16)}px`;
   const w = pop.offsetWidth, h = pop.offsetHeight;
   pop.style.left = `${Math.max(8, Math.min(r.left, vw - w - 8))}px`;
@@ -26,7 +27,7 @@ function place() {
 }
 function fill() {
   const { groups } = cur.build();
-  pop.replaceChildren(...groups.map((g) => { const b = el('section', 'pn-pop-grp'); if (g.title) b.append(el('h3', null, g.title)); b.append(...g.rows.map(rowOf)); return b; }));
+  pop.replaceChildren(...groups.map((g) => { const b = el('section', 'pn-pop-grp'); if (g.title) b.append(el('h3', null, g.title)); b.append(...g.rows.map(rowOf)); if (g.note) b.append(el('small', 'pn-pop-note', g.note)); return b; }));
   pop.firstChild || pop.append(el('small', null, tr('mac.plan.loading')));
 }
 function open(pill, build, byHover) {
@@ -39,7 +40,7 @@ export function close() {
   if (cur) cur.pill.removeAttribute('aria-expanded');
   cur = null; hover = false; if (pop) pop.hidden = true;
 }
-/** make a pill show its card; build() returns { groups: [{ title?, rows: [{ label, pct, resetsAt? }] }] } at the time it opens */
+/** make a pill show its card; build() returns { groups: [{ title?, rows: [{ label, pct, resetsAt? }], note? }] } at the time it opens */
 export function attach(pill, key, build) {
   pill.dataset.q = key;
   pill.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') open(pill, build, true); });
@@ -47,15 +48,17 @@ export function attach(pill, key, build) {
   pill.addEventListener('focus', () => { if (lastType !== 'mouse' && lastType !== 'touch' && lastType !== 'pen') open(pill, build, false); });   // (keyboard focus; a press opens it by the click)
   pill.addEventListener('blur', () => { if (cur?.pill === pill) close(); });
   pill.addEventListener('click', () => { if (cur?.pill === pill && !(hover && lastType === 'mouse')) close(); else open(pill, build, false); lastType = ''; });
-  // the list was drawn again while its card was open: follow the new pill
-  if (cur && cur.pill.dataset.q === key && cur.pill !== pill) { cur.pill = pill; open(pill, build, hover); }
+  // the list was drawn again while its card was open: follow the new pill, with the new numbers (not placed here: the pill
+  // is not on the page yet, and a card whose pill is gone closes; refreshQuota places it once the list is in)
+  if (cur && cur.pill.dataset.q === key && cur.pill !== pill) { cur.pill = pill; cur.build = build; pill.setAttribute('aria-expanded', 'true'); pill.setAttribute('aria-describedby', 'pn-pop'); }
 }
-// the card is not stuck: a press elsewhere, Escape, the page scrolling or hiding, the mouse leaving all close it
+// the card is not stuck: a press elsewhere, Escape, the page hiding, the mouse leaving all close it (a scroll moves it: the
+// list keeps its scroll through each redraw, and that is a scroll too)
 export function startQuota() {
   document.addEventListener('pointerdown', (e) => { if (cur && !e.target.closest?.('.pn-qp, .pn-pop')) close(); }, true);
   document.addEventListener('pointermove', (e) => { if (cur && hover && e.pointerType === 'mouse' && !e.target.closest?.('.pn-qp, .pn-pop')) close(); }, true);
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  document.addEventListener('scroll', () => { if (cur) close(); }, true);
+  document.addEventListener('scroll', () => { if (cur) place(); }, true);
   document.addEventListener('visibilitychange', close); addEventListener('blur', close); addEventListener('resize', () => cur && place());
 }
 export const refreshQuota = () => { if (!cur) return; if (cur.pill.isConnected) { fill(); place(); } else close(); };
