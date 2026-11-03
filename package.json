@@ -1,6 +1,6 @@
 {
   "name": "claude-my-office",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "A 3D office for your Claude Code sessions that also looks after your Mac: live agents, approve from the office, RAM per session, forgotten dev servers, cleanup.",
   "license": "MIT",
   "repository": {
