@@ -105,6 +105,7 @@ import * as uiTimelapse from './ui/timelapse.js';
 import * as uiGroupChat from './ui/group-chat.js';
 import * as uiGroupChatView from './ui/group-chat-view.js';
 import * as uiStuck from './ui/stuck.js';
+import * as uiMacApprove from './ui/mac-approve.js';
 import * as uiModels from './ui/models.js';
 import * as uiCacheWords from './ui/cache-words.js';
 import * as uiTips from './ui/tips.js';
@@ -226,6 +227,7 @@ const MODULES = [
   uiGroupChat,
   uiGroupChatView,
   uiStuck,
+  uiMacApprove,
   uiModels,
   uiCacheWords,
   uiTips,
@@ -249,7 +251,7 @@ const MODULES = [
 
 // what the 2D list needs (its rows, the top bar and drawers, the group chat, the live connection or the demo)
 const LIST = new Set([coreEnv, uiEventText, uiIcons, peopleWorkers, uiLite, uiActivity, uiSessionDrawer, uiMacDrawer, uiBurn, uiVault, uiTopbar,
-  interactPlaceCards, uiSettings, uiGroupChat, uiGroupChatView, uiStuck, uiModels, uiCacheWords, netLive, lifeYourTurn, audioSfx, uiPermissions,
+  interactPlaceCards, uiSettings, uiGroupChat, uiGroupChatView, uiStuck, uiMacApprove, uiModels, uiCacheWords, netLive, lifeYourTurn, audioSfx, uiPermissions,
   uiPhone, uiNotify, demoDemo, replayReplay, replayTimeline, uiTicks]);
 const done = new Set();
 let started = false;

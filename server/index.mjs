@@ -28,6 +28,7 @@ import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
+import { holdMs, createBarWatch } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
@@ -1355,6 +1356,13 @@ const lockMsg = (until) => tr('server.pin.locked', { n: Math.max(1, Math.ceil((u
 const HOLD_MS = Math.min(45_000, Number(process.env.OFFICE_HOLD_MS) || 45_000);
 const presence = new Map();   // page id -> { focused, at }
 const officeFocused = () => { const now = Date.now(); for (const p of presence.values()) if (p.focused && now - p.at < 5000) return true; return false; };
+/* The menu bar app holds requests too, when the owner is at the Mac (server/mac-hold.mjs): it reads /api/panel every
+   3 s (that is its "alive"), and the Mac's idle time is read at most every 10 s while it does. OFFICE_IDLE_SEC fakes the
+   idle time (tests only). "Approve from the Mac's notifications" off (Settings → More): it never holds. */
+const barWatch = createBarWatch({ idle: () => (process.env.OFFICE_IDLE_SEC !== undefined ? Number(process.env.OFFICE_IDLE_SEC) : process.platform === 'darwin' ? idleSeconds() : Infinity) });
+const macApprove = () => prefs.get('macApprove') !== false;
+const holdFor = () => holdMs({ focused: officeFocused(), barAlive: barWatch.alive(), idleSec: barWatch.idleSec(), pref: macApprove(), normalMs: HOLD_MS });
+const barHolds = () => !officeFocused() && holdFor() > 0;
 const pending = new Map();    // request id -> held request
 const permPub = (p) => ({ id: p.id, sess: p.sess, name: p.name, tool: p.tool, type: p.type, label: p.label, detail: p.detail, remember: p.remember, at: p.at, until: p.until,
   kind: p.kind || 'perm', questions: p.questions, plan: p.plan });
@@ -1393,14 +1401,15 @@ async function onPermission(p, res, long = false) {
   const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
   // a run started from the office (a phone's work) may wait for a phone to answer even with no office open: they get a push
   const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id || t.from?.sid === p.session_id);
-  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !ours && !long)) { res.writeHead(200).end(''); return; }
+  const hold = holdFor();
+  if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!hold && !ours && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const c = await classifyVi(p.tool_name, p.tool_input);
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
   const id = crypto.randomUUID(), now = Date.now();
   const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, type: c.type, label: c.label, detail: permDetail(p),
-    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + HOLD_MS, long, task: lh.task?.id || null };
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), HOLD_MS);   // (the long one: until answered, or its hook gives up)
+    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + (hold || HOLD_MS), long, task: lh.task?.id || null };
+  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold || HOLD_MS);   // (the long one: until answered, or its hook gives up)
   pending.set(id, entry);
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
@@ -1502,10 +1511,11 @@ async function undoAct(b, who) {
 const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
 async function onQuestion(p, res, long = false) {
   const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
-  if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || (!officeFocused() && !long)) { res.writeHead(200).end(''); return; }
+  const hold = holdFor();
+  if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || (!hold && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const i = p.tool_input || {}, id = crypto.randomUUID(), now = Date.now(), txt = (v, n) => clip(redact(oneLine(v)), n);
-  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + HOLD_MS, long, task: lh.task?.id || null };
+  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + hold, long, task: lh.task?.id || null };
   if (p.tool_name === 'AskUserQuestion') {
     const qs = Array.isArray(i.questions) ? i.questions.slice(0, 4) : [];
     if (!qs.length) { res.writeHead(200).end(''); return; }
@@ -1517,7 +1527,7 @@ async function onQuestion(p, res, long = false) {
     Object.assign(entry, { kind: 'plan', type: 'plan', label: tr('server.tool.plan') });
     entry.plan = clip(redact(String(i.plan || '')), 20000); entry.detail = clip(oneLine(entry.plan), 200);
   }
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), HOLD_MS);
+  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold);
   pending.set(id, entry);
   res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
@@ -2412,15 +2422,18 @@ function aiOut() { return AI_OFF ? null : { codex: codex.out(), ag: ag.out() }; 
    of each tool's account in use as a level, and each session's state (a notification when one starts waiting or
    finishes), with the words in the office's language. The office starts it when it starts, if it was built. */
 function panelOut() {
+  barWatch.seen();   // (the menu bar reads this: it is alive, and the Mac's idle time is read for it)
   const now = Date.now(), waitingFor = new Set([...pending.values()].map((p) => p.sess));
   const list = [...sessions.values()].map((s) => ({ id: s.id, name: s.title || s.name, status: s.status === 'wait' || waitingFor.has(s.id) ? 'wait' : s.status === 'work' ? 'work' : 'rest' }));
   const tight = (ws) => Math.max(0, ...(ws || []).filter((w) => !w.resetsAt || w.resetsAt > now).map((w) => w.pct || 0));
   const ai = aiOut(), cx = ai?.codex?.list?.find((a) => a.id === ai.codex.now), ag2 = ai?.ag?.list?.find((a) => a.id === ai.ag.now);
   const top = Math.max(tight(limitsOut()?.windows), tight(cx?.windows), ag2?.rows?.[0]?.pct || 0);
   const working = list.filter((s) => s.status === 'work').length, waiting = list.filter((s) => s.status === 'wait').length;
-  return { ok: true, working, waiting, level: top >= 95 ? 'critical' : top >= 80 ? 'warn' : 'ok', sessions: list,
+  // the requests held now, for the notification banners (a risky command gets no "allow" there: the office asks twice)
+  const held = [...pending.values()].map((p) => ({ id: p.id, kind: p.kind || 'perm', sess: p.sess, name: p.name, tool: p.tool, detail: clip(oneLine(p.kind === 'plan' ? p.detail : p.kind === 'ask' ? p.questions?.[0]?.question || '' : `${p.label}: ${p.detail}`), 120), risky: (p.kind || 'perm') === 'perm' && !!dangerKey(p), until: p.until }));
+  return { ok: true, working, waiting, held, level: top >= 95 ? 'critical' : top >= 80 ? 'warn' : 'ok', sessions: list,
     summary: [working && tr('panel.working', { n: working }), waiting && tr('panel.waiting', { n: waiting })].filter(Boolean).join(' · ') || tr('panel.quiet'),
-    words: { wait: tr('panel.bar.wait'), done: tr('panel.bar.done'), open: tr('panel.open3d'), list: tr('panel.open2d'), quit: tr('panel.bar.quit'), off: tr('panel.offline') } };
+    words: { allow: tr('panel.bar.allow'), deny: tr('panel.bar.deny'), ide: tr('panel.bar.ide'), answer: tr('panel.bar.answer'), window: tr('panel.bar.window'), plan: tr('panel.bar.plan'), wait: tr('panel.bar.wait'), done: tr('panel.bar.done'), open: tr('panel.open3d'), list: tr('panel.open2d'), quit: tr('panel.bar.quit'), off: tr('panel.offline') } };
 }
 const MENUBAR_APP = path.join(DATA_DIR, 'menubar', 'My Office.app');
 if (process.platform === 'darwin' && process.env.OFFICE_MENUBAR !== '0' && fs.existsSync(MENUBAR_APP)) {
@@ -2602,7 +2615,7 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/presence') {
         const page = String(b.page || '').slice(0, 64);
         if (b.focused) presence.set(page, { focused: true, at: Date.now() }); else presence.delete(page);
-        if (!officeFocused()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // nobody is looking: give the prompt back (a background session's waits on)
+        if (!officeFocused() && !barHolds()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // nobody is looking: give the prompt back (a background session's waits on)
         json(res, 200, { ok: true, pending: pending.size });
         return;
       }
@@ -2806,6 +2819,29 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/panel' && req.method === 'GET') {   // the menu bar's reading (menubar/): this computer only
     if (!isLoopback(req)) { json(res, 403, { ok: false }); return; }
     json(res, 200, panelOut());
+    return;
+  }
+  if (req.method === 'POST' && url.pathname === '/api/panel/answer') {   // a banner's button (menubar/): { id, choice: allow | deny | skip } for a tool request (this computer only)
+    if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      const p = pending.get(String(b?.id || '')), choice = b?.choice;
+      if (!p || (p.kind || 'perm') !== 'perm' || !['allow', 'deny', 'skip'].includes(choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
+      if (choice === 'allow' && dangerKey(p)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }   // (a risky command: two clicks, in the office)
+      if (choice === 'skip') settlePerm(p.id); else settlePerm(p.id, JSON.stringify(permDecision(p, choice)));
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} notification perm ${choice} ${p.name} ${p.tool} ${p.detail.slice(0, 120)}\n`).catch(() => {});
+      json(res, 200, { ok: true });
+    });
+    return;
+  }
+  if (url.pathname === '/api/macapprove') {   // Settings → More: approve from the Mac's notifications, on or off (this computer only)
+    if (!isLoopback(req) || (req.method === 'POST' && (!sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')))) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    if (req.method !== 'POST') { json(res, 200, { ok: true, on: macApprove() }); return; }
+    readJson(req).then((b) => {
+      prefs.set('macApprove', b?.on === false ? false : undefined);
+      if (b?.on === false && !officeFocused()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // (nobody else holds them now)
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} mac notification approve ${macApprove() ? 'on' : 'off'}\n`).catch(() => {});
+      json(res, 200, { ok: true, on: macApprove() });
+    });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/api/panel/open') {   // the small panel's buttons: the office (or its list view) in the browser (this computer only)

@@ -22,7 +22,7 @@ export default {
   subs: { one: '{n} subagent at work', other: '{n} subagents at work' },
   working: '{n} working',
   waiting: { one: '{n} waits for you', other: '{n} wait for you' },
-  bar: { wait: '{name} is waiting for you', done: '{name} is done', quit: 'Hide this icon (until the office starts again)' },
+  bar: { allow: 'Allow', deny: 'Deny', ide: 'Answer in the IDE', answer: 'Open to answer', window: 'Open the session window', plan: 'A plan needs your approval', wait: '{name} is waiting for you', done: '{name} is done', quit: 'Hide this icon (until the office starts again)' },
   quiet: 'All quiet',
   needsYou: 'Needs you ({n})',
   sessions: 'Sessions',

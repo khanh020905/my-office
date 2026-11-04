@@ -152,6 +152,12 @@ export default async function SettingsPanel() {
               <div className="seg">{LOOP_MIN.map((n) => <button key={n} type="button" data-loop-min={n} aria-pressed={n === 10 ? 'true' : 'false'}>{t('settings.loop.mins', { n })}</button>)}</div></div>
             <p className="pop-note st-loop-install" id="st-loop-install" hidden>{t('settings.loop.install')}</p>
           </div>
+          {/* approving from the Mac's notifications (src/office/ui/mac-approve.js fills it in from the server; hidden in the demo) */}
+          <div className="st-loop" id="st-macapprove" hidden>
+            <h3>{t('settings.macApprove.title')}</h3>
+            <div className="pop-toggles"><button type="button" className="tgl" data-mac-tgl="" role="switch" aria-checked="true"><span>{t('settings.macApprove.on')}</span><i></i></button></div>
+            <p className="pop-note">{t('settings.macApprove.note')}</p>
+          </div>
           {/* farewells for projects gone quiet (src/office/people/farewell.js fills it in from the server; hidden in the demo) */}
           <div className="st-loop" id="st-farewell" hidden>
             <h3>{t('settings.farewell.title')}</h3>

@@ -43,6 +43,12 @@ export default {
     saved: 'Đã lưu. Phiên Claude mở từ giờ sẽ dùng; phiên đang mở giữ model cũ.',
     readOnly: 'Không đọc được ~/.claude/settings.json (có thể có chú thích): đặt model trong đó bằng tay nhé.',
   },
+  // Settings → More: duyệt ngay từ thông báo của Mac (ui/mac-approve.js, server/mac-hold.mjs)
+  macApprove: {
+    title: 'Duyệt từ thông báo của Mac',
+    on: 'Duyệt từ thông báo của Mac',
+    note: 'Khi bạn đang ngồi ở máy (vừa chạm phím hoặc chuột) và biểu tượng trên thanh menu đang chạy, một yêu cầu của Claude được giữ tối đa 20 giây để bạn bấm Cho phép / Từ chối ngay trên thông báo. Lệnh rủi ro chỉ có Từ chối. Tắt đi thì Claude hỏi ngay trong IDE như trước; rời máy cũng vậy.',
+  },
   loop: {
     title: 'Vòng lặp kẹt',
     on: 'Ngắt vòng lặp kẹt',
