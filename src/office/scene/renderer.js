@@ -59,7 +59,13 @@ export function setup() {
   controls = new OrbitControls(camera, renderer.domElement);
   controls.target.copy(HOME);
   controls.enableDamping = true;
-  controls.enablePan = false;
+  // left drag moves along the floor, right drag turns, the wheel zooms in where the pointer is, so you can zoom into a
+  // corner and walk on from there (a visitor's suggestion, 04/11/2026); a touch: one finger moves, two zoom and turn
+  controls.enablePan = true;
+  controls.screenSpacePanning = false;
+  controls.zoomToCursor = true;
+  controls.mouseButtons = { LEFT: THREE.MOUSE.PAN, MIDDLE: THREE.MOUSE.DOLLY, RIGHT: THREE.MOUSE.ROTATE };
+  controls.touches = { ONE: THREE.TOUCH.PAN, TWO: THREE.TOUCH.DOLLY_ROTATE };
   controls.minZoom = HQ ? 0.36 : PRO ? 0.5 : 0.7;
    controls.maxZoom = 3.4;
   controls.minPolarAngle = 0.55;

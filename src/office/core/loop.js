@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import { state } from './state.js';
 import { reduceMotion, replay } from './env.js';
 import { HOME, SOFTWARE_GL, camera, controls, fpCam, labels, renderer, resize, scene } from '../scene/renderer.js';
+import { REACH } from '../world/layout.js';
 import { updateExtras } from '../world/props/update.js';
 import { leaving, npcs, subs, updateZs, workers } from '../people/workers.js';
 import { updateTeam } from '../people/team-lines.js';
@@ -72,7 +73,7 @@ function frameGap(now) {
   if (fp.on) return 1000 / 60;
   if (recorder || state.clip) return 1000 / 30;
   if (!document.hasFocus()) return now - lastInput > 120_000 ? 1000 / 2 : 1000 / 8;
-  if (now - lastInput < 1500 || state.zoomGoal !== null || focusTarget.distanceToSquared(controls.target) > 1e-4) return 1000 / 60;
+  if (now - lastInput < 1500 || now - camMovedAt < 300 || state.zoomGoal !== null || focusTarget.distanceToSquared(controls.target) > 1e-4) return 1000 / 60;
   const moving = walkingNow() || particles.length || rocketState.t >= 0 || (replay.on && replay.playing);
   if (phoneLike()) return moving ? 1000 / 20 : 1000 / 12;   // a phone: its battery and its CPU first (a glance at the office, not a game)
   return moving ? 1000 / 30 : 1000 / 20;
@@ -197,12 +198,23 @@ export function loop(now = 0) {
     labels.render(scene, fpCam); placePlc(); if (PERF) lap('labels');
     return;
   }
-  const sel = state.selectedId && workers.get(state.selectedId);
+  // The camera flies only where code sends it (a selected person, a view button, a place's card: they set focusTarget);
+  // otherwise it stays where the user left it, the glide after a drag or the wheel included. A drag while someone is
+  // selected stops following them until one is chosen again.
+  if (handCam) unfollow = state.selectedId;
+  if (!state.selectedId) unfollow = null;
+  const sel = state.selectedId && state.selectedId !== unfollow && workers.get(state.selectedId);
   if (sel) focusTarget.set(sel.pos.x, 0.9, sel.pos.y);
-  const delta = _camDelta.copy(focusTarget).sub(controls.target).multiplyScalar(Math.min(1, dt0 * 4));
-  controls.target.add(delta); camera.position.add(delta);
+  if (!focusTarget.equals(_aim)) { flying = true; _aim.copy(focusTarget); }
+  if (flying && !handCam) {
+    const delta = _camDelta.copy(focusTarget).sub(controls.target).multiplyScalar(Math.min(1, dt0 * 4));
+    controls.target.add(delta); camera.position.add(delta);
+    if (focusTarget.distanceToSquared(controls.target) < 1e-6) flying = false;
+  } else { flying = false; focusTarget.copy(controls.target); _aim.copy(focusTarget); }
   if (state.zoomGoal !== null) { camera.zoom += (state.zoomGoal - camera.zoom) * Math.min(1, dt0 * 4); camera.updateProjectionMatrix(); if (Math.abs(state.zoomGoal - camera.zoom) < 0.005) state.zoomGoal = null; }
+  controls.dampingFactor = 1 - Math.pow(0.95, dt0 * 60);   // (the glide after a drag lasts the same time at any frame rate)
   controls.update();
+  keepNear();
   holdAboveGround();
   clipCamera();
   updateWorld(scene, false); if (PERF) lap('world');
@@ -212,11 +224,22 @@ export function loop(now = 0) {
   placePlc(); if (PERF) lap('labels');
 }
 
+// the camera's centre stays over the office and a little of the street round it (a drag can't lose the office)
+let handCam = false, flying = false, unfollow = null, camMovedAt = 0;
+const _near = new THREE.Vector3(), _aim = new THREE.Vector3();
+function keepNear() {
+  const r = REACH(), t = controls.target, x = Math.min(r.x1 + 3, Math.max(r.x0 - 3, t.x)), z = Math.min(r.z1 + 3, Math.max(r.z0 - 3, t.z));
+  if (x === t.x && z === t.z) return;
+  _near.set(x - t.x, 0, z - t.z); t.add(_near); camera.position.add(_near); focusTarget.add(_near); _aim.add(_near);
+}
+
 export function setup() {
   /* ---------- render loop ---------- */
-  focusTarget = HOME.clone();
+  focusTarget = HOME.clone(); _aim.copy(HOME);
   state.zoomGoal = null;
-  controls.addEventListener('start', () => { state.zoomGoal = null; setView(null); });
+  controls.addEventListener('start', () => { state.zoomGoal = null; setView(null); handCam = true; });
+  controls.addEventListener('end', () => { handCam = false; });
+  controls.addEventListener('change', () => { camMovedAt = performance.now(); });   // (still gliding: full frame rate)
   for (const ev of ['pointerdown', 'pointermove', 'wheel', 'keydown', 'touchstart']) addEventListener(ev, () => { lastInput = performance.now(); }, { passive: true, capture: true });
   renderer.shadowMap.autoUpdate = false;
   scene.matrixWorldAutoUpdate = false;   // (updateWorld above does it, once a frame)

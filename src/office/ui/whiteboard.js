@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import { state } from '../core/state.js';
 import { V2, el, fmtAgo, nowMs, rand, stage } from '../core/env.js';
 import { icon } from './icons.js';
-import { BASE_ZOOM, camera, composer, fpCam, renderer, scene } from '../scene/renderer.js';
+import { BASE_ZOOM, camera, composer, controls, fpCam, renderer, scene } from '../scene/renderer.js';
 import { mat } from '../scene/blocks.js';
 import { STICKY_COLORS, STICKY_SLOTS, board, boardFace } from '../world/furniture/board.js';
 import { ADJ, DESK_SPOTS, NODES, STATIONS, route, standBy, wayTo } from '../people/navigation.js';
@@ -236,7 +236,7 @@ export function setup() {
   buildProps();
   const deskSession = (i) => [...sessions.values()].filter((s) => s.desk >= 0).sort((a, b) => a.desk - b.desk)[i];
   const fake = (s, type, label, extra = {}) => onEvent({ id: Date.now() + Math.random(), ts: Date.now(), sess: s.id, name: s.name, type, label, ...extra });
-  if (new URLSearchParams(location.search).has('debug')) addHook({ THREE, PROPS, PLACES, camera, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get subs() { return subs; }, get leaving() { return leaving; }, get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id),
+  if (new URLSearchParams(location.search).has('debug')) addHook({ THREE, PROPS, PLACES, camera, controls, scene, stage, propMeshes, chipCovered, activateProp, closePlace, get fp() { return fp; }, get subs() { return subs; }, get leaving() { return leaving; }, get wx() { return wx; }, applyWeather: () => applyWeather(), select: (id) => openSession(id),
     view: (x, y, z, zoom) => { focusTarget.set(x, y, z); state.zoomGoal = zoom * BASE_ZOOM; state.lastUserCam = performance.now(); }, renderer, composer, get director() { return director; }, STATIONS, nav: { route, NODES, ADJ, DESK_SPOTS, blocked, standBy, wayTo }, floorLamps, errands, gatherings,
     goOut, get outing() { return outing(); }, get street() { return THEME?.live?.street; }, fpToStreet: () => toStreet(), speed: (n) => { state.speed = n; },
     limitOut: (min) => { state.quotaTest = min > 0 ? Date.now() + min * 60e3 : 0; }, get napOn() { return napOn; },
