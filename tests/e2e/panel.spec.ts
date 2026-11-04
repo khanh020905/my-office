@@ -204,3 +204,43 @@ test('the panel: a question and a plan answered right in it', async ({ page }) =
   await expect(page.locator('.pn-perm')).toHaveCount(0);
   expect(bodies[2]).toEqual({ id: 'p2', choice: 'approve' });
 });
+
+// The panel by keyboard (src/panel/keys.js): ↑ ↓ through the sessions, Y / N for the first request (a risky one: Y
+// twice), nothing while typing; the menu bar's hint line names the keys.
+test('the panel by keyboard: arrows through the sessions, Y / N for a request', async ({ page }) => {
+  const now = Date.now();
+  const sessions = [{ id: 's1', name: 'shop-1', title: 'Shop', status: 'wait', lastAt: now }, { id: 's2', name: 'docs-2', title: 'Docs', status: 'rest', lastAt: now - 60e3 }];
+  const perms = [{ id: 'r1', kind: 'perm', sess: 's1', name: 'shop-1', tool: 'Bash', type: 'bash', label: 'rm -rf build', detail: 'rm -rf build' },
+    { id: 'p2', kind: 'perm', sess: 's2', name: 'docs-2', tool: 'Bash', type: 'bash', label: 'npm test', detail: 'npm test' }];
+  await page.addInitScript((d) => {
+    class FakeES { onopen: (() => void) | null = null; onmessage: ((m: { data: string }) => void) | null = null; onerror = null; constructor() { (window as unknown as { __es: unknown }).__es = this; setTimeout(() => { this.onopen?.(); this.onmessage?.({ data: JSON.stringify({ k: 'snap', local: true, sessions: d.sessions, perms: d.perms, ai: null, limits: null }) }); }, 0); } close() { /* none */ } }
+    (window as unknown as { EventSource: unknown }).EventSource = FakeES;
+  }, { sessions, perms });
+  const bodies: { id: string, choice: string }[] = [];
+  await page.route('**/api/sys', (r) => r.fulfill({ json: {} }));
+  await page.route('**/api/perm*', (r) => { bodies.push(r.request().postDataJSON()); return r.fulfill({ json: { ok: true } }); });
+  await page.setViewportSize({ width: 360, height: 560 });
+  await page.goto('/panel?embed=menubar');
+  await expect(page.locator('.pn-keys')).toBeVisible();
+  await expect(page.locator('.pn-perm')).toHaveCount(2);
+  await page.locator('.pn-head').click();
+  // the arrows
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.pn-sess', { hasText: 'Shop' })).toBeFocused();
+  await page.keyboard.press('ArrowDown');
+  await expect(page.locator('.pn-sess', { hasText: 'Docs' })).toBeFocused();
+  await page.keyboard.press('ArrowUp');
+  await expect(page.locator('.pn-sess', { hasText: 'Shop' })).toBeFocused();
+  // the first request is a risky one: Y arms it, Y again sends it
+  await page.keyboard.press('y');
+  await expect(page.locator('.pn-perm').first().locator('.pn-btn--ok')).not.toHaveText('Allow');
+  expect(bodies).toEqual([]);
+  await page.keyboard.press('y');
+  await expect.poll(() => bodies.length).toBe(1);
+  expect(bodies[0]).toMatchObject({ id: 'r1', choice: 'allow' });
+  await expect(page.locator('.pn-perm')).toHaveCount(1);
+  // N for the next one
+  await page.keyboard.press('n');
+  await expect.poll(() => bodies.length).toBe(2);
+  expect(bodies[1]).toMatchObject({ id: 'p2', choice: 'deny' });
+});

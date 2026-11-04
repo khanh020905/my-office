@@ -2,15 +2,17 @@
 // plan's limit runs low; a click opens the office's small panel (/panel) in a popover, a right-click a short menu; a
 // notification when a session starts waiting for you or finishes. It reads the office's /api/panel every 3 seconds.
 // Built by `my-office install` (bin/cli.mjs: swiftc, then an app bundle in the office's data folder) and started by
-// the office. The port comes as the first argument (4310 when there is none).
+// the office. The port comes as the first argument (4310 when there is none). ⌃⌥O opens and closes the panel from
+// anywhere (a Carbon hot key: no accessibility permission needed); Esc in the panel closes it.
 import Cocoa
 import WebKit
 import UserNotifications
+import Carbon.HIToolbox
 
 let port = CommandLine.arguments.dropFirst().first ?? "4310"
 let base = "http://127.0.0.1:\(port)"
 
-final class Bar: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate {
+final class Bar: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotificationCenterDelegate, WKScriptMessageHandler {
   var item: NSStatusItem!
   let popover = NSPopover()
   var web: WKWebView!
@@ -30,7 +32,9 @@ final class Bar: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotif
       b.action = #selector(clicked(_:))
       b.sendAction(on: [.leftMouseUp, .rightMouseUp])
     }
-    web = WKWebView(frame: NSRect(x: 0, y: 0, width: 360, height: 560), configuration: WKWebViewConfiguration())
+    let config = WKWebViewConfiguration()
+    config.userContentController.add(self, name: "bar")   // (the panel's Esc: src/panel/keys.js)
+    web = WKWebView(frame: NSRect(x: 0, y: 0, width: 360, height: 560), configuration: config)
     let vc = NSViewController()
     vc.view = web
     popover.contentViewController = vc
@@ -43,6 +47,24 @@ final class Bar: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotif
     center.requestAuthorization(options: [.alert, .sound]) { _, _ in }
     poll()
     timer = Timer.scheduledTimer(withTimeInterval: 3, repeats: true) { [weak self] _ in self?.poll() }
+    hotKey()
+  }
+
+  // ⌃⌥O: the panel, from any app
+  var hotKeyRef: EventHotKeyRef?
+  func hotKey() {
+    var spec = EventTypeSpec(eventClass: OSType(kEventClassKeyboard), eventKind: UInt32(kEventHotKeyPressed))
+    InstallEventHandler(GetApplicationEventTarget(), { _, _, me in
+      guard let me = me else { return noErr }
+      let bar = Unmanaged<Bar>.fromOpaque(me).takeUnretainedValue()
+      DispatchQueue.main.async { bar.toggle() }
+      return noErr
+    }, 1, &spec, Unmanaged.passUnretained(self).toOpaque(), nil)
+    let id = EventHotKeyID(signature: OSType(0x4D4F4642), id: 1)   // ('MOFB')
+    RegisterEventHotKey(UInt32(kVK_ANSI_O), UInt32(controlKey | optionKey), id, GetApplicationEventTarget(), 0, &hotKeyRef)
+  }
+  func userContentController(_ controller: WKUserContentController, didReceive message: WKScriptMessage) {
+    if message.body as? String == "close", popover.isShown { popover.performClose(nil) }
   }
 
   @objc func clicked(_ sender: NSStatusBarButton) {
@@ -56,6 +78,7 @@ final class Bar: NSObject, NSApplicationDelegate, NSPopoverDelegate, UNUserNotif
     popover.show(relativeTo: b.bounds, of: b, preferredEdge: .minY)
     NSApp.activate(ignoringOtherApps: true)
     popover.contentViewController?.view.window?.makeKey()
+    popover.contentViewController?.view.window?.makeFirstResponder(web)   // (the keys work at once: src/panel/keys.js)
   }
   func menu() {
     let m = NSMenu()
