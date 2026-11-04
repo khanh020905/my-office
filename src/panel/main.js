@@ -7,6 +7,7 @@ import { dangerKey } from '../shared/danger.js';
 import { el, level } from './fmt.js';
 import { attach, liveWindows, refreshQuota, startQuota } from './quota.js';
 import { startMac } from './mac.js';
+import { startKeys } from './keys.js';
 import { projectOf, sessionCard } from './session-card.js';
 import { planBlocks } from './md.js';
 
@@ -233,7 +234,7 @@ export function startPanel() {
   addEventListener('pagehide', () => { try { navigator.sendBeacon(q('/api/presence'), new Blob([JSON.stringify({ page: PAGE, focused: false })], { type: 'application/json' })); } catch { /* gone */ } });
   setInterval(() => { if (document.hasFocus()) presence(); }, 2000);
   setInterval(tick, 1000);
-  startQuota(); startMac(macBox, { q });
+  startQuota(); startMac(macBox, { q }); startKeys();
   setInterval(draw, 30_000);   // ("2 min ago")
   connect(); draw(); presence();
 }

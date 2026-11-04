@@ -118,7 +118,9 @@
 .pn-sess-what, .pn-sess-sub { padding-left: 16px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .72rem; color: var(--muted); }
 .pn-sess.is-wait .pn-sess-what { color: var(--amber); }
 .pn-sess-sub { color: var(--faint); }
-.pn-foot { display: flex; gap: 6px; padding: 9px 12px; border-top: 1px solid var(--line); background: var(--bar); }
+.pn-foot { display: flex; flex-wrap: wrap; gap: 6px; padding: 9px 12px; border-top: 1px solid var(--line); background: var(--bar); }
+.pn-keys { display: none; flex-basis: 100%; text-align: center; color: var(--faint); font-size: .64rem; }
+:root[data-embed="menubar"] .pn-keys { display: block; }   /* (the keys and ⌃⌥O are the menu bar's) */
 .pn-foot .pn-btn { flex: 1; text-align: center; }
 /* in the editor's side bar: its own top line already names it */
 :root[data-embed="ide"] .pn-head { padding-block: 7px; }

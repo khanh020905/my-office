@@ -24,6 +24,7 @@ export default {
   waiting: { one: '{n} waits for you', other: '{n} wait for you' },
   bar: { allow: 'Allow', deny: 'Deny', ide: 'Answer in the IDE', answer: 'Open to answer', window: 'Open the session window', plan: 'A plan needs your approval', wait: '{name} is waiting for you', done: '{name} is done', quit: 'Hide this icon (until the office starts again)' },
   quiet: 'All quiet',
+  keys: '⌃⌥O opens this · ↑↓ pick a session · Enter its window · Y / N approve · Esc closes',
   needsYou: 'Needs you ({n})',
   sessions: 'Sessions',
   mac: { title: '{Mac}' },

@@ -16,6 +16,7 @@ export default async function PanelPage() {
       <footer className="pn-foot">
         <button type="button" className="pn-btn" data-open="office">{t('panel.open3d')}</button>
         <button type="button" className="pn-btn pn-btn--ghost" data-open="2d">{t('panel.open2d')}</button>
+        <small className="pn-keys">{t('panel.keys')}</small>
       </footer>
       <PanelBoot />
     </div>

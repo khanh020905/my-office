@@ -23,6 +23,7 @@ export default {
   waiting: '{n} chờ bạn',
   bar: { allow: 'Cho phép', deny: 'Từ chối', ide: 'Trả lời trong IDE', answer: 'Mở để trả lời', window: 'Mở cửa sổ phiên', plan: 'Có kế hoạch cần bạn duyệt', wait: '{name} đang chờ bạn duyệt', done: '{name} đã xong việc', quit: 'Ẩn biểu tượng này (tới lần văn phòng khởi động sau)' },
   quiet: 'Đang yên',
+  keys: '⌃⌥O mở bảng này · ↑↓ chọn phiên · Enter mở cửa sổ · Y / N duyệt · Esc đóng',
   needsYou: 'Cần bạn duyệt ({n})',
   sessions: 'Phiên',
   mac: { title: '{Mac}' },
