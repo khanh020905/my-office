@@ -13,6 +13,7 @@ import { unseenDone } from '../life/your-turn.js';
 import { whereabouts } from '../people/outings.js';
 import { imageUrl, openImage } from './image-view.js';
 import { t as tr, num } from '../../i18n/index.js';
+import { modelLabel } from '../../shared/model-name.js';
 
 let feedFilter = 'all';
 let query = '';
@@ -178,11 +179,13 @@ function renderRail() {
     const color = colorOf(s), cur = String(s.id === state.selectedId);
     r.b.dataset.status = s.status; r.b.dataset.stuck = s.stuck && s.status !== 'rest' ? '1' : ''; r.b.dataset.done = unseenDone.has(s.id) ? '1' : ''; r.b.setAttribute('aria-current', cur); r.av.style.setProperty('--c', color);
     { const k = agentOf(s); if (r.avTxt.firstChild?.dataset?.agent !== k) { r.avTxt.replaceChildren(agentMark(k)); r.av.title = AGENT_NAME[k]; } }
-    const nk = dn(s) + '|' + (s.dir || '') + '|' + (s.origin || '') + (s.link ? '|rc' : '');
+    const model = modelLabel(s.model);
+    const nk = dn(s) + '|' + (s.dir || '') + '|' + (s.origin || '') + '|' + model + (s.link ? '|rc' : '');
     if (r.nameKey !== nk) {
-      r.nameKey = nk; r.name.textContent = dn(s); r.top.querySelector('.ri-rc')?.remove(); r.top.querySelector('.ri-proj')?.remove();
+      r.nameKey = nk; r.name.textContent = dn(s); r.top.querySelector('.ri-rc')?.remove(); r.top.querySelector('.ri-proj')?.remove(); r.top.querySelector('.ri-model')?.remove();
+      if (model) { const md = el('span', 'ri-model', model); md.title = s.model; r.name.after(md); }
       const proj = String(s.dir || '').split('/').filter(Boolean).pop();
-      if (proj && proj !== dn(s)) { const pj = el('span', 'ri-proj', proj); pj.title = s.origin ? tr('activity.runsIn', { dir: s.dir, origin: s.origin }) : `${s.dir}`; r.name.after(pj); }
+      if (proj && proj !== dn(s)) { const pj = el('span', 'ri-proj', proj); pj.title = s.origin ? tr('activity.runsIn', { dir: s.dir, origin: s.origin }) : `${s.dir}`; (r.top.querySelector('.ri-model') || r.name).after(pj); }
       if (s.link) { const rc = el('span', 'ri-rc'); rc.title = tr('activity.remoteOn'); rc.append(icon('phone')); r.top.append(rc); }
     }
     r.b.title = `${dn(s)}${s.title ? ` (${s.name})` : ''} · ${s.dir || ''}`;
@@ -199,7 +202,7 @@ function renderRail() {
     const sig = subsNow.map((x) => `${x.id}:${x.last?.label || ''}:${x.desc}`).join('|');
     if (sig !== r.subSig) { r.subSig = sig; r.subList.replaceChildren(...subsNow.map((x) => subRow(s, x))); }
     r.subList.hidden = !subsNow.length;
-    const match = !q || s.name.toLowerCase().includes(q) || String(s.title || '').toLowerCase().includes(q) || String(s.dir || '').toLowerCase().includes(q);
+    const match = !q || s.name.toLowerCase().includes(q) || String(s.title || '').toLowerCase().includes(q) || String(s.dir || '').toLowerCase().includes(q) || String(s.model || '').toLowerCase().includes(q);
     const folded = s.status === 'rest' && restCollapsed && !q && railFilter !== 'rest';
     r.li.hidden = !match || (railFilter && s.status !== railFilter) || folded;
     r.c.dataset.status = s.status; r.c.setAttribute('aria-current', cur); r.cd.style.background = color;

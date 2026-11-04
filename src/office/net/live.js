@@ -98,6 +98,7 @@ export function upsertSession(s, walkIn = true) {
   if (!w && !leavingIds.has(s.id)) w = addWorker(s, walkIn && had === false && state.connectedOnce);
   if (w) {
     w.setName(short(dn(s), 26));
+    if (s.agent === 'cursor') w.setModel(s.model || '');
     const live = new Set((s.subs || []).map((x) => x.id));
     for (const [aid, sw] of subs) if (sw.parent === w && !live.has(aid)) dropSub(aid);
     for (const x of s.subs || []) { if (!subs.has(x.id)) spawnSub(w, x.id, x.type); const sw = subs.get(x.id); if (sw && x.desc) sw.desc = x.desc; sw?.setModel(x.model); }

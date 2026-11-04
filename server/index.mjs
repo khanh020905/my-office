@@ -334,6 +334,7 @@ const pub = (s) => ({ id: s.id, pid: s.pid, name: s.name, title: s.title || '', 
   taskStart: s.taskStart, counts: s.counts, subs: Object.values(s.subs).map(pubSub), doneSubs: (s.doneSubs || []).map(pubSub), last: s.last, acct: acctOf(s),
   entry: s.entry || '', moved: s.parked ? { to: acctShown(s.parked.to), at: s.parked.at } : null,
   lastAt: s.lastEventAt || s.createdAt, doneAt: s.doneAt || 0, todos: s.todos || [], lastReply: s.lastReply || '', origin: s.origin || '',
+  agent: s.agent === 'codex' || s.agent === 'gemini' || s.agent === 'cursor' ? s.agent : 'claude', model: s.model || '',
   bg: s.bg ? [...s.bg.values()].slice(0, 6) : [],
   dayFirst: s.dayFirst || null,
   stuck: s.stuck || null,
@@ -968,8 +969,9 @@ setInterval(() => {
     // Claude went quiet without a Stop event (e.g. interrupted): let the chibi rest. A long tool run (a build, a test
     // suite) is not quiet; a tool still open after 10 minutes probably lost its PostToolUse.
     if (s.status === 'work' && !s.busy && (!s.inTool || now - s.lastEventAt > 600_000) && now - s.lastEventAt > 20_000) { s.status = 'rest'; broadcast({ k: 'sess', s: pub(s) }); }
-    // Sessions seen only through hooks (no session file) leave after 10 quiet minutes.
-    if (!s.fromFile && now - s.lastEventAt > 600_000) dropSession(key, s);
+    // Sessions seen only through hooks (no session file) leave after 10 quiet minutes. A Cursor chat has no pid
+    // file; it stays until its sessionEnd hook, and the quiet rule above still sits it down between turns.
+    if (!s.fromFile && s.agent !== 'cursor' && now - s.lastEventAt > 600_000) dropSession(key, s);
     // A subagent that went quiet is finished: 90 s once its session rests, 5 min while the session still works.
     for (const [id, sub] of Object.entries(s.subs)) if (now - sub.seenAt > (s.status === 'rest' ? 90_000 : 300_000)) { finishSub(s, id, now); broadcast({ k: 'sess', s: pub(s) }); }
   }
@@ -980,6 +982,7 @@ setInterval(async () => {
   if (usageBusy) return; usageBusy = true;
   try {
     for (const s of sessions.values()) {
+      if (s.agent === 'cursor') continue;   // (its transcript is not Claude's jsonl: don't price it as one)
       const main = s.transcript || (s.sid && s.cwd ? path.join(CLAUDE_DIR, 'projects', s.cwd.replace(/[^A-Za-z0-9-]/g, '-'), `${s.sid}.jsonl`) : null);
       if (!main) continue;
       if (!s.usage) { s.usage = blankUsage(); s.usage.interrupted = 0; }
@@ -1005,6 +1008,14 @@ function count(s, tool, sub) {
 
 let lastHookAt = 0;
 const startedAt = Date.now();
+// A Cursor chat (hooks/cursor-map.mjs) is not a Claude process: remember that, and its model, but don't let a
+// subagent's model overwrite the conversation it was spawned from.
+function tagCursor(s, p, ev) {
+  if (p.agent !== 'cursor') return;
+  s.agent = 'cursor';
+  if (ev === 'SubagentStart' || ev === 'SubagentStop') return;
+  if (typeof p.model === 'string' && p.model && p.model.toLowerCase() !== 'default') s.model = p.model;
+}
 async function onHook(p) {
   lastHookAt = Date.now();
   const ev = p.hook_event_name, sid = p.session_id;
@@ -1016,10 +1027,12 @@ async function onHook(p) {
   if (!s) {
     const key = 's' + sid;
     s = newSession(key);
-    s.sid = sid; s.cwd = p.cwd || ''; s.name = `${base(p.cwd) || 'claude'}-${sid.slice(0, 2)}`; noteDir(s.cwd);
+    s.sid = sid; s.cwd = p.cwd || ''; s.name = `${base(p.cwd) || (p.agent === 'cursor' ? 'cursor' : 'claude')}-${sid.slice(0, 2)}`; noteDir(s.cwd);
     sessions.set(key, s); sidToKey.set(sid, key);
+    tagCursor(s, p, ev);
     broadcast({ k: 'sess', s: pub(s) });
   }
+  tagCursor(s, p, ev);
   const now = Date.now();
   s.lastEventAt = now;
   { const day = new Date(now).toLocaleDateString('sv'); if (ev !== 'SessionEnd' && s.dayFirst?.day !== day) s.dayFirst = { day, at: now }; }   // (its first sign of life each day: the lobby's attendance terminal)
@@ -1111,9 +1124,13 @@ async function onHook(p) {
       }
       break;
     }
-    case 'SubagentStart':
+    case 'SubagentStart': {
+      const x = agent ? s.subs[agent] : null;
+      if (x && p.task && !x.desc) x.desc = clip(redact(oneLine(String(p.task))), 70);   // (no Claude transcript meta for a Cursor subagent)
+      if (x && !x.model && typeof p.subagent_model === 'string') x.model = p.subagent_model;
       e = mk('substart', p.agent_type || 'agent', { agent });
       break;
+    }
     case 'SubagentStop': {
       const x = agent ? finishSub(s, agent, now) : null;
       e = mk('substop', x?.type || p.agent_type || 'agent', { agent, desc: x?.desc || '' });
@@ -1121,7 +1138,7 @@ async function onHook(p) {
     }
     case 'Stop':
       undo.stop(sid);   // (the turn is over: "Hoàn tác lượt cuối" may now put its files back)
-      setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
+      if (s.agent !== 'cursor') setTimeout(() => refreshTitle(s), 4000); usageAfterTurn();
       if (steerLater.has(sid) && !tasks.of(sid)) setTimeout(() => sendLater(sid), 2000);   // (a note that couldn't get in while it worked: now; a run's own: when it ends)
       s.inTool = false;
       s.status = 'rest'; s.doneAt = now;

@@ -39,13 +39,28 @@ node bin/cli.mjs install --service   # cùng các lệnh như `my-office …`, d
 
 | Lệnh | Việc |
 | --- | --- |
-| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names]` | Thêm 13 hook báo sự kiện, hook duyệt quyền, hook trả lời câu hỏi / duyệt kế hoạch, và status line báo hạn mức gói (status line cũ của bạn vẫn chạy bên trong). Bật luôn số liệu dùng của chính Claude Code (OpenTelemetry) cho "Cái gì đang ăn gói", trừ khi bạn đã gửi nó đi chỗ khác. `--service`: chạy nền bằng launchd. `--lan`: cho điện thoại cùng wifi xem. `--no-approve`: bỏ hai hook duyệt. `--no-status`: không đụng status line. `--no-otel`: không bật số liệu dùng; `--no-otel-names`: giữ ẩn tên MCP, skill, agent bạn tự thêm ("custom") |
-| `uninstall` | Gỡ mọi hook của My Office, phần cài đặt số liệu dùng do install thêm, và dịch vụ nền; giữ nguyên phần còn lại của `settings.json` |
+| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] [--no-cursor]` | Thêm 13 hook báo sự kiện, hook duyệt quyền, hook trả lời câu hỏi / duyệt kế hoạch, và status line báo hạn mức gói (status line cũ của bạn vẫn chạy bên trong). Bật luôn số liệu dùng của chính Claude Code (OpenTelemetry) cho "Cái gì đang ăn gói", trừ khi bạn đã gửi nó đi chỗ khác. Viết thêm hook người dùng của Cursor để mọi cuộc Agent trên máy này hiện trong văn phòng (xem bên dưới). `--service`: chạy nền bằng launchd. `--lan`: cho điện thoại cùng wifi xem. `--no-approve`: bỏ hai hook duyệt. `--no-status`: không đụng status line. `--no-otel`: không bật số liệu dùng; `--no-otel-names`: giữ ẩn tên MCP, skill, agent bạn tự thêm ("custom"). `--no-cursor`: không đụng `~/.cursor/hooks.json` |
+| `uninstall` | Gỡ mọi hook của My Office, kể cả hook Cursor mà install đã thêm, phần cài đặt số liệu dùng do install thêm, và dịch vụ nền; giữ nguyên phần còn lại của `settings.json` |
 | `doctor` | Kiểm tra từng bước, nói rõ thiếu gì và lệnh sửa |
 | `start [--lan]` | Chạy server ở cửa sổ hiện tại (không dùng launchd) |
 | `pin [--new]` | Xem mã PIN điện thoại; `--new` đổi mã và đăng xuất mọi điện thoại |
 
 Khởi động lại sau khi sửa code: `launchctl kickstart -k gui/$(id -u)/com.my-office` · Log: `tail -f ~/.my-office/server.log` (cài từ mã nguồn: `data/server.log`)
+
+### Cursor
+
+`install` cũng ghi hook người dùng vào `~/.cursor/hooks.json` (Windows: `%USERPROFILE%\.cursor\hooks.json`): mỗi sự kiện Agent một lệnh chỉ quan sát, trỏ tới `hooks/cursor.mjs`. Cursor chạy chúng cho mọi cuộc Agent trên máy, model nào cũng được. Script đổi payload của Cursor thành đúng sự kiện Claude Code đã gửi tới `POST /event`, nên văn phòng vẽ cuộc đó thành một người. Danh sách phiên có dấu Cursor và tên model. Cuộc đang mở chỉ hiện khi bạn gửi câu tiếp theo hoặc agent gọi công cụ, vì `sessionStart` chỉ chạy lúc tạo cuộc mới. Chạy `install` lần nữa không thêm trùng. `uninstall` chỉ gỡ những lệnh trỏ tới `hooks/cursor.mjs`, phần còn lại của file giữ nguyên.
+
+Hook luôn in `{}` và thoát 0. Văn phòng tắt thì Cursor vẫn chạy. Hook này không duyệt quyền. Hạn mức gói, phần trăm ngữ cảnh và "Cái gì đang ăn gói" vẫn chỉ có từ Claude Code: Cursor không gửi status line hay OpenTelemetry. Cuộc Cursor không có file tiến trình trong `~/.claude/sessions`, nên người đó ở lại đến khi Cursor gửi `sessionEnd`. Gõ Tab không phải một phiên. Agent trên mây chỉ hiện khi Cursor thật sự chạy các hook này trên máy.
+
+| Hook Cursor | Sự kiện văn phòng |
+| --- | --- |
+| `sessionStart` / `sessionEnd` | `SessionStart` / `SessionEnd` |
+| `beforeSubmitPrompt` | `UserPromptSubmit` |
+| `preToolUse` / `postToolUse` / `postToolUseFailure` | cùng các sự kiện công cụ (`Shell` hiện như lệnh, `StrReplace` như sửa file) |
+| `subagentStart` / `subagentStop` | subagent của cuộc cha |
+| `stop` | `Stop`, hoặc `StopFailure` khi lượt lỗi |
+| `preCompact` | `PreCompact` |
 
 ## Có gì
 
@@ -169,7 +184,7 @@ Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại c
 
 ## An toàn
 
-- Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường. Hook ngắt vòng lặp chạy đồng bộ nhưng chờ tối đa 0,3 giây và không in gì khi văn phòng tắt hay chậm, nên không bao giờ chặn Claude Code vì văn phòng.
+- Hook gửi tới `127.0.0.1` và chạy nền; server tắt thì hook bỏ qua, Claude Code chạy bình thường. Hook ngắt vòng lặp chạy đồng bộ nhưng chờ tối đa 0,3 giây và không in gì khi văn phòng tắt hay chậm, nên không bao giờ chặn Claude Code vì văn phòng. Hook của Cursor cũng vậy: gửi tới `127.0.0.1` rồi in `{}`, văn phòng tắt không chặn agent.
 - Chuỗi giống mật khẩu, token, khoá API bị che trước khi lưu hay hiển thị (`redact.mjs`).
 - Số liệu dùng ("Cái gì đang ăn gói") chỉ đi từ Claude Code tới `127.0.0.1`: bộ nhận từ chối mọi thứ đến từ trang web, wifi hay đường hầm, chỉ đọc JSON (tối đa 4 MB mỗi lần), và chỉ giữ tổng chi phí, token theo ngày; email, prompt, lệnh không bao giờ được lưu.
 - Nút Tắt kiểm lại PID **và giờ khởi động** của tiến trình ngay trước khi tắt, nên không tắt nhầm tiến trình mới mang lại PID cũ. Mọi lần tắt, dọn, duyệt quyền ghi vào `data/actions.log`.
@@ -179,7 +194,7 @@ Mặc định chỉ chính Mac mở được. Muốn xem trên điện thoại c
 - `server/`: máy chủ Node. `index.mjs` nhận hook, đọc `~/.claude/sessions/*.json` (theo `CLAUDE_CONFIG_DIR` nếu có), đẩy sự kiện qua SSE, giữ yêu cầu duyệt quyền, ghi nhật ký xem lại, trang PIN, và giao trang cho Next.js. `system.mjs`: RAM/CPU/ổ đĩa, dev server, session rảnh, dọn dẹp. `otel.mjs`: bộ nhận OpenTelemetry cho "Cái gì đang ăn gói" (`otel-setup.mjs`: phần cài đặt của install). `usage.mjs`: token và ngữ cảnh. `trophies.mjs`: tổng tích luỹ cho tủ cúp. `redact.mjs`: luật che bí mật.
 - `app/` + `src/components/`: trang Next.js (App Router). `src/styles/`: CSS theo từng khu vực.
 - `src/office/`: văn phòng 3D (three.js), chia module theo thư mục `core`, `scene`, `world`, `people`, `life`, `ui`, `interact`, `net`, `demo`, `replay`. Bản đồ module ở [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
-- `bin/cli.mjs`: lệnh install / uninstall / doctor / start / pin. `hooks/hooks.json` + `.claude-plugin/`: cài dạng plugin. `hooks/status-line.mjs`: status line gửi hạn mức gói về văn phòng.
+- `bin/cli.mjs`: lệnh install / uninstall / doctor / start / pin. `hooks/hooks.json` + `.claude-plugin/`: cài dạng plugin. `hooks/status-line.mjs`: status line gửi hạn mức gói về văn phòng. `hooks/cursor.mjs` và `hooks/cursor-map.mjs`: hook Cursor, đổi sự kiện Agent thành sự kiện văn phòng rồi gửi `/event`.
 - `tests/unit/` (node --test) và `tests/e2e/` (Playwright), chạy trên CI ở `.github/workflows/ci.yml` (e2e: nhóm @smoke), toàn bộ e2e chia nhiều máy ở `e2e-full.yml` (mỗi đêm và mỗi PR).
 - `data/` (không đưa lên git): `state.json`, `token`, `pin`, `todos.json`, `limits.json`, `totals.json`, `statusline-prev.json`, `owners.json`, `replay/YYYY-MM-DD.jsonl` (giữ 7 ngày), `otel/YYYY-MM-DD.json` (giữ 30 ngày), `actions.log`, `server.log`.
 

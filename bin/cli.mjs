@@ -54,6 +54,67 @@ const STATUS_SCRIPT = path.join(ROOT, 'hooks', 'status-line.mjs'), STATUS_PREV =
 const STATUS_CMD = WIN ? `"${fwd(process.execPath)}" "${fwd(STATUS_SCRIPT)}"` : `"${process.execPath}" "${STATUS_SCRIPT}"`;
 const oursStatus = (s) => typeof s?.command === 'string' && s.command.includes('status-line.mjs') && (s.command.includes(ROOT) || s.command.includes(fwd(ROOT)));
 const ours = (h) => typeof h?.command === 'string' && h.command.includes(`127.0.0.1:${PORT}/`);
+// Cursor agent hooks (any model): ~/.cursor/hooks.json, one observe-only command per event. hooks/cursor.mjs reshapes
+// the payload and posts it to the same /event the Claude Code hooks use.
+const CURSOR_HOOKS = path.join(HOME, '.cursor', 'hooks.json');
+const CURSOR_EVENTS = ['sessionStart', 'sessionEnd', 'beforeSubmitPrompt', 'preToolUse', 'postToolUse', 'postToolUseFailure', 'subagentStart', 'subagentStop', 'stop', 'preCompact'];
+const cursorCmd = () => `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'cursor.mjs'))}" ${PORT}`;
+const isCursorHook = (h) => typeof h?.command === 'string' && (h.command.includes('hooks/cursor.mjs') || h.command.includes('hooks\\cursor.mjs'));
+async function readCursorHooks() {
+  try { return JSON.parse(await fsp.readFile(CURSOR_HOOKS, 'utf8')); }
+  catch (e) { if (e.code === 'ENOENT') return { version: 1, hooks: {} }; throw e; }
+}
+async function writeCursorHooks(cfg) {
+  await fsp.mkdir(path.dirname(CURSOR_HOOKS), { recursive: true });
+  const tmp = `${CURSOR_HOOKS}.tmp-${process.pid}`;
+  await fsp.writeFile(tmp, JSON.stringify(cfg, null, 2) + '\n');
+  await fsp.rename(tmp, CURSOR_HOOKS);
+}
+async function installCursor() {
+  if (args.includes('--no-cursor')) return;
+  let cfg;
+  try { cfg = await readCursorHooks(); }
+  catch (e) { warn(tr('cli.install.cursorRead', { file: CURSOR_HOOKS, error: e.message })); return; }
+  if (!cfg || typeof cfg !== 'object' || Array.isArray(cfg)) cfg = { version: 1, hooks: {} };
+  cfg.version ??= 1;
+  cfg.hooks ||= {};
+  const cmd = cursorCmd();
+  let added = 0;
+  for (const ev of CURSOR_EVENTS) {
+    if (!Array.isArray(cfg.hooks[ev])) cfg.hooks[ev] = [];
+    const list = cfg.hooks[ev];
+    const prev = list.find(isCursorHook);
+    if (!prev) { list.push({ command: cmd, timeout: 5 }); added++; }
+    else if (prev.command !== cmd) { prev.command = cmd; prev.timeout ??= 5; added++; }
+  }
+  if (added) { await writeCursorHooks(cfg); ok(tr('cli.install.cursor', { n: added, file: CURSOR_HOOKS })); }
+  else ok(tr('cli.install.cursorAlready'));
+}
+async function uninstallCursor() {
+  let cfg;
+  try { cfg = JSON.parse(await fsp.readFile(CURSOR_HOOKS, 'utf8')); }
+  catch { return 0; }
+  if (!cfg?.hooks || typeof cfg.hooks !== 'object') return 0;
+  let removed = 0;
+  for (const [ev, list] of Object.entries(cfg.hooks)) {
+    if (!Array.isArray(list)) continue;
+    const kept = list.filter((h) => !isCursorHook(h));
+    removed += list.length - kept.length;
+    if (kept.length) cfg.hooks[ev] = kept; else delete cfg.hooks[ev];
+  }
+  if (removed) { await writeCursorHooks(cfg); ok(tr('cli.uninstall.cursor', { n: removed, file: CURSOR_HOOKS })); }
+  return removed;
+}
+function doctorCursor() {
+  if (!fs.existsSync(CURSOR_HOOKS)) { warn(tr('cli.doctor.noCursor', { file: CURSOR_HOOKS })); return; }
+  let cfg;
+  try { cfg = JSON.parse(fs.readFileSync(CURSOR_HOOKS, 'utf8')); }
+  catch (e) { warn(tr('cli.doctor.cursorBad', { file: CURSOR_HOOKS, error: e.message })); return; }
+  const have = CURSOR_EVENTS.filter((ev) => (cfg.hooks?.[ev] || []).some(isCursorHook));
+  have.length === CURSOR_EVENTS.length
+    ? ok(tr('cli.doctor.cursor', { n: have.length, file: CURSOR_HOOKS }))
+    : warn(tr('cli.doctor.cursorSome', { have: have.length, total: CURSOR_EVENTS.length, missing: CURSOR_EVENTS.filter((e) => !have.includes(e)).join(', '), file: CURSOR_HOOKS }));
+}
 // --lan opens the server to the home wifi so a phone can watch (QR code or PIN). Off by default.
 const LAN = args.includes('--lan');
 const service = () => serviceFor({ root: ROOT, server: path.join(ROOT, 'server', 'index.mjs'), log: path.join(dataDir(ROOT, {}), 'server.log'), host: LAN ? '0.0.0.0' : '127.0.0.1', port: PORT });
@@ -110,6 +171,7 @@ async function install() {
     LAN ? warn(tr('cli.install.lan')) : ok(tr('cli.install.local'));
   }
   if (!args.includes('--no-panel') && !opt('--settings')) await panel();
+  await installCursor();
   if (!args.includes('--no-menubar') && !opt('--settings') && process.platform === 'darwin') menubar();
   console.log(`\n${tr('cli.install.next', { port: PORT })}`);
 }
@@ -179,7 +241,9 @@ async function uninstall() {
   }
   const otel = removeOtel(cfg);   // (only the keys install added, still as it wrote them)
   if (otel.kept.length) warn(tr('cli.uninstall.otelKept', { keys: otel.kept.join(', ') }));
-  if (removed || otel.removed) { await writeSettings(cfg); ok(tr('cli.uninstall.removed', { n: removed + otel.removed, file: SETTINGS })); } else ok(tr('cli.uninstall.none'));
+  if (removed || otel.removed) { await writeSettings(cfg); ok(tr('cli.uninstall.removed', { n: removed + otel.removed, file: SETTINGS })); }
+  const cursorRemoved = await uninstallCursor();
+  if (!removed && !otel.removed && !cursorRemoved) ok(tr('cli.uninstall.none'));
   // The login service is machine-wide: only touch it when working on the real settings (not a --settings copy).
   if (!opt('--settings') && (await service().uninstall())) ok(tr('cli.uninstall.service'));
   if (!opt('--settings') && unwrapEditors()) ok(tr('cli.uninstall.editors'));
@@ -242,6 +306,7 @@ async function doctor() {
       else warn(tr('cli.doctor.statusSilent'));
     }
   }
+  doctorCursor();
   const inEditors = panelIn();
   inEditors.length ? ok(tr('cli.doctor.panel', { apps: inEditors.join(', ') })) : warn(tr('cli.doctor.noPanel'));
   if (process.platform === 'darwin') fs.existsSync(MENUBAR_APP) ? ok(tr('cli.doctor.menubar')) : warn(tr('cli.doctor.noMenubar'));

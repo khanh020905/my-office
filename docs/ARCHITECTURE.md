@@ -2,15 +2,16 @@
 
 My Office is two programs in one repository:
 
-1. **A local server** (`server/`, plain Node.js ESM, no build step). Claude Code hooks POST every event to it; it keeps one
-   record per open session, measures the Mac, and streams compact events to the page over Server-Sent Events. It also
-   hosts Next.js, which renders the page.
+1. **A local server** (`server/`, plain Node.js ESM, no build step). Claude Code hooks POST every event to it; Cursor's
+   user hooks do the same after `hooks/cursor.mjs` renames the payload. It keeps one record per open session, measures
+   the Mac, and streams compact events to the page over Server-Sent Events. It also hosts Next.js, which renders the page.
 2. **The office** (`app/`, `src/`). A Next.js App Router page whose markup is static React components; the 3D office and
    all its panels are driven by plain JavaScript modules in `src/office/`, written against three.js.
 
 ```
 Claude Code ──hooks (curl, loopback only)──▶ server/index.mjs ──SSE /stream──▶ the page (src/office)
-                                               │   ▲                               │
+Cursor agent ──hooks/cursor.mjs (loopback)─▶       │              │
+                                                   │   ▲          │
                     ~/.claude/sessions, transcripts   /api/* (sys, log, timeline, replay, todos, perm…)
 Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs ──▶ server/otel.mjs ──/api/burn──▶ "What eats your plan"
 ```
@@ -48,7 +49,11 @@ Claude Code ──OpenTelemetry (OTLP/HTTP JSON)──▶ /v1/metrics, /v1/logs 
 | `prefs.mjs` | The office's language (`data/prefs.json`, `OFFICE_LANG`) and the server's translator `tr()`. |
 
 `bin/cli.mjs` installs the hooks (curl on macOS and Linux, `hooks/send.mjs` on Windows) and, through `bin/service.mjs`, the
-background service: launchd, a systemd user service, or a script in the Windows Startup folder.
+background service: launchd, a systemd user service, or a script in the Windows Startup folder. The same `install` merges
+Cursor's user hooks into `~/.cursor/hooks.json`: `hooks/cursor.mjs` reads Cursor's stdin JSON, `hooks/cursor-map.mjs` turns
+it into the Claude Code event shape (`session_id`, `cwd`, `Shell` → `Bash`, `StrReplace` → `Edit`), and posts it to `/event`.
+The server tags that session `agent: "cursor"` and keeps it until `SessionEnd` instead of the 10-minute hook-only timeout.
+`--no-cursor` skips the file; `uninstall` removes only those commands.
 
 Runtime state lives in `data/` (git-ignored): the access token, phone PIN, replay logs (7 days), usage sums (`otel/`, 30 days), totals, each project's working life (`tenure.json`), caches.
 

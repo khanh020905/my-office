@@ -43,6 +43,7 @@
 .av:has(.av-logo[data-agent="claude"]) { background: #F4EEE3; }
 .av:has(.av-logo[data-agent="gemini"]) { background: #FFFFFF; }
 .av:has(.av-logo[data-agent="codex"]) { background: #0F1013; }
+.av:has(.av-logo[data-agent="cursor"]) { background: #EDEDED; }
 .av:has(.av-logo) { box-shadow: inset 0 0 0 2.5px var(--c), inset 0 0 0 4px rgba(0, 0, 0, .25); }
 .av-st { position: absolute; right: -1px; bottom: -1px; width: 11px; height: 11px; border-radius: 50%; background: var(--faint); box-shadow: 0 0 0 2.5px var(--side); }
 .ri[data-status="work"] .av-st { background: var(--green); }
@@ -53,7 +54,8 @@
 .ri-main { min-width: 0; display: grid; gap: 2px; }
 .ri-top { display: flex; align-items: center; gap: 5px; min-width: 0; }
 .ri-name { font-weight: 600; font-size: .84rem; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.ri-proj { flex: none; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); font: 600 .62rem/1.25 var(--font); color: var(--muted); }
+.ri-proj, .ri-model { flex: none; max-width: 48%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, .06); border: 1px solid var(--line); font: 600 .62rem/1.25 var(--font); color: var(--muted); }
+.ri-model { max-width: 34%; }
 .ri-rc { color: var(--blue); display: grid; }
 .ri-rc svg { width: 12px; height: 12px; }
 .ri-doing { font-size: .74rem; color: var(--muted); min-width: 0; display: flex; align-items: center; gap: 5px; }

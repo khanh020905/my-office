@@ -16,7 +16,7 @@ import { openSession } from './session-drawer.js';
 import { closePlace } from '../interact/place-cards.js';
 import { exitFp, fp } from '../interact/first-person.js';
 import { t as tr } from '../../i18n/index.js';
-import { modelFamily } from '../../shared/model-name.js';
+import { modelFamily, modelLabel } from '../../shared/model-name.js';
 
 export let lite = false;
 let filter = 'all', query = '', head = null, tabs = null, permHost = null, listEl = null, emptyEl = null;
@@ -36,7 +36,7 @@ function nowOf(s) {
 }
 function matches(s) {
   if (!query) return true;
-  const hay = fold([dn(s), s.name, s.dir, s.git?.branch, s.lastPrompt].join(' '));
+  const hay = fold([dn(s), s.name, s.dir, s.git?.branch, s.lastPrompt, s.model].join(' '));
   return fold(query).split(/\s+/).filter(Boolean).every((w) => hay.includes(w));
 }
 
@@ -50,7 +50,7 @@ function row(s) {
   // under the name: its project (when the name isn't it already), branch, where it runs, and resting, whether its cache
   // is still warm (cheap to carry on); none of that, while working: the task it was given
   const proj = project(s), cache = st === 'rest' && s.cache ? cacheWords(s.cache, 'lite')?.text : '';
-  const bits = [proj !== dn(s) ? proj : '', s.git?.branch ? `${s.git.branch}${s.git.dirty ? ' •' : ''}` : '', s.origin, cache].filter(Boolean);
+  const bits = [proj !== dn(s) ? proj : '', modelLabel(s.model), s.git?.branch ? `${s.git.branch}${s.git.dirty ? ' •' : ''}` : '', s.origin, cache].filter(Boolean);
   sub.textContent = bits.length ? bits.join(' · ') : st !== 'rest' && s.lastPrompt ? `“${s.lastPrompt}”` : '';
   if (sub.textContent) main.append(sub);
   const doing = el('span', `v2-now${now.muted ? ' is-muted' : ''}${now.warn ? ' is-warn' : ''}`);

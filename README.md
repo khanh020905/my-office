@@ -53,8 +53,8 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 | Command | What it does |
 | --- | --- |
-| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. It also turns on Claude Code's own usage numbers (OpenTelemetry) for "What eats your plan", unless you already send them somewhere: see below. `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. `--no-otel` leaves telemetry off; `--no-otel-names` keeps the names of your own MCP servers, skills and agents hidden ("custom"). |
-| `uninstall` | Removes every My Office hook, the telemetry settings install added, and the background service, and keeps the rest of `settings.json`. |
+| `install [--service] [--lan] [--no-approve] [--no-status] [--no-otel] [--no-otel-names] [--no-cursor]` | Adds three kinds of hooks: event hooks, approval hooks, and a status line that reports your plan's usage. Your own status line keeps running inside it. It also turns on Claude Code's own usage numbers (OpenTelemetry) for "What eats your plan", unless you already send them somewhere: see below. It writes Cursor's user hooks too, so every local Agent chat shows up in the office (see below). `--service` runs the office in the background from login: launchd on macOS, a systemd user service on Linux, the Startup folder on Windows (no admin needed). `--lan` lets a phone on the same Wi-Fi watch. `--no-approve` leaves out the approval hooks. `--no-status` leaves your status line alone. `--no-otel` leaves telemetry off; `--no-otel-names` keeps the names of your own MCP servers, skills and agents hidden ("custom"). `--no-cursor` leaves `~/.cursor/hooks.json` alone. |
+| `uninstall` | Removes every My Office hook, including the Cursor user hooks install added, the telemetry settings install added, and the background service, and keeps the rest of `settings.json`. |
 | `doctor` | Checks each step and says what is missing and how to fix it. |
 | `start [--lan]` | Runs the server in this terminal (no launchd). |
 | `pin [--new]` | Shows the phone PIN; `--new` changes it and signs every phone out. |
@@ -62,6 +62,21 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 - Restart after changing the code: `launchctl kickstart -k gui/$(id -u)/com.my-office` (macOS) or
   `systemctl --user restart my-office` (Linux). `my-office doctor` prints the right command for your system.
 - Logs: `tail -f ~/.my-office/server.log` (from the source: `data/server.log`).
+
+### Cursor
+
+`install` also merges user hooks into `~/.cursor/hooks.json` (`%USERPROFILE%\.cursor\hooks.json` on Windows): one observe-only command per agent event, using the absolute path to `hooks/cursor.mjs`. Cursor runs them for every local Agent chat, on any model. The script renames Cursor's payload into the events Claude Code already posts to `POST /event`, so the office draws that chat as a person. The session list shows a Cursor mark and the model name. A chat that is already open appears on its next prompt or tool call, because `sessionStart` runs only when a conversation is created. Running `install` again does not add the commands twice. `uninstall` removes only the commands that point at `hooks/cursor.mjs` and leaves the rest of the file.
+
+The hook always prints `{}` and exits 0. If the office is closed, Cursor carries on. These hooks do not approve tools. Plan usage, context fill, and "What eats your plan" stay Claude Code only: Cursor does not send a status line or OpenTelemetry. A Cursor chat has no process file under `~/.claude/sessions`, so the person stays until Cursor sends `sessionEnd`. Tab completions are not sessions. Cloud agents appear only when Cursor runs these local hooks.
+
+| Cursor hook | Office event |
+| --- | --- |
+| `sessionStart` / `sessionEnd` | `SessionStart` / `SessionEnd` |
+| `beforeSubmitPrompt` | `UserPromptSubmit` |
+| `preToolUse` / `postToolUse` / `postToolUseFailure` | the same tool events (`Shell` is shown as a command, `StrReplace` as an edit) |
+| `subagentStart` / `subagentStop` | a subagent of the parent chat |
+| `stop` | `Stop`, or `StopFailure` when the turn errors |
+| `preCompact` | `PreCompact` |
 
 ## What's inside
 
@@ -533,7 +548,8 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 
 - **Everything stays on your Mac.** Hooks post to `127.0.0.1` in the background. If the office is not running, Claude
   Code carries on as normal. The stuck-loop hook is the one that waits for an answer, 0.3 s at most, and prints
-  nothing when the office is closed or slow, so it never holds Claude Code up because of the office.
+  nothing when the office is closed or slow, so it never holds Claude Code up because of the office. Cursor's hooks
+  do the same: they post to `127.0.0.1` and print `{}`, so a stopped office never blocks the agent.
 - **Secrets are masked.** Strings that look like passwords, tokens or API keys are masked before they are stored or
   shown.
 - **Plan usage** is read the way the IDE's Usage panel reads it:
