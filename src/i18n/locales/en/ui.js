@@ -182,7 +182,7 @@ export default {
   },
   photo: {
     label: 'Photo mode',
-    hint: 'Drag to turn · scroll to zoom · right-drag to move · P or Esc to leave',
+    hint: 'Drag to move · right-drag to turn · scroll to zoom where you point · P or Esc to leave',
     names: 'Names',
     mark: 'Logo',
     sizeTitle: 'Picture size',

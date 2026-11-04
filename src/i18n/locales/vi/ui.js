@@ -182,7 +182,7 @@ export default {
   },
   photo: {
     label: 'Chế độ chụp ảnh',
-    hint: 'Kéo để xoay · cuộn để phóng to · kéo chuột phải để dời · P hoặc Esc để thoát',
+    hint: 'Kéo để dời · kéo chuột phải để xoay · cuộn để phóng to chỗ con trỏ · P hoặc Esc để thoát',
     names: 'Tên',
     mark: 'Logo',
     sizeTitle: 'Cỡ ảnh',
