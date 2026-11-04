@@ -123,3 +123,30 @@
 /* in the editor's side bar: its own top line already names it */
 :root[data-embed="ide"] .pn-head { padding-block: 7px; }
 @media (prefers-reduced-motion: reduce) { .pn-btn, .pn-sess { transition: none; } }
+
+/* a question or a plan answered here */
+.pn-perm { min-width: 0; }
+.pn-q-block { display: grid; gap: 5px; min-width: 0; }
+.pn-q-top { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.pn-chip { padding: 1px 7px; border-radius: 999px; background: var(--card-3); font-size: .64rem; font-weight: 700; color: var(--ink); }
+.pn-q-hint { font-size: .64rem; color: var(--muted); }
+.pn-q-text { margin: 0; font-size: .76rem; line-height: 1.4; color: var(--ink); overflow-wrap: anywhere; }
+.pn-opts { display: grid; gap: 4px; }
+.pn-opt { all: unset; box-sizing: border-box; display: grid; gap: 1px; padding: 6px 9px; border-radius: 8px; background: var(--card-2); border: 1px solid var(--line-2); cursor: pointer; min-width: 0; overflow-wrap: anywhere; }
+.pn-opt b { font-size: .74rem; font-weight: 700; color: var(--ink); }
+.pn-opt small { font-size: .66rem; line-height: 1.35; color: var(--muted); }
+.pn-opt:hover { background: var(--card); }
+.pn-opt:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.pn-opt[aria-pressed="true"] { border-color: var(--green); box-shadow: inset 0 0 0 1px var(--green); }
+.pn-other { box-sizing: border-box; width: 100%; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line-2); background: rgba(0, 0, 0, .25); color: var(--ink); font: inherit; font-size: .72rem; }
+.pn-other:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.pn-plan { max-height: 11.5em; overflow: auto; padding: 6px 8px; border-radius: 7px; background: rgba(0, 0, 0, .3); font-size: .7rem; line-height: 1.5; overflow-wrap: anywhere; min-width: 0; }
+.pn-plan h4 { margin: .5em 0 .2em; font-size: .76rem; }
+.pn-plan p { margin: .3em 0; }
+.pn-plan ul { margin: .3em 0; padding: 0; list-style: none; }
+.pn-plan li { position: relative; padding-left: 1.1em; }
+.pn-plan li::before { content: '•'; position: absolute; left: 0; color: var(--muted); }
+.pn-plan li[data-n]::before { content: attr(data-n); font-size: .9em; }
+.pn-plan pre { margin: .3em 0; padding: 4px 6px; background: rgba(0, 0, 0, .3); border-radius: 5px; white-space: pre-wrap; font: 500 .66rem/1.5 var(--mono); }
+.pn-plan code { font: 500 .66rem var(--mono); }
+.pn-plan hr { border: 0; border-top: 1px solid var(--line-2); }
