@@ -192,6 +192,7 @@ engine switches to demo mode and talks to no API.
 | `ui/image-view.js` | 28 | Images in the feed: a session that read, wrote or edited an image gets a thumbnail on that line (activity.js), and a click opens it here, large, over the office (the server serves it by id: GET /api/image). |
 | `ui/lite.js` | 153 | The 2D view: every session as a row, no 3D (a page that opens in it builds no 3D world until asked, core/world-boot.js; switched to later, the office keeps a frame a second behind it). |
 | `ui/look-switch.js` | 22 | Switching the character look. |
+| `ui/mac-approve.js` | 23 | Settings → More: "Approve from the Mac's notifications" (on by default; kept by the server, data/prefs.json). |
 | `ui/mac-drawer.js` | 684 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/models.js` | 44 | "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the model a Claude session runs on, the one its subagents run on, always that one or only when Claude doesn't pick, and the note asking Claude to split big tasks. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |

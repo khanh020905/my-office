@@ -45,6 +45,12 @@ export default {
     readOnly: "~/.claude/settings.json can't be read here (it may have comments): set the model there by hand.",
   },
   // Settings → More: the stuck-loop breaker (server/loops.mjs)
+  // Settings → More: approve right from the Mac's notifications (ui/mac-approve.js, server/mac-hold.mjs)
+  macApprove: {
+    title: "Approve from the Mac's notifications",
+    on: "Approve from the Mac's notifications",
+    note: "While you are at the Mac (a key or the mouse touched lately) and the menu bar icon is running, a request from Claude is held for up to 20 seconds so you can press Allow / Deny on its notification. A risky command only gets Deny. Turn it off and Claude asks in the IDE straight away, as before; so it does when you are away.",
+  },
   loop: {
     title: 'Stuck loops',
     on: 'Break stuck loops',
