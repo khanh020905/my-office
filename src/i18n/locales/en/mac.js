@@ -48,6 +48,7 @@ export default {
     title: 'Claude plan usage limits',
     account: 'The Claude Code account signed in on this {mac} (switch with /login and the office reads it again)',
     loading: 'Reading the usage limits from your Claude Code account…',
+    renew: 'Renew',
     justUpdated: 'just updated',
     resets: 'resets {when}',
     noneOnPlan: 'not on the {plan} plan',
