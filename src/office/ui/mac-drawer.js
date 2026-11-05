@@ -63,10 +63,13 @@ function renderOthers(rows) {
   for (const o of state.limits?.others || []) {
     const ws = liveOf(o), acc = [o.account?.plan, o.account?.org].filter(Boolean).join(' · ');
     const block = acctBlock(o.name, o.label, acc, o.until); rows.append(block);
-    if (!ws.length) { block.append(el('small', 'plan-other-note', o.note || tr('mac.plan.loading'))); continue; }
+    // its sign-in token ran out (an account not used for a while): renewed by one quiet Claude Code run (server/index.mjs refreshLogin)
+    const renew = () => { const b = addButton(tr('mac.plan.renew'), '', () => { b.disabled = true; post('/api/accounts/renew', { name: o.name }); }); b.disabled = !!o.renewing; return b; };
+    if (!ws.length) { block.append(el('small', 'plan-other-note', o.note || tr('mac.plan.loading'))); if (o.expired) block.append(renew()); continue; }
     for (const w of ws) limitRow(block, w);
     // Anthropic not answering for now (it limits how often it's asked): the last reading stays, with when it was read
     if (o.note) block.append(el('small', 'plan-other-note', o.at ? tr('mac.plan.readAt', { time: hhmm(o.at), note: o.note }) : o.note));
+    if (o.expired) block.append(renew());
   }
   if (state.limits?.others?.length) rows.append(autoRow());
   // in the order the user dragged them into (the server's: switching goes down it), the switch after them

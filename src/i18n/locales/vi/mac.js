@@ -45,6 +45,7 @@ export default {
     title: 'Hạn mức gói Claude',
     account: 'Tài khoản Claude Code đang đăng nhập trên máy này (đổi bằng /login, văn phòng tự đọc lại)',
     loading: 'Đang đọc hạn mức từ tài khoản Claude Code…',
+    renew: 'Làm mới',
     justUpdated: 'vừa cập nhật',
     resets: 'đặt lại {when}',
     noneOnPlan: 'không có ở gói {plan}',

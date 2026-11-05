@@ -171,6 +171,9 @@ export default {
     httpError: 'Anthropic trả lỗi {status}.',
     offline: 'Không gọi được Anthropic (mất mạng?).',
     newAccount: 'Đang đọc hạn mức của tài khoản vừa đăng nhập…',
+    tokenExpired: 'Token đăng nhập đã hết hạn (tài khoản lâu không dùng). Văn phòng tự làm mới vài tiếng một lần, hoặc bấm Làm mới.',
+    renewing: 'Đang làm mới token đăng nhập…',
+    renewFailed: 'Chưa làm mới được token: mở Claude Code bằng tài khoản này một lần, hoặc đăng nhập lại.',
   },
   api: {
     approveOnMac: 'Chỉ duyệt được trên {mac}.',

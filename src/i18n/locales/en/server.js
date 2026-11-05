@@ -182,6 +182,9 @@ export default {
     httpError: 'Anthropic returned error {status}.',
     offline: "Couldn't reach Anthropic (offline?).",
     newAccount: 'Reading the limits of the account you just signed in to…',
+    tokenExpired: 'Its sign-in token has run out (the account was not used for a while). The office renews it every few hours, or press Renew.',
+    renewing: 'Renewing its sign-in token…',
+    renewFailed: "Couldn't renew its sign-in token: open Claude Code with this account once, or sign in again.",
   },
   api: {
     approveOnMac: 'Approvals only work on the {mac}.',

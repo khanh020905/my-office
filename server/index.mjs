@@ -1878,7 +1878,7 @@ setInterval(async () => {
 }, 30 * 60e3).unref();
 function othersOut() {
   return otherDirs.map((d) => { const o = others.get(d) || {}, slug = accName(d);
-    return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
+    return { name: slug, label: acctLabel(slug), until: blockedUntil(o.windows, hits.get(slug)), at: o.at || 0, account: o.account || null, expired: !!o.expired, renewing: renewing.has(d), windows: (o.windows || []).map((w) => ({ ...w, label: winLabel(w) })), note: o.note ? tr(...o.note) : '' }; });
 }
 const otherBusy = new Map();
 const OTHERS_FILE = path.join(DATA_DIR, 'others-usage.json');
@@ -1887,15 +1887,48 @@ function saveOthers() {
   fsp.writeFile(OTHERS_FILE, JSON.stringify(keep)).catch(() => {});
 }
 try { for (const [d, o] of Object.entries(JSON.parse(fs.readFileSync(OTHERS_FILE, 'utf8')))) others.set(d, { ...o }); } catch { /* none yet */ }
+/* An account nobody has used for a while: its sign-in token has run out (Claude Code renews it only while it runs), and
+   Anthropic's usage endpoint answers a dead token with 429 "rate limited", not 401. So no request goes out with a dead
+   token: Claude Code itself is run once on that account (Haiku, one word, no hooks, no MCP servers, nothing saved, no
+   tools: a few seconds and a sliver of that account's usage), which renews the token the way it always does, and then
+   the usage is read. By itself at most every 6 hours per account; the plan card's "Làm mới" any time. */
+const RENEW_EVERY = 6 * 3600e3;
+const dead = (login) => !!login?.expiresAt && login.expiresAt < Date.now();
+const renewing = new Map();   // folder -> its run
+function refreshLogin(dir) {
+  if (renewing.has(dir)) return renewing.get(dir);
+  const bin = findClaude();
+  if (!bin) return Promise.resolve(false);
+  const cwd = path.join(DATA_DIR, 'renew');
+  try { fs.mkdirSync(cwd, { recursive: true }); } catch { /* the run still goes */ }
+  const run = new Promise((resolve) => {
+    const child = execFile(bin.file, ['-p', '--model', 'haiku', '--no-session-persistence', '--strict-mcp-config', '--tools', '', '--settings', '{"disableAllHooks":true}', 'Reply with the single word: ok'],
+      { cwd, env: { ...process.env, CLAUDE_CONFIG_DIR: dir }, timeout: 90_000, maxBuffer: 1 << 20 }, (err) => resolve(!err));
+    child.stdin?.end();   // (-p reads stdin too: nothing comes)
+  }).then((ok) => { fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} renew login ${accName(dir)} -> ${ok ? 'ok' : 'failed'}\n`).catch(() => {}); return ok; })
+    .finally(() => renewing.delete(dir));
+  renewing.set(dir, run);
+  return run;
+}
 function fetchOtherUsage(dir, force = false) {
   if (process.env.OFFICE_USAGE === '0') return Promise.resolve();
   const o = others.get(dir) || {}; others.set(dir, o);
   // the endpoint rate-limits each account: every 5 minutes at most (a forced read, when one runs out, still goes), and
   // after a 429 Anthropic's own wait or 5, 10, then up to 30 minutes; the last reading stays on show meanwhile
-  if (Date.now() < (o.wait || 0) || (!force && o.at && Date.now() - o.at < 290_000) || otherBusy.has(dir)) return Promise.resolve();
+  if ((!force && o.at && Date.now() - o.at < 290_000) || otherBusy.has(dir)) return Promise.resolve();
   const job = (async () => {
-    const login = await OS.claudeLogin(dir);
+    let login = await OS.claudeLogin(dir);
     if (!login?.accessToken) { o.note = ['server.usage.keychain']; return; }
+    if (dead(login)) {   // (see refreshLogin: a dead token gets a 429 that is not a limit)
+      o.expired = true;
+      if (!force && Date.now() - (o.renewAt || 0) < RENEW_EVERY) { o.note = ['server.usage.tokenExpired']; return; }
+      o.renewAt = Date.now(); o.note = ['server.usage.renewing']; broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
+      const ran = await refreshLogin(dir);
+      login = await OS.claudeLogin(dir);
+      if (!ran || !login?.accessToken || dead(login)) { o.note = ['server.usage.renewFailed']; return; }
+      o.expired = false; o.wait = 0; o.backoff = 0;
+    }
+    if (Date.now() < (o.wait || 0)) return;   // (Anthropic's own wait after a 429: the last note stays)
     try {
       const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { Authorization: `Bearer ${login.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
       if (r.status === 429) { o.backoff = Math.min(30, (o.backoff || 2.5) * 2); const ms = Math.max(o.backoff * 60e3, (Number(r.headers.get('retry-after')) || 0) * 1000); o.wait = Date.now() + ms; o.note = ['server.usage.rateLimited', { n: Math.ceil(ms / 60e3) }]; return; }
@@ -2880,11 +2913,18 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
-  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order|move))?$/.test(url.pathname)) {   // (this computer only, from this page)
+  if (req.method === 'POST' && /^\/api\/accounts(\/(code|cancel|login|rename|use|auto|order|move|renew))?$/.test(url.pathname)) {   // (this computer only, from this page)
     const sameOrigin = sameOriginOf(req);
     if (!isLoopback(req) || !sameOrigin || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.account.onMac') }); return; }
     readJson(req).then(async (b) => {
       if (url.pathname === '/api/accounts') { json(res, 200, await prepareAccount(b?.name)); return; }
+      if (url.pathname === '/api/accounts/renew') {   // { name }: its dead token renewed now, then its usage read (refreshLogin)
+        const dir = dirOfSlug(String(b?.name || ''));
+        if (!dir) { json(res, 404, { ok: false }); return; }
+        fetchOtherUsage(dir, true);
+        json(res, 200, { ok: true });
+        return;
+      }
       if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ ...(b?.on !== undefined && { auto: !!b.on }), ...(b?.move !== undefined && { move: !!b.move }) })); return; }
       if (url.pathname === '/api/accounts/move') {   // { id: the session, to: the account ('' = the main one) }
         const s = [...sessions.values()].find((x) => x.id === String(b?.id || '')), to = b?.to ? slugOf(b.to) : '';
