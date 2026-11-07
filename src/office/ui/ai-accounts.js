@@ -216,20 +216,20 @@ const tight = (ws) => (ws || []).reduce((a, w) => (!a || w.pct > a.pct ? w : a),
 // (a tab is narrow: "out until 13:10", or with the day when it isn't today)
 const outShort = (t) => tr('ai.tab.out', { when: new Date(t).toDateString() === new Date().toDateString() ? hhmm(t) : `${tr('mac.plan.weekdays', null, 'list')[new Date(t).getDay()]} ${hhmm(t)}` });
 // a tab's line: [text, level] ('off': grey)
-function claudeLine() {
+export function claudeLine() {
   const until = state.limits?.until, top = tight(liveWindows());
   if (until > Date.now()) return [outShort(until), 'critical'];
   if (!top) return [state.limitsNote ? tr('mac.plan.unread') : tr('ai.tab.reading'), 'off'];
   return [`${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%`, level(top.pct)];
 }
-function codexLine(c) {
+export function codexLine(c) {
   const a = c.list.find((x) => x.id === c.now);
   if (!a) return [tr(c.seat === 'apiKey' ? 'ai.tab.apiKey' : 'ai.tab.signedOut'), 'off'];
   if (a.until) return [outShort(a.until), 'critical'];
   const top = tight(a.windows);
   return top ? [`${top.key === 'session' ? tr('mac.plan.fiveHour') : tr('mac.plan.week')} ${Math.round(top.pct)}%`, level(top.pct)] : [tr('ai.tab.reading'), 'off'];
 }
-function agLine(g) {
+export function agLine(g) {
   const a = g.list.find((x) => x.id === g.now);
   if (g.pending) return [tr('ai.tab.pending'), 'warn'];
   if (!a) return [tr('ai.tab.signedOut'), 'off'];

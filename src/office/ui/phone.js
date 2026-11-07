@@ -1,7 +1,8 @@
 // The office on a phone: an app-like layout for small screens, upright or held sideways. <html> gets .is-phone and
-// phone.css lays the page out: a compact top bar, the office filling the screen, and a tab bar at the bottom (Văn phòng ·
-// Phiên · Hoạt động · Duyệt · Chat) whose tabs open the session list, the activity, the waiting approvals and the team
-// chat as full-screen sheets over the office; "Văn phòng" closes whatever is open. Approvals also float above the tab
+// phone.css lays the page out: a compact top bar, the office filling the screen, and a tab bar at the bottom (Tổng quan ·
+// Phiên · Hoạt động · Duyệt · Chat) whose tabs open the home (ui/phone-home.js), the session list, the activity, the
+// waiting approvals and the team chat as full-screen sheets over the office; a second tap on the open tab closes it
+// (the office shows again; in the 2D view the home is the screen, so it stays: the 3D | 2D switch is the way to 3D). Approvals also float above the tab
 // bar as soon as one comes in, with buttons big enough for a thumb. The counts on the tabs follow the page: the waiting
 // sessions, the approvals in the stack, the chat's unread badge (watched, so nothing else has to call in here).
 import { state } from '../core/state.js';
@@ -11,14 +12,16 @@ import { closeSession, drM, drS } from './session-drawer.js';
 import { closeMac } from './mac-drawer.js';
 import { closeBurn } from './burn.js';
 import { togglePlan, togglePop } from './settings.js';
+import { setHome, setupHome } from './phone-home.js';
 import { t as tr } from '../../i18n/index.js';
 
 // a phone upright, or sideways (wide but short, with a finger for a pointer)
 const PHONE = '(max-width: 720px), (max-height: 520px) and (hover: none) and (pointer: coarse)';
-const TABS = [['office', 'home'], ['sessions', 'users'], ['activity', 'list'], ['approve', 'alert'], ['chat', 'chat']];
+const TABS = [['home', 'home'], ['sessions', 'users'], ['activity', 'list'], ['approve', 'alert'], ['chat', 'chat']];
 let mq, bar, tab = 'office', emptyEl;
 export const isPhone = () => !!mq?.matches;
 const chatOpen = () => !!$('zchat') && !$('zchat').hidden;
+const in2d = () => document.body.classList.contains('is-lite');
 
 // everything that opens over the office, shut
 function closeSheets(but = '') {
@@ -48,14 +51,17 @@ function badge(name, n, tone = '') {
 function sync() {
   if (!bar) return;
   if (tab === 'chat' && !chatOpen()) tab = 'office';   // (closed from inside: its back button)
+  if (tab === 'office' && in2d() && mq.matches) tab = 'home';   // (the 2D view has no office to show: the home is its screen)
+  setHome(tab === 'home' && mq.matches);
   for (const b of bar.querySelectorAll('[data-tab]')) b.setAttribute('aria-selected', String(b.dataset.tab === tab));
   const waiting = $('perm-stack')?.children.length || 0;
   badge('approve', waiting, 'red');
   badge('sessions', Number($('st-wait')?.textContent) || 0, 'amber');
   const cb = $('chat-badge'); badge('chat', cb && !cb.hidden ? Number(cb.textContent.replace(/\D/g, '')) || 1 : 0, 'red');
   emptyEl.hidden = !(tab === 'approve' && !waiting);
-  state.covered = tab === 'sessions' || tab === 'activity' || tab === 'chat';   // (the office under a full-screen sheet: loop.js barely draws it)
+  state.covered = tab === 'home' || tab === 'sessions' || tab === 'activity' || tab === 'chat';   // (the office under a full-screen sheet: loop.js barely draws it)
   document.documentElement.classList.toggle('ph-has-perms', waiting > 0);
+  document.documentElement.classList.toggle('ph-home-open', tab === 'home');
 }
 // a close button at the top of a sheet that has none of its own
 function closer(host) {
@@ -81,6 +87,7 @@ export function setup() {
     b.addEventListener('click', () => showTab(name));
     bar.append(b);
   }
+  setupHome();
   emptyEl = el('div', 'ph-empty'); emptyEl.hidden = true;
   emptyEl.append(icon('check'), el('b', null, tr('ui.phone.approveEmpty')), el('span', null, tr('ui.phone.approveEmptySub')));
   $('app').append(bar, emptyEl);
@@ -89,6 +96,10 @@ export function setup() {
   const watch = new MutationObserver(() => sync());
   for (const id of ['perm-stack', 'st-wait', 'chat-badge']) { const n = $(id); if (n) watch.observe(n, { childList: true, characterData: true, subtree: true, attributes: true }); }
   new MutationObserver(() => { if (!$('zchat')) return; watch.observe($('zchat'), { attributes: true, attributeFilter: ['hidden'] }); sync(); }).observe($('app'), { childList: true });
+  // 2D switched on or off: the home is its screen; to 3D, the home gives way to the office
+  let was2d = in2d();
+  new MutationObserver(() => { const now = in2d(); if (now === was2d) return; was2d = now; if (!mq.matches) return; if (now) showTab('home'); else if (tab === 'home') { tab = 'office'; closeSheets(); sync(); } }).observe(document.body, { attributes: true, attributeFilter: ['class'] });
+  document.addEventListener('click', (e) => { if (mq.matches && tab === 'home' && !in2d() && e.target.closest?.('[data-view="3d"]')) { tab = 'office'; sync(); } });
   mq.addEventListener('change', apply);
   apply();
 }

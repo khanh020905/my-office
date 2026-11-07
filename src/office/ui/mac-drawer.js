@@ -469,7 +469,7 @@ function holders(s) {
   if (rest > total * 0.01) shown.push({ key: 'other', name: tr('mac.held.other'), mem: rest, slot: 0 });
   return { total, groups: shown };
 }
-function verdictKey(s) {
+export function verdictKey(s) {
   const swap = s.mem.swapUsed;
   if (s.mem.pressure === 'critical') return swap > GB ? 'critical' : 'squeeze';
   if (s.mem.pressure === 'warn') return swap > GB ? 'swap' : 'squeeze';

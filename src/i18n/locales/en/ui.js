@@ -119,7 +119,13 @@ export default {
   // the tab bar and sheets on a phone (ui/phone.js)
   phone: {
     tabs: 'Sections',
-    office: 'Office',
+    home: 'Overview',
+    homeNeeds: 'Needs you',
+    homeNothing: 'Nothing needs you right now',
+    homeWorking: 'Working now',
+    homeIdle: '{n} sessions resting, none running',
+    homePlans: 'Plan limits',
+    homeMac: 'Mac',
     sessions: 'Sessions',
     activity: 'Activity',
     approve: 'Approve',
