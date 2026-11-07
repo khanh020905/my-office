@@ -13,6 +13,7 @@ self.addEventListener('push', (e) => {
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
   const url = new URL(e.notification.data?.url || '/', self.location.origin).href;
+  if (new URL(url).origin !== self.location.origin) { e.waitUntil(self.clients.openWindow(url)); return; }   // (the tunnel's new address)
   e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
     const open = list.find((c) => new URL(c.url).origin === self.location.origin);
     if (open) { open.postMessage({ k: 'open', url }); return open.focus(); }

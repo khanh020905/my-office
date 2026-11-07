@@ -6,6 +6,9 @@ export default {
     downloadFailed: "Couldn't download cloudflared (status {status}). Check the network and turn it on again.",
     ready: 'Away from home: {url}',
     dropped: 'The tunnel dropped, connecting again…',
+    revoked: 'Cloudflare took the old address back, getting a new one…',
+    newTitle: 'The office has a new address',
+    newBody: 'Cloudflare took the old address back. The new one: {url}',
   },
   move: {
     notOpen: 'This session is no longer open.',

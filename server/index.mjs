@@ -3358,16 +3358,37 @@ async function listenTunnel() {
   await new Promise((resolve, reject) => { srv.once('error', reject); srv.listen(TUNNEL_PORT, '127.0.0.1', resolve); });
   tunnel.srv = srv; tunnel.port = TUNNEL_PORT;
 }
+// Cloudflare can take a quick tunnel back while cloudflared lives on, retrying for ever: its log then says "Tunnel not
+// found" after its last "Registered tunnel connection" (seen 04/11/2026: three days of an address that no longer existed,
+// shown as on). Read from the end of its log, a few KB.
+function tunnelRevoked() {
+  let tail = '';
+  try {
+    const fd = fs.openSync(TUNNEL_LOG, 'r'), size = fs.fstatSync(fd).size, n = Math.min(size, 8192), buf = Buffer.alloc(n);
+    fs.readSync(fd, buf, 0, n, size - n); fs.closeSync(fd); tail = buf.toString('utf8');
+  } catch { return false; }
+  const gone = tail.lastIndexOf('Tunnel not found');
+  return gone >= 0 && gone > tail.lastIndexOf('Registered tunnel connection');
+}
 function tunnelUp(pid, url) {
+  // a new address after Cloudflare took the old one back: to the phones that get notifications (their link is dead)
+  if (tunnel.revoked && tunnel.revoked !== url) pushOut({ title: tr('server.tunnel.newTitle'), body: tr('server.tunnel.newBody', { url }), tag: 'tunnel', url });
+  tunnel.revoked = '';
   Object.assign(tunnel, { pid, url, host: new URL(url).host, state: 'on', tries: 0, error: '' });
   try { fs.writeFileSync(TUNNEL_FILE, JSON.stringify({ pid, url, port: tunnel.port })); } catch { /* read-only data */ }
   console.log(`[my-office] ${tr('server.tunnel.ready', { url })}`);
   clearInterval(tunnel.watch);
   tunnel.watch = setInterval(() => {   // (it may drop: the network went away, Cloudflare closed it; again, later each time)
+    if (tunnel.pid && alive(tunnel.pid) && tunnelRevoked()) {   // (taken back but still running: stopped here, started again below)
+      tunnel.revoked = tunnel.url;
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} tunnel taken back by Cloudflare ${tunnel.url} -> a new address\n`).catch(() => {});
+      try { process.kill(tunnel.pid, 'SIGTERM'); } catch { /* gone */ }
+      return;
+    }
     if (!tunnel.pid || alive(tunnel.pid)) return;
     clearInterval(tunnel.watch); Object.assign(tunnel, { pid: 0, url: '', host: '' }); fs.rmSync(TUNNEL_FILE, { force: true });
     if (!prefs.get('tunnel')) { tunnel.state = 'off'; return; }
-    tunnel.state = 'error'; tunnel.error = tr('server.tunnel.dropped');
+    tunnel.state = 'error'; tunnel.error = tr(tunnel.revoked ? 'server.tunnel.revoked' : 'server.tunnel.dropped');
     if (++tunnel.tries <= 6) setTimeout(() => { if (prefs.get('tunnel')) startTunnel(); }, Math.min(60_000, 3000 * 2 ** tunnel.tries)).unref();
   }, 5000);
   tunnel.watch.unref();
