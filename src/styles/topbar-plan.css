@@ -124,6 +124,8 @@
 .acct-warn { font-size: .64rem; line-height: 1.45; color: var(--amber); }
 .acct-move { display: flex; align-items: flex-start; gap: 7px; font-size: .66rem; line-height: 1.45; color: var(--ink); cursor: pointer; }
 .acct-move input { flex: none; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
+.acct-move[hidden] { display: none; }
+.acct-resume { margin-left: 20px; }   /* (under "move": it only follows one) */
 @media (prefers-reduced-motion: reduce) { .acct-knob, .acct-knob::after, .acct-use, .acct-pen { transition: none; } }
 /* the other AI tools' accounts (ai-accounts.js): Codex, Antigravity IDE, a section each under Claude's */
 .plan-ai { display: grid; gap: 12px; margin-top: 12px; min-width: 0; }

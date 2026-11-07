@@ -33,6 +33,7 @@ import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
 import { steerable, inboundFrom, isSocket, deliver } from './steer.mjs';
+import { createAutoResume } from './auto-resume.mjs';
 import { createRewriter } from './rewrite.mjs';
 import { createPush } from './push.mjs';
 import { SHOT_ASK, shoot, shotsIn } from './shots.mjs';
@@ -2228,14 +2229,16 @@ function setEditorWrapper(on) {
   });
 }
 function autoOut() {
-  return { on: !!prefs.get('autoSwitch'), move: prefs.get('autoMove') !== false, pick: pickSlug(), order: orderOf(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
+  return { on: !!prefs.get('autoSwitch'), move: prefs.get('autoMove') !== false, resume: prefs.get('autoResume') !== false, pick: pickSlug(), order: orderOf(), now: nowSlug(), editors: editorsNow, script: SWITCH_FILE, alias: switchAlias, win: process.platform === 'win32' };
 }
 // the card's switch, "use this one" (it goes to the top) and the order dragged into place: the editors' script goes in
 // while switching is on, the top account isn't the main one or a moved conversation is still to start again, and out
-// again after. move: whether the conversations open on an account that runs out move too (on unless turned off)
-function setSwitch({ auto, pick, order, move } = {}) {
+// again after. move: whether the conversations open on an account that runs out move too (on unless turned off);
+// resume: whether a moved one then goes on by itself on the new account (server/auto-resume.mjs; on unless turned off)
+function setSwitch({ auto, pick, order, move, resume } = {}) {
   if (auto !== undefined) prefs.set('autoSwitch', auto || undefined);
   if (move !== undefined) prefs.set('autoMove', move ? undefined : false);
+  if (resume !== undefined) prefs.set('autoResume', resume ? undefined : false);
   if (pick !== undefined) order = [pick, ...orderOf().filter((s) => s !== pick)];
   if (order !== undefined) { prefs.set('accountOrder', order); prefs.set('accountPick', undefined); }
   const on = switching() || pinned().length > 0;
@@ -2299,6 +2302,9 @@ async function moveNow(s, to, why) {
   broadcast({ k: 'sess', s: pub(s) });
   return { ok: true, name, to: acctShown(to), message: tr('server.move.done', { name, to: acctShown(to) }) };
 }
+// a moved conversation going on by itself on the new account (server/auto-resume.mjs)
+const autoResume = createAutoResume({ findClaude, dirOfSlug, prefs, pinDir: PIN_DIR, spawn, prompt: () => tr('server.move.resumePrompt'),
+  log: (msg) => fsp.appendFile(ACTION_LOG, msg).catch(() => {}) });
 // switching on: the editor's conversations resting on an account out for a while (not a short rate limit) move to the
 // one new sessions start on now, if it has room. Called a few seconds after the account ran out (the session that
 // hit the limit needs a moment to rest), and once more a little later for one that was still finishing.
@@ -2309,7 +2315,7 @@ async function autoMove(slug) {
   for (const s of [...sessions.values()]) {
     if (acctOf(s) !== slug || s.entry !== 'claude-vscode' || s.status !== 'rest' || s.parked || !s.pid) continue;
     const r = await moveSession(s, to, 'auto');
-    if (r.ok) moved.push(r.name);
+    if (r.ok) { moved.push(r.name); autoResume.resumeSession(s, to); }   // (and on with it there, unless turned off)
   }
   if (moved.length) broadcast({ k: 'acctmove', names: moved, from: acctShown(slug), to: acctShown(to) });
 }
@@ -2931,7 +2937,14 @@ const server = http.createServer((req, res) => {
         json(res, 200, { ok: true });
         return;
       }
-      if (url.pathname === '/api/accounts/auto') { json(res, 200, setSwitch({ ...(b?.on !== undefined && { auto: !!b.on }), ...(b?.move !== undefined && { move: !!b.move }) })); return; }
+      if (url.pathname === '/api/accounts/auto') {
+        json(res, 200, setSwitch({
+          ...(b?.on !== undefined && { auto: !!b.on }),
+          ...(b?.move !== undefined && { move: !!b.move }),
+          ...(b?.resume !== undefined && { resume: !!b.resume }),
+        }));
+        return;
+      }
       if (url.pathname === '/api/accounts/move') {   // { id: the session, to: the account ('' = the main one) }
         const s = [...sessions.values()].find((x) => x.id === String(b?.id || '')), to = b?.to ? slugOf(b.to) : '';
         json(res, 200, s ? await moveSession(s, to) : { ok: false, message: tr('server.move.notOpen') });
