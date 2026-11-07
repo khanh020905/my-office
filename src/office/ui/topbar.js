@@ -42,7 +42,30 @@ let pmTab = null;              // the way in shown: 'home' | 'away' (null: the t
 async function loadTunnel() {
   tun = await fetch('/api/tunnel').then((r) => r.json()).catch(() => null);
   clearTimeout(tunPoll);
-  if (tun && ['download', 'starting'].includes(tun.state) && !$('phone-modal').hidden) tunPoll = setTimeout(() => loadTunnel().then(renderPhone), 1500);
+  const setting = tun?.domain && !['done', 'error'].includes(tun.domain.state);   // (a fixed address being set up)
+  if (tun && (['download', 'starting'].includes(tun.state) || setting) && !$('phone-modal').hidden) tunPoll = setTimeout(() => loadTunnel().then(renderPhone), setting ? 2000 : 1500);
+}
+// a fixed address on your own domain (a named Cloudflare tunnel, server/index.mjs setTunnelDomain): in use, being set up,
+// or a box for the domain
+function fixedBox() {
+  const box = el('div', 'pm-fixed'), d = tun?.domain;
+  box.append(el('b', 'pm-fixed-h', tr('topbar.phone.fixedTitle')));
+  const set = async (host) => { const r = await post('/api/tunnel/domain', { host }); if (!r?.ok && r?.message) toast(r.message); await loadTunnel(); renderPhone(); };
+  if (d && !['done', 'error'].includes(d.state)) { box.append(el('p', 'muted pm-wait', tr(`topbar.phone.fixedStep.${d.state}`, { host: d.host }))); return box; }
+  if (tun?.fixed) {
+    const drop = el('button', 'btn btn--sm', tr('topbar.phone.fixedDrop')); drop.type = 'button'; drop.addEventListener('click', () => set(''));
+    box.append(el('p', 'muted pm-note', tr('topbar.phone.fixedOn')), drop);
+    return box;
+  }
+  const form = el('form', 'pm-fixed-form'), field = el('input', 'pm-fixed-in'), go = el('button', 'btn btn--sm btn--confirm', tr('topbar.phone.fixedUse'));
+  field.type = 'text'; field.autocomplete = 'off'; field.spellcheck = false; field.placeholder = tr('topbar.phone.fixedPlaceholder'); field.setAttribute('aria-label', tr('topbar.phone.fixedTitle'));
+  field.addEventListener('keydown', (e) => e.stopPropagation());
+  go.type = 'submit';
+  form.addEventListener('submit', (e) => { e.preventDefault(); if (field.value.trim()) { go.disabled = true; set(field.value); } });
+  form.append(field, go);
+  box.append(el('p', 'muted pm-note', tr('topbar.phone.fixedHint')), form);
+  if (d?.state === 'error') box.append(el('p', 'pm-err', d.note));
+  return box;
 }
 // an address to open: as text you can select, and a button that copies it
 function urlRow(url) {
@@ -89,6 +112,7 @@ export function renderPhone() {
     else if (tun.state === 'on' && tun.url) conn.append(where(tun.url, tun.url, tr('topbar.phone.tunOn'), tr('topbar.phone.tunNote')));
     else if (tun.state === 'error') conn.append(el('p', 'pm-err', tr('topbar.phone.tunError', { error: tun.error || '' })));
     else conn.append(el('p', 'muted pm-wait', tr(tun.state === 'download' ? 'topbar.phone.tunDownload' : 'topbar.phone.tunStarting')));
+    if (tunOn) conn.append(fixedBox());
     // the Mac kept awake while it's on (the power adapter only): what that means right now
     if (tunOn && tun.awake) conn.append(el('p', `pm-awake${tun.awake.ac === false ? ' is-battery' : ''}`, tr(tun.awake.ac === false ? 'topbar.phone.awakeBattery' : 'topbar.phone.awakeOn')));
   }
