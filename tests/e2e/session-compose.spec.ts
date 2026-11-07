@@ -29,7 +29,9 @@ test('a session page on a phone: one line of chips, a box that writes to the ses
   await page.route(/\/api\/tasks(\?.*)?$/, (r) => { if (r.request().method() === 'POST') bodies.push(r.request().postDataJSON()); return r.continue(); });
   await page.goto('/');
   await expect(page.locator('html')).toHaveClass(/is-phone/, { timeout: 60_000 });
-  await page.locator('#lite .v2-row', { hasText: 'compose-proj' }).first().click();
+  // (on a phone the sessions are the "Phiên" tab's list: the 2D list makes way for the Tổng quan sheet)
+  await page.locator('.ph-tabs .ph-tab').nth(1).click();
+  await page.locator('.side-left').getByText('compose-proj').first().click();
   const drawer = page.locator('#dr-session');
   await expect(drawer).toBeVisible();
   await expect(drawer.locator('.chat')).toContainText('first answer', { timeout: 20_000 });
