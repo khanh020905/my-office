@@ -176,7 +176,7 @@ engine switches to demo mode and talks to no API.
 | `scene/lights.js` | 35 | Sun, sky light and the room lamps (per-room night lighting on the company floor). |
 | `scene/quality.js` | 77 | Graphics quality: Auto (the default), Low, Medium or High, each viewer's own choice (Settings → Display). |
 | `scene/renderer.js` | 97 | Renderer, cameras, orbit controls, post-processing and environment light. |
-| `ui/activity.js` | 301 | The activity column and the session list. |
+| `ui/activity.js` | 302 | The activity column and the session list. |
 | `ui/ai-accounts.js` | 270 | The other AI tools' accounts, in the plan card under Claude's (server/codex-accounts.mjs, antigravity-accounts.mjs): Codex and Antigravity IDE, each with its accounts (usage, the one in use, out until when), adding one, using another, and switching by itself when the one in use runs out. |
 | `ui/burn.js` | 218 | What eats your plan: where Claude Code's usage goes, by model, MCP server, skill, plugin, subagent, project and session. |
 | `ui/cache-words.js` | 53 | How a session's prompt cache reads on screen ("Đồng hồ bộ nhớ đệm", src/shared/cache-clock.js; the cups on the desks are world/props/cups.js): the line under the session drawer's folder, the one under the chat's "Gửi tới" and in its list of conversations, list mode's cards, and the switch in Settings → More for the "about to go cold" notification. |
@@ -197,7 +197,8 @@ engine switches to demo mode and talks to no API.
 | `ui/models.js` | 44 | "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the model a Claude session runs on, the one its subagents run on, always that one or only when Claude doesn't pick, and the note asking Claude to split big tasks. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
 | `ui/permissions.js` | 150 | Approve / deny cards and Claude's questions. |
-| `ui/phone.js` | 94 | The office on a phone: an app-like layout for small screens, upright or held sideways. |
+| `ui/phone-home.js` | 114 | "Tổng quan", the home sheet of the phone layout (ui/phone.js): one screen for "what needs me, and how are things". |
+| `ui/phone.js` | 105 | The office on a phone: an app-like layout for small screens, upright or held sideways. |
 | `ui/photo.js` | 138 | Photo mode: the office alone over the whole window, the camera free (any angle, closer or further, pan with the right button), then a PNG at the screen's size, Full HD or 4K. |
 | `ui/pins.js` | 63 | "Ghi nhớ cho Claude" (server: /api/pins, /hook/start): what you want a conversation to keep in mind, said to Claude again each time Claude Code compacts it. |
 | `ui/portraits.js` | 64 | Portraits of the two character looks for Settings → Characters: two people in each look, drawn by the office's own renderer (same materials, light and tone mapping, so they match what you will see) into a canvas, the first time the tab opens. |

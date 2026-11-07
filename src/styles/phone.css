@@ -54,7 +54,7 @@ html:not(.is-phone) .ph-close { display: none; }
 
 /* approvals: the first one floats above the tabs (all of them in the Duyệt tab), with big buttons and no keyboard hints */
 .is-phone .perm-stack { position: fixed; top: auto; left: 8px; right: 8px; bottom: calc(var(--ph-tabs) + 8px); transform: none; width: auto; max-height: 52vh; overflow-y: auto; overscroll-behavior: contain; z-index: 34; }
-.is-phone:not(.ph-approve) .perm-stack > .perm-card:nth-child(n+2) { display: none; }
+.is-phone:not(.ph-approve):not(.ph-home-open) .perm-stack > .perm-card:nth-child(n+2) { display: none; }
 .is-phone.ph-approve .perm-stack { top: calc(var(--ph-sheet-top) + 8px); max-height: none; align-content: start; }
 /* (a toast while an approval floats goes to the top, never over its buttons) */
 .is-phone.ph-has-perms .toast { bottom: auto; top: 58px; }
@@ -90,3 +90,48 @@ html:not(.is-phone) .ph-close { display: none; }
 
 /* things that only showed on hover get a tap path */
 @media (hover: none) { .msg-copy, .todo-del { opacity: .8; } }
+
+/* Tổng quan (ui/phone-home.js): what needs me, the sessions at work, the plans' limits, the Mac. The approval stack moves in here
+   while it is open, as plain cards in the flow; the 2D list (#lite) is not shown on a phone: Phiên is the one list. */
+.is-phone #lite { display: none !important; }
+.ph-home { display: none; }
+.is-phone .ph-home { display: block; position: fixed; z-index: 30; left: 0; right: 0; top: var(--ph-sheet-top); bottom: var(--ph-tabs); overflow-y: auto; overscroll-behavior: contain; background: var(--side); animation: ph-sheet .2s ease-out; }
+.is-phone .ph-home[hidden] { display: none; }
+.hm-body { display: grid; gap: 18px; padding: 14px 14px 20px; max-width: 640px; margin: 0 auto; }
+.hm-rest { display: grid; gap: 18px; min-width: 0; }
+.hm-sec { display: grid; gap: 8px; min-width: 0; }
+.hm-h { display: flex; align-items: baseline; gap: 8px; margin: 0; font-size: .74rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+.hm-h small { font-size: .72rem; padding: 1px 7px; border-radius: 9px; background: var(--card); border: 1px solid var(--line-2); letter-spacing: 0; }
+.hm-needs .hm-h small { background: var(--red); border-color: transparent; color: #fff; }
+.hm-rows { display: grid; gap: 8px; }
+.is-phone .ph-home .perm-stack { position: static; transform: none; width: auto; max-height: none; overflow: visible; display: grid; gap: 8px; }
+.is-phone .ph-home .perm-stack:empty { display: none; }
+.hm-ok, .hm-none { margin: 0; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-2); color: var(--muted); font-size: .86rem; }
+.hm-row { all: unset; box-sizing: border-box; display: grid; grid-template-columns: 10px minmax(0, 1fr) auto; gap: 10px; align-items: start; min-height: 56px; padding: 11px 12px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-2); cursor: pointer; }
+.hm-row:focus-visible, .hm-card:focus-visible { outline: 2px solid var(--accent); }
+.hm-row.is-wait { border-color: var(--amber); }
+.hm-dot { width: 9px; height: 9px; margin-top: 6px; border-radius: 50%; background: var(--green); }
+.hm-row.is-wait .hm-dot { background: var(--amber); }
+.hm-main { display: grid; gap: 2px; min-width: 0; }
+.hm-title { color: var(--ink); font-size: .95rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-sub { color: var(--muted); font-size: .78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-now { display: flex; align-items: center; gap: 6px; min-width: 0; color: var(--ink-2, var(--muted)); font-size: .82rem; }
+.hm-now .ic { width: 14px; height: 14px; flex: none; }
+.hm-now span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-now.is-warn { color: var(--amber); }
+.hm-time { color: var(--muted); font-size: .76rem; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.hm-card { all: unset; box-sizing: border-box; display: grid; gap: 10px; padding: 12px 14px; border-radius: 12px; background: var(--card); border: 1px solid var(--line-2); cursor: pointer; min-width: 0; }
+.hm-tool { display: grid; gap: 5px; min-width: 0; }
+.hm-tool > b { color: var(--ink); font-size: .84rem; }
+.hm-other > b { font-weight: 600; color: var(--muted); }
+.hm-bar { display: grid; grid-template-columns: 4.5em minmax(0, 1fr) 3em; gap: 8px; align-items: center; font-size: .78rem; color: var(--muted); }
+.hm-bar i { display: block; height: 7px; border-radius: 4px; background: var(--line-2); overflow: hidden; }
+.hm-bar i b { display: block; height: 100%; border-radius: 4px; background: var(--green); }
+.hm-bar i b.warn { background: var(--amber); }
+.hm-bar i b.critical { background: var(--red); }
+.hm-bar em { font-style: normal; text-align: right; color: var(--ink); font-variant-numeric: tabular-nums; }
+.hm-bl { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.hm-line { font-size: .82rem; color: var(--muted); }
+.hm-line.is-warn { color: var(--amber); }
+.hm-line.is-critical { color: var(--red); }
+@media (max-height: 520px) { .hm-body { grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; } .hm-needs, .hm-rest { grid-column: auto; } }

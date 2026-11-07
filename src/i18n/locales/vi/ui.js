@@ -119,7 +119,13 @@ export default {
   // the tab bar and sheets on a phone (ui/phone.js)
   phone: {
     tabs: 'Các mục',
-    office: 'Văn phòng',
+    home: 'Tổng quan',
+    homeNeeds: 'Cần bạn',
+    homeNothing: 'Không có gì cần bạn lúc này',
+    homeWorking: 'Đang làm',
+    homeIdle: '{n} phiên đang nghỉ, không phiên nào đang chạy',
+    homePlans: 'Giới hạn gói',
+    homeMac: 'Máy Mac',
     sessions: 'Phiên',
     activity: 'Hoạt động',
     approve: 'Duyệt',

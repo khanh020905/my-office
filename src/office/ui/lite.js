@@ -22,11 +22,11 @@ export let lite = false;
 let filter = 'all', query = '', head = null, tabs = null, permHost = null, listEl = null, emptyEl = null;
 const GROUPS = ['wait', 'work', 'rest'];
 const fold = (s) => String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase();
-const project = (s) => s.git?.repo || String(s.dir || '').split('/').filter(Boolean).pop() || '';
-const statusOf = (s) => (s.status === 'wait' ? 'wait' : s.status === 'rest' ? 'rest' : 'work');
+export const project = (s) => s.git?.repo || String(s.dir || '').split('/').filter(Boolean).pop() || '';
+export const statusOf = (s) => (s.status === 'wait' ? 'wait' : s.status === 'rest' ? 'rest' : 'work');
 
 // what it is doing now, in words of the work (not of the office: no lift, no shop)
-function nowOf(s) {
+export function nowOf(s) {
   if (s.status === 'wait') return { ic: 'alert', text: s.last ? tr('lite.now.waitOn', { what: verb(s.last) }) : tr('lite.now.wait') };
   if (s.stuck) return { ic: 'alert', text: tr(`activity.doing.stuck.${s.stuck.kind}`, { label: short(s.stuck.label, 40), n: s.stuck.n, mins: s.stuck.mins }), warn: true };
   if (s.status === 'rest' && s.bg?.length) return { ic: 'terminal', text: tr('activity.doing.bg', { desc: s.bg[0].desc }) };
@@ -107,9 +107,9 @@ export function setLite(on) {
   lite = on; document.body.classList.toggle('is-lite', on); $('lite').hidden = !on; $('btn-lite').setAttribute('aria-pressed', String(on));
   for (const b of document.querySelectorAll('[data-view]')) b.setAttribute('aria-pressed', String((b.dataset.view === '2d') === on));
   try { localStorage.setItem('office-lite', on ? 'on' : 'off'); } catch { /* storage blocked */ }
-  // the approvals: at the top of the list in 2D, over the office in 3D
+  // the approvals: at the top of the list in 2D, over the office in 3D (on a phone the home sheet, ui/phone-home.js, holds them)
   const stack = $('perm-stack');
-  if (on) { build(); if (stack && permHost && stack.parentNode !== permHost) permHost.append(stack); if (fp.on) exitFp(); closePlace(); renderLite(); }
+  if (on) { build(); if (stack && permHost && stack.parentNode !== permHost && !document.documentElement.classList.contains('is-phone')) permHost.append(stack); if (fp.on) exitFp(); closePlace(); renderLite(); }
   else if (stack && stack.parentNode === permHost) $('lite').after(stack);
 }
 export function renderLite() {

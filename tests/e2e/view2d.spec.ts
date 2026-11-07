@@ -70,7 +70,7 @@ test('2D: approvals on top, then needs you / working / resting; tabs, search and
   expect(errors).toEqual([]);
 });
 
-test('3D | 2D is kept per browser; a phone gets the list without anything off the screen', async ({ page }) => {
+test('3D | 2D is kept per browser; a phone gets the home instead of the list', async ({ page }) => {
   test.setTimeout(150_000);
   await setUp(page);
   await page.click('.tb-view [data-view="3d"]');
@@ -82,10 +82,9 @@ test('3D | 2D is kept per browser; a phone gets the list without anything off th
   await page.click('.tb-view [data-view="2d"]');
   await page.reload();
   await expect(page.locator('#lite .v2-row').first()).toBeVisible({ timeout: 90_000 });
-  // a phone: the rows fit, the tabs scroll rather than wrap
+  // a phone: no second list (Phiên is the list there); the 2D view's screen is the Tổng quan sheet, nothing off the screen
   await page.setViewportSize({ width: 390, height: 844 });
-  await expect(page.locator('#lite .v2-row').first()).toBeVisible();
-  expect(await page.locator('#lite').evaluate((e) => e.scrollWidth - e.clientWidth)).toBeLessThanOrEqual(0);
-  const tab = await page.locator('#lite .v2-tab[data-f="wait"]').boundingBox();
-  expect(tab!.height).toBeLessThan(40);   // (one line)
+  await expect(page.locator('#lite')).toBeHidden();
+  await expect(page.locator('#ph-home .hm-row').first()).toBeVisible();
+  expect(await page.evaluate(() => Math.max(document.documentElement.scrollWidth, document.body.scrollWidth) - innerWidth)).toBeLessThanOrEqual(0);
 });
