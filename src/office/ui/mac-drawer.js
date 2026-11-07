@@ -223,6 +223,21 @@ function autoRow() {
     });
     mv.append(cb, el('span', null, tr('mac.plan.autoMove')));
     box.append(mv);
+
+    // then on with it by itself there (server/auto-resume.mjs), under "move" since it only follows one
+    const res = el('label', 'acct-move acct-resume'), rcb = el('input'); rcb.type = 'checkbox'; rcb.checked = a.resume !== false;
+    rcb.addEventListener('change', async () => {
+      rcb.disabled = true;
+      const r = await post('/api/accounts/auto', { resume: rcb.checked });
+      rcb.disabled = false;
+      if (!r.ok) { rcb.checked = !rcb.checked; toast(tr('mac.plan.useFailed')); return; }
+      if (state.limits) state.limits.auto = r;
+      toast(tr(rcb.checked ? 'mac.plan.autoResumeOn' : 'mac.plan.autoResumeOff'), 4000);
+    });
+    res.append(rcb, el('span', null, tr('mac.plan.autoResume')));
+    res.hidden = a.move === false;
+    cb.addEventListener('change', () => { res.hidden = !cb.checked; });
+    box.append(res);
   }
   if (!switchOn()) return box;
   box.append(el('small', 'acct-auto-sub', tr('mac.plan.running')));
@@ -234,7 +249,7 @@ function autoRow() {
 // the server moved the conversations open on an account that ran out
 export function acctMoved(d) {
   if (replay.on || !d.names?.length) return;
-  toast(tr('mac.plan.moved', { from: d.from, to: d.to, n: d.names.length, names: d.names.join(', ') }), 10000);
+  toast(tr(state.limits?.auto?.resume === false ? 'mac.plan.moved' : 'mac.plan.movedResumed', { from: d.from, to: d.to, n: d.names.length, names: d.names.join(', ') }), 10000);
   chatMoved(d.names, d.to);
 }
 // the server moved new sessions to another account (one ran out, or came back)

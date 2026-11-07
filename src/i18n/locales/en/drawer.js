@@ -20,7 +20,16 @@ export default {
   qrNote: 'Scan it with your phone’s camera: the session opens in the Claude app, to keep prompting and approving from anywhere.',
   openOnClaudeNote: 'Keep prompting there, even from your phone.',
   // {cmd} is where the /rc code chip goes
-  rcHint: 'To keep prompting from your phone, type {cmd} in this session on your {mac} and an open button will show up here.',
+  compose: {
+    send: 'Send',
+    demo: 'Demo: nothing goes to a real Claude.',
+    noSid: 'This session has no conversation id yet, so it can’t be messaged directly. Do one turn on the Mac and try again.',
+    badPhoto: 'Couldn’t read that photo.',
+    dropPhoto: 'Remove this photo',
+    photosOnly: '(photos only)',
+    askSteer: 'It is in the middle of something. Cut in now?',
+    st: { send: 'Sending…', work: 'Claude is working', done: 'Done', fail: 'Not sent', ask: 'Busy' },
+  },
   acct: {
     label: 'Change account',
     moving: 'Moving…',

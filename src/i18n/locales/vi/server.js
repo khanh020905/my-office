@@ -16,6 +16,7 @@ export default {
     newBody: 'Cloudflare thu hồi địa chỉ cũ. Địa chỉ mới: {url}',
   },
   move: {
+    resumePrompt: 'Tiếp tục làm nốt việc đang dở (lượt trước bị ngắt vì tài khoản cũ hết hạn mức).',
     notOpen: 'Phiên này không còn mở.',
     noAccount: 'Không thấy tài khoản này.',
     same: 'Phiên này đang chạy bằng {to} rồi.',

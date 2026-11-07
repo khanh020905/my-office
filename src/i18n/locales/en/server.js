@@ -18,6 +18,7 @@ export default {
     newBody: 'Cloudflare took the old address back. The new one: {url}',
   },
   move: {
+    resumePrompt: 'Carry on with the work in progress (the last turn was cut off because the previous account ran out).',
     notOpen: 'This session is no longer open.',
     noAccount: "Can't find that account.",
     same: 'This session is on {to} already.',
