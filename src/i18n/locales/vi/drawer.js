@@ -17,7 +17,16 @@ export default {
   qrTitle: 'Quét bằng điện thoại để tiếp tục phiên này trong app Claude',
   qrNote: 'Quét bằng camera điện thoại: phiên mở trong app Claude, gõ tiếp và duyệt lệnh ở đâu cũng được.',
   openOnClaudeNote: 'Gõ tiếp prompt ở đó, kể cả trên điện thoại.',
-  rcHint: 'Muốn gõ tiếp từ điện thoại: gõ {cmd} trong phiên này trên {mac}, nút mở sẽ hiện ở đây.',
+  compose: {
+    send: 'Gửi',
+    demo: 'Bản demo: không gửi tới Claude thật.',
+    noSid: 'Phiên này chưa có mã hội thoại nên chưa nhắn thẳng được. Làm một lượt trên Mac rồi thử lại.',
+    badPhoto: 'Không đọc được ảnh này.',
+    dropPhoto: 'Bỏ ảnh này',
+    photosOnly: '(chỉ có ảnh)',
+    askSteer: 'Phiên đang làm dở. Chen lời vào giữa chừng?',
+    st: { send: 'Đang gửi…', work: 'Claude đang làm', done: 'Xong', fail: 'Chưa gửi được', ask: 'Đang bận' },
+  },
   acct: {
     label: 'Đổi tài khoản',
     moving: 'Đang đổi…',

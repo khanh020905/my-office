@@ -14,6 +14,7 @@ import { DEMO, demoLog } from '../demo/demo.js';
 import { acctActions } from './session-account.js';
 import { drawDrawerCache } from './cache-words.js';
 import { pinsLabel, renderPins } from './pins.js';
+import { renderCompose, setupCompose } from './session-compose.js';
 import { openUndo } from './undo-view.js';
 import { t as tr, locale } from '../../i18n/index.js';
 import { modelLong } from '../../shared/model-name.js';
@@ -37,7 +38,7 @@ export function openSession(id, opts = {}) {
   if (!same) { logItems = []; subItems = []; }
   state.subView = opts.agent || null;
   setTab(opts.tab || 'chat');
-  renderSessionHead(); renderActions();
+  renderSessionHead(); renderActions(); renderCompose();
   loadLog(true);
   queueUi();
 }
@@ -95,10 +96,6 @@ function renderActions() {
       if (qrFor === s.id) { const code = el('div', 'qr dr-qr'); try { new window.QRCode(code, { text: s.link, width: 180, height: 180 }); box.append(code, el('p', 'dr-note', tr('drawer.qrNote'))); } catch { /* no QR */ } }
     }
     if (qrFor !== s.id) box.append(el('p', 'dr-note', tr('drawer.openOnClaudeNote')));
-  } else {
-    const [before, after = ''] = tr('drawer.rcHint').split('{cmd}');
-    const p = el('p', 'dr-note'); p.append(before, el('code', null, '/rc'), after);
-    box.append(p);
   }
 }
 // "Close session" for a session that is resting: the same safe stop as the Mac panel (only the process you saw, matched by
@@ -394,5 +391,6 @@ export function setup() {
   jumpBtn.append(icon('chevron'), document.createTextNode(tr('drawer.latest')));
   jumpBtn.addEventListener('click', () => { const b = $('ds-body'); b.scrollTo({ top: b.scrollHeight, behavior: reduceMotion ? 'auto' : 'smooth' }); });
   $('dr-session').append(jumpBtn);
+  setupCompose(drS, () => scheduleLog());   // (a box to write to the session from its page: ui/session-compose.js)
   $('ds-body').addEventListener('scroll', syncJump, { passive: true });
 }
