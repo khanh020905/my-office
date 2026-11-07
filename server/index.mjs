@@ -1905,7 +1905,7 @@ function refreshLogin(dir) {
     const child = execFile(bin.file, ['-p', '--model', 'haiku', '--no-session-persistence', '--strict-mcp-config', '--tools', '', '--settings', '{"disableAllHooks":true}', 'Reply with the single word: ok'],
       { cwd, env: { ...process.env, CLAUDE_CONFIG_DIR: dir }, timeout: 90_000, maxBuffer: 1 << 20 }, (err) => resolve(!err));
     child.stdin?.end();   // (-p reads stdin too: nothing comes)
-  }).then((ok) => { fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} renew login ${accName(dir)} -> ${ok ? 'ok' : 'failed'}\n`).catch(() => {}); return ok; })
+  }).then(async (ok) => { const now = await OS.claudeLogin(dir).catch(() => null); fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} renew login ${accName(dir)} -> ${now?.accessToken && !dead(now) ? 'renewed' : 'failed'}${ok ? '' : ' (its run ended in an error)'}\n`).catch(() => {}); return ok; })
     .finally(() => renewing.delete(dir));
   renewing.set(dir, run);
   return run;
@@ -1923,9 +1923,10 @@ function fetchOtherUsage(dir, force = false) {
       o.expired = true;
       if (!force && Date.now() - (o.renewAt || 0) < RENEW_EVERY) { o.note = ['server.usage.tokenExpired']; return; }
       o.renewAt = Date.now(); o.note = ['server.usage.renewing']; broadcast({ k: 'limits', limits: limitsOut(), note: noteText() });
-      const ran = await refreshLogin(dir);
+      await refreshLogin(dir);
       login = await OS.claudeLogin(dir);
-      if (!ran || !login?.accessToken || dead(login)) { o.note = ['server.usage.renewFailed']; return; }
+      // (judged by the token, not by the run: an account at its limit has its one word refused, but the token renewed first)
+      if (!login?.accessToken || dead(login)) { o.note = ['server.usage.renewFailed']; return; }
       o.expired = false; o.wait = 0; o.backoff = 0;
     }
     if (Date.now() < (o.wait || 0)) return;   // (Anthropic's own wait after a 429: the last note stays)
