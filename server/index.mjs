@@ -27,6 +27,7 @@ import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
+import { createAgentModel } from '../src/shared/agent-events.js';
 import { dangerKey } from '../src/shared/danger.js';
 import { holdMs, createBarWatch } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
@@ -257,6 +258,9 @@ try {
   if (Array.isArray(saved.feed)) feed = saved.feed.slice(-FEED_MAX);
   seq = saved.seq || 0;
 } catch { /* first run */ }
+// spec §7 normalised agent model: recovers from the saved feed after a restart, then onHook feeds it live
+const agentModel = createAgentModel();
+agentModel.load(feed);
 setInterval(() => {
   if (!dirty) return;
   dirty = false;
@@ -1152,6 +1156,7 @@ async function onHook(p) {
   }
   if (loopSig) onLoop(s, loopSig);
   if (e) {
+    agentModel.ingest(e);
     if (toFeed) pushFeed(e);
     broadcast({ k: 'ev', e, s: pub(s), stats });
     if (!s.viaOffice) chat.onEvent(e);
@@ -3186,6 +3191,7 @@ const server = http.createServer((req, res) => {
     readLog(s, 120, url.searchParams.get('agent')).then((items) => json(res, 200, { items })).catch(() => json(res, 200, { items: [] }));
     return;
   }
+  if (url.pathname === '/api/production/agents') { json(res, 200, { agents: agentModel.snapshot() }); return; }
   if (url.pathname === '/api/timeline') {
     const to = Math.min(Number(url.searchParams.get('to')) || Date.now(), Date.now()), from = Math.max(Number(url.searchParams.get('from')) || to - 3600e3, to - 2 * 86400e3);
     const dayOf = (t) => new Date(t).toLocaleDateString('sv-SE');

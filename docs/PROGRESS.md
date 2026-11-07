@@ -30,6 +30,14 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 2. Video QA runs `py -3.14 tools/video_qa.py` from the xuongphim workspace. Spawning Python from the server must use a fixed argv (no shell), loopback only, and validated paths inside an allow-listed root.
 3. No upstream concept of a "video project", Type A/B or a "stage", so these must come from real files or explicit events, never from guesses (spec: no fake progress).
 4. Bundle and draw-call growth in the 3D scene.
-5. The full spec (sections 1–18, acceptance criteria in section 17) has not been received in this session yet, so Phase 1+ is blocked on it.
+5. ~~Spec not received~~ — resolved: the full spec (sections 1–18) is `spec.md` in the parent session's notes folder.
 
-## Phase 1 — normalised event and agent model — NOT STARTED
+## Phase 1 — normalised event and agent model (2026-11-08) — VERIFIED
+
+- `src/shared/agent-events.js`: `normalize(e)` maps the office's own events to spec §7 `agent.*` kinds with a `source` (`execution`, or `inferred` for edit/write that was asked for but not confirmed on disk). `createAgentModel()` tracks main sessions and subagents (`sess:agentId`, parent link) with honest states running / reviewing / waiting / blocked / done / failed / unknown (no event for 10 min → unknown, never running).
+- Dedup by event id; late events count but never move state back; demo events refused; agent cap evicts the stalest. Recovery: `load(feed)` from the saved state after a restart.
+- Server hook-in (4 lines): import, `agentModel.load(feed)` after state load, `agentModel.ingest(e)` in onHook's emit block, `GET /api/production/agents` (behind the existing auth check).
+- Checks: `npm test` 171 tests (164 pass, 7 skipped, 0 fail; 6 new in `tests/unit/agent-events.test.mjs`), typecheck pass, lint pass. The route has not been hit on a live server yet.
+- Not in this phase: `agent.file_created` (no hook distinguishes create from modify), `production.*` and `video.*` events (Phases 3–4).
+
+## Phase 2 — 3D departments — NOT STARTED
