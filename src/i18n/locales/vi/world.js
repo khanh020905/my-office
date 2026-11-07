@@ -41,6 +41,13 @@ export default {
     hqSub: 'Các phòng ban',
     board: 'Bảng sprint',
     cols: ['Cần làm', 'Đang làm', 'Xong'],
+    dir: 'CÁC PHÒNG SẢN XUẤT',
+    idle: '—',
+    active: '{n} đang làm',
+    review: 'đang duyệt',
+    failed: '{n} lỗi',
+    names: { director: 'Đạo diễn', research: 'Nghiên cứu', script: 'Kịch bản', storyboard: 'Phân cảnh', visual: 'Thiết kế hình ảnh',
+      animation: 'Hoạt hình', audio: 'Âm thanh', editing: 'Dựng & xuất', qa: 'Kiểm định', library: 'Thư viện' },
   },
   // the traffic police on the street (street-csgt.js): what they say, the card, the record (biên bản)
   csgt: {

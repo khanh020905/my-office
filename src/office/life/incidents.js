@@ -23,6 +23,7 @@ import { chatEvent } from '../ui/group-chat.js';
 import { headache, treat } from '../people/outings.js';
 import { pickleCi, pickleTest } from '../people/pickle.js';
 import { photoRelease } from '../people/photobooth.js';
+import { deptEvent } from './departments.js';
 
 /* ---------- incidents: three failures in five minutes turn the office red for a while ---------- */
 export const fails = [];
@@ -40,6 +41,7 @@ export function updateIncident(t) {
 }
 export function onEvent(e) {
   chatEvent(e);   // (the group chat: ui/group-chat.js)
+  deptEvent(e);   // the production departments board (life/departments.js)
   if (e.type === 'stop' || e.type === 'commit') printPage();   // every finished turn and every commit prints a page
   if (e.type === 'test' || e.type === 'testok' || e.type === 'testfail') { onTest(e); if (!e.agent) pickleTest(e); }   // the test board's lamps (tests.js); a point on the pickleball court (people/pickle.js)
   if (e.type === 'commit') onCommit(e); if (e.type === 'push') onPush(e);   // a letter in the post box; the postman (post.js)

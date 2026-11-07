@@ -47,6 +47,14 @@ export default {
     hqSub: 'Departments',
     board: 'Sprint board',
     cols: ['To do', 'Doing', 'Done'],
+    // the production directory board by the HQ sign (wing.js deptBoard): live agents per department, from real events only
+    dir: 'PRODUCTION DEPARTMENTS',
+    idle: '—',
+    active: '{n} active',
+    review: 'in review',
+    failed: '{n} failed',
+    names: { director: 'Director', research: 'Research', script: 'Script', storyboard: 'Storyboard', visual: 'Visual design',
+      animation: 'Animation', audio: 'Audio', editing: 'Editing & render', qa: 'QA', library: 'Library' },
   },
   // the traffic police on the street (street-csgt.js): what they say, the card, the record (biên bản)
   csgt: {

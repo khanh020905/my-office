@@ -12,9 +12,40 @@ import { trinket } from '../props/trinkets.js';
 import { DEPTS, WING } from '../layout.js';
 import { floorZone, glassWall, gridTex, lowWall, plateTex, speckTex } from './pieces.js';
 import { t as tr } from '../../../i18n/index.js';
+import { DEPARTMENTS } from '../../../shared/departments.js';
 
 /** DEPT_SIGNS[i](name) redraws room i's door plaque: the project's name, or '' for a free room. */
 export const DEPT_SIGNS = [];
+
+/** deptBoard(counts) redraws the production directory: counts[id] = { active, review, failed } from real agent events. */
+let drawDir = null;
+export const deptBoard = (counts) => drawDir?.(counts);
+function directory(x, y, z, ry) {
+  const W = 768, H = 512, c = document.createElement('canvas'); c.width = W; c.height = H;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const draw = (counts) => {
+    const g = c.getContext('2d');
+    g.fillStyle = '#1E232B'; g.fillRect(0, 0, W, H);
+    g.textBaseline = 'middle'; g.textAlign = 'left'; g.fillStyle = '#F3EFE8'; g.font = `800 34px ${FONT}`;
+    g.fillText(tr('world.dept.dir'), 28, 38);
+    DEPARTMENTS.forEach((d, i) => {
+      const y0 = 82 + i * 43, r = counts[d.id] || {};
+      g.fillStyle = d.accent; g.fillRect(28, y0 - 14, 12, 28);
+      g.textAlign = 'left'; g.fillStyle = r.active ? '#F3EFE8' : '#9AA3B0'; g.font = `700 26px ${FONT}`;
+      const name = tr(`world.dept.names.${d.id}`); fitText(g, name, 360); g.fillText(name, 56, y0);
+      g.textAlign = 'right'; g.font = `600 24px ${FONT}`;
+      const bits = [r.active ? tr('world.dept.active', { n: r.active }) : '', r.review ? tr('world.dept.review') : '', r.failed ? tr('world.dept.failed', { n: r.failed }) : ''].filter(Boolean);
+      g.fillStyle = r.failed ? '#FF6B5E' : r.active ? '#B9D6C4' : '#6E7684';
+      g.fillText(bits.join(' · ') || tr('world.dept.idle'), W - 28, y0);
+    });
+    tex.needsUpdate = true;
+  };
+  draw({});
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(1.5, 1.0), new THREE.MeshBasicMaterial({ map: tex, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  m.position.set(x, y, z); m.rotation.y = ry; m.userData.noMerge = true; scene.add(m);
+  let shown = '{}';
+  drawDir = (counts) => { const k = JSON.stringify(counts); if (k === shown) return; shown = k; draw(counts); };
+}
 const ACCENTS = ['#3F7CC4', '#6A8042', '#D97757', '#8C4FA8'];
 const CARPETS = ['#5E6B7D', '#66735C', '#7B6A5E', '#655F7A'];
 const FONT = '"Be Vietnam Pro", system-ui, sans-serif';
@@ -126,6 +157,7 @@ function buildWing() {
   put(scene, rbox(0.03, 2.7, 1.6, mat('#2F4A3D', { roughness: 0.9 }), 0.005), -7.985, 1.35, (WING.corA[0] + WING.corA[1]) / 2);
   { const m = new THREE.Mesh(new THREE.PlaneGeometry(1.36, 0.42), new THREE.MeshBasicMaterial({ map: plateTex(tr('world.dept.hq'), tr('world.dept.hqSub'), { bg: '#2F4A3D', fg: '#F3EFE8', sub: '#B9D6C4' }) }));
     m.position.set(-7.965, 1.95, (WING.corA[0] + WING.corA[1]) / 2); m.rotation.y = Math.PI / 2; scene.add(m); }
+  directory(-7.965, 3.4, (WING.corA[0] + WING.corA[1]) / 2, Math.PI / 2);   // above the sign: the production departments, live
   potPlant(13.55, 9.9, 1.1, 'monstera'); potPlant(2.7, 25.55, 0.95, 'bush'); potPlant(3.9, 25.55, 0.95, 'snake');
 }
 

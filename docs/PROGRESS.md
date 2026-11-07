@@ -40,4 +40,11 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 - Checks: `npm test` 171 tests (164 pass, 7 skipped, 0 fail; 6 new in `tests/unit/agent-events.test.mjs`), typecheck pass, lint pass. The route has not been hit on a live server yet.
 - Not in this phase: `agent.file_created` (no hook distinguishes create from modify), `production.*` and `video.*` events (Phases 3–4).
 
-## Phase 2 — 3D departments — NOT STARTED
+## Phase 2 — 3D departments — VERIFIED (2026-11-08)
+- `src/shared/departments.js`: 10 production departments (director, research, script, storyboard, visual, animation, audio, editing, qa, library) and `deptOf(event)`, which places an event by agent type or description keywords. An event it can't place gets `null` and is never guessed. The agent model now stores `dept`.
+- `world/pro/wing.js`: a production directory board above the HQ sign. It shows only with the HQ flag, uses noMerge, and redraws only when the counts change. Each row shows the department, then active / in review / failed counts, or an idle mark.
+- `life/departments.js`: a page-side agent model fed from `onEvent` (incidents.js). It redraws at most once a second, and every 30 s so stale agents drop off. Counts come from real events only. Demo events show on the page and are never stored.
+- Locales: en and vi `world.dept.dir/idle/active/review/failed/names.*`.
+- Checks: `npm test` ran 174 tests (167 pass, 7 skipped, 0 fail; 3 new in `tests/unit/departments.test.mjs`); typecheck and lint pass. The board has not been looked at in a browser yet.
+- Known limit: the page model fills only from events after the page loads, so the board starts idle until new activity arrives.
+

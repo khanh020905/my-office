@@ -5,7 +5,9 @@
 // Honesty rules: a state comes only from a real event; an agent with no event for STALE_MS shows 'unknown', never 'running';
 // events marked demo are refused, so demo mode can never enter the production model.
 
-export const KINDS = ['agent.started', 'agent.stopped', 'agent.task_assigned', 'agent.tool_started', 'agent.tool_completed', 'agent.tool_failed',
+import { deptOf } from './departments.js';
+
+export const KINDS =['agent.started', 'agent.stopped', 'agent.task_assigned', 'agent.tool_started', 'agent.tool_completed', 'agent.tool_failed',
   'agent.file_created', 'agent.file_modified', 'agent.awaiting_approval', 'agent.waiting', 'agent.completed', 'agent.failed'];
 export const STATES = ['running', 'reviewing', 'waiting', 'blocked', 'done', 'failed', 'unknown'];
 // source: how we know (spec §7 data accuracy) — 'execution' is a hook Claude Code sent; 'inferred' is read from a tool's
@@ -60,13 +62,14 @@ export function createAgentModel({ max = 200 } = {}) {
     let a = agents.get(n.agent);
     if (!a) {
       if (agents.size >= max) { const oldest = [...agents.values()].sort((x, y) => x.lastAt - y.lastAt)[0]; agents.delete(oldest.id); }
-      a = { id: n.agent, parent: n.parent, sess: n.sess, name: n.name, state: 'unknown', since: n.ts, lastAt: 0, lastId: 0, last: null, tools: 0, fails: 0, files: 0 };
+      a = { id: n.agent, parent: n.parent, sess: n.sess, name: n.name, state: 'unknown', since: n.ts, lastAt: 0, lastId: 0, last: null, tools: 0, fails: 0, files: 0, dept: null };
       agents.set(n.agent, a);
     }
     if (n.name && !a.name) a.name = n.name;
     if (n.kind === 'agent.tool_started') a.tools++;
     if (n.kind === 'agent.tool_failed') a.fails++;
     if (n.kind === 'agent.file_modified') a.files++;
+    const d = deptOf(n); if (d) a.dept = d;   // the last department a real event placed it in; unplaceable events keep it
     // an event that arrives late (lower id than the last one applied) counts, but does not move the state back
     if (n.id > a.lastId) {
       const st = n.runner && n.kind === 'agent.tool_started' ? 'reviewing' : STATE_OF[n.kind];
