@@ -76,3 +76,39 @@
 .pins-in:focus { outline: 2px solid var(--accent-line); outline-offset: -1px; }
 .pins-form .btn { justify-self: end; }
 .pins-said { color: var(--faint); font-size: .72rem; }
+/* writing to a session from its page (ui/session-compose.js) */
+.ds-compose { flex: none; display: grid; gap: 8px; padding: 10px 14px calc(10px + env(safe-area-inset-bottom, 0px)); border-top: 1px solid var(--line); background: var(--side); }
+.ds-cmp-note { margin: 0; font-size: .76rem; line-height: 1.45; color: var(--muted); overflow-wrap: anywhere; }
+.ds-sent { display: grid; gap: 6px; margin: 0; padding: 0; list-style: none; max-height: 30vh; overflow-y: auto; }
+.ds-sent-i { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; padding: 7px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--card); font-size: .78rem; line-height: 1.4; min-width: 0; }
+.ds-sent-st { flex: none; font-size: .68rem; font-weight: 700; color: var(--accent); }
+.ds-sent-i.is-done .ds-sent-st { color: var(--green-ink); }
+.ds-sent-i.is-fail .ds-sent-st { color: var(--red); }
+.ds-sent-t { flex: 1; min-width: 0; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.ds-sent-i small { flex-basis: 100%; color: var(--muted); }
+.ds-cmp-photos { display: flex; gap: 6px; flex-wrap: wrap; }
+.ds-cmp-photos[hidden], .ds-compose[hidden], .ds-sent[hidden], .ds-cmp-note[hidden] { display: none; }
+.ds-cmp-ph { all: unset; width: 44px; height: 44px; border-radius: 8px; overflow: hidden; border: 1px solid var(--line-2); cursor: pointer; }
+.ds-cmp-ph img { width: 100%; height: 100%; object-fit: cover; }
+.ds-cmp-row { display: flex; align-items: flex-end; gap: 6px; min-width: 0; }
+.ds-cmp-in { flex: 1; min-width: 0; resize: none; max-height: 120px; padding: 10px 12px; border: 1px solid var(--line-2); border-radius: 12px; background: var(--card); color: var(--ink); font: inherit; font-size: 16px; line-height: 20px; }
+.ds-cmp-in:focus-visible { outline: 2px solid var(--accent); }
+.ds-cmp-ib, .ds-cmp-send { all: unset; flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; color: var(--muted); cursor: pointer; }
+.ds-cmp-ib:hover, .ds-cmp-ib.is-rec { color: var(--ink); background: var(--card-2); }
+.ds-cmp-ib.is-rec { color: var(--red); }
+.ds-cmp-send { background: var(--accent); color: var(--on-accent); }
+.ds-cmp-send:disabled { opacity: .4; cursor: default; }
+.ds-cmp-ib:focus-visible, .ds-cmp-send:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+.ds-cmp-ib svg, .ds-cmp-send svg { width: 20px; height: 20px; }
+.ds-compose.is-off .ds-cmp-row { display: none; }
+/* on a phone: the six tiles become one line of chips, so the conversation is what you see first */
+.is-phone .counts { display: flex; gap: 6px; padding: 10px 14px 0; overflow-x: auto; scrollbar-width: none; }
+.is-phone .counts::-webkit-scrollbar { display: none; }
+.is-phone .counts li { flex: none; flex-direction: row; align-items: baseline; gap: 5px; padding: 5px 10px; border-radius: 999px; }
+.is-phone .counts b { font-size: .8rem; }
+.is-phone .counts span { font-size: .68rem; white-space: nowrap; }
+.is-phone .dr-actions { flex-wrap: nowrap; overflow-x: auto; padding-top: 10px; scrollbar-width: none; }
+.is-phone .dr-actions > * { flex: none; }
+.is-phone .dr-actions > .dr-note:not(.dr-qr + .dr-note) { display: none; }
+.is-phone .tabs { margin-top: 10px; }
+.is-phone .dr-body { padding-top: 12px; }
