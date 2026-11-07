@@ -9,6 +9,7 @@ import { DATA_DIR } from '../../playwright.config';
 const tunnel = async (request: APIRequestContext) => (await (await request.get('/api/tunnel')).json()) as { url: string, state: string };
 test('a tunnel Cloudflare took back is started again, with a new address', async ({ request }) => {
   test.setTimeout(120_000);
+  await request.post('/api/tunnel', { data: { on: false } });   // (a clean start: the switch only starts one that is off)
   fs.writeFileSync(path.join(DATA_DIR, 'fake-revoke'), '');
   await request.post('/api/tunnel', { data: { on: true } });
   await expect.poll(async () => (await tunnel(request)).url, { timeout: 30_000 }).toContain('e2e-revoked');

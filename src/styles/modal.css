@@ -28,6 +28,11 @@
 .pm-awake.is-battery { border-color: var(--amber, #F2B544); }
 .pm-err { margin: 0; font-size: .78rem; color: var(--red); text-align: left; width: 100%; }
 .pm-wait { margin: 0; font-size: .8rem; width: 100%; text-align: left; }
+.pm-fixed { display: grid; gap: 6px; width: 100%; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; text-align: left; }
+.pm-fixed-h { font-size: .82rem; }
+.pm-fixed .btn { justify-self: start; }
+.pm-fixed-form { display: flex; gap: 6px; }
+.pm-fixed-in { flex: 1; min-width: 0; padding: 6px 9px; border-radius: 8px; border: 1px solid var(--line); background: transparent; color: inherit; font: inherit; font-size: .8rem; }
 .pm-wait::before { content: ''; display: inline-block; width: 10px; height: 10px; margin-right: 8px; border-radius: 50%; border: 2px solid var(--muted); border-top-color: transparent; animation: pm-spin .8s linear infinite; vertical-align: -1px; }
 @keyframes pm-spin { to { transform: rotate(360deg); } }
 .modal-card:has(#pm-body) { width: min(520px, 100%); max-height: calc(100dvh - 32px); overflow-y: auto; }
