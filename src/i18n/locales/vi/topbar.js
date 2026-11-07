@@ -38,7 +38,7 @@ export default {
     tunDownload: 'Đang tải cloudflared của Cloudflare (khoảng 40 MB, một lần)…',
     tunStarting: 'Đang kết nối với Cloudflare…',
     tunOn: 'Quét mã hoặc mở địa chỉ này trên điện thoại, 4G hay wifi nào cũng được.',
-    tunNote: 'Địa chỉ giữ nguyên tới khi tắt đường hầm hoặc khởi động lại Mac.',
+    tunNote: 'Địa chỉ giữ nguyên tới khi tắt đường hầm hoặc khởi động lại Mac. Nếu Cloudflare thu hồi nó, văn phòng tự lấy địa chỉ mới và gửi về điện thoại đang nhận thông báo.',
     tunError: 'Chưa mở được đường hầm: {error}. Tắt rồi bật lại để thử lần nữa.',
     pinTitle: 'Mã PIN',
     pinLabel: 'Điện thoại vào bằng mã',

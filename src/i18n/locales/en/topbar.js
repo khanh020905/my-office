@@ -38,7 +38,7 @@ export default {
     tunDownload: 'Downloading Cloudflare’s cloudflared (about 40 MB, once)…',
     tunStarting: 'Connecting to Cloudflare…',
     tunOn: 'Scan the code or open this address on your phone, on any network.',
-    tunNote: 'The address stays until you turn the tunnel off or restart the Mac.',
+    tunNote: 'The address stays until you turn the tunnel off or restart the Mac. If Cloudflare takes it back, the office gets a new one and sends it to the phones that get notifications.',
     tunError: 'The tunnel isn’t open yet: {error}. Turn it off and on to try again.',
     pinTitle: 'PIN',
     pinLabel: 'Phones get in with',

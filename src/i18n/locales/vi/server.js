@@ -4,6 +4,9 @@ export default {
     downloadFailed: 'Không tải được cloudflared (mã {status}). Kiểm tra mạng rồi bật lại.',
     ready: 'Dùng khi ra ngoài: {url}',
     dropped: 'Đường hầm bị ngắt, đang nối lại…',
+    revoked: 'Cloudflare đã thu hồi địa chỉ cũ, đang lấy địa chỉ mới…',
+    newTitle: 'Địa chỉ mở văn phòng đã đổi',
+    newBody: 'Cloudflare thu hồi địa chỉ cũ. Địa chỉ mới: {url}',
   },
   move: {
     notOpen: 'Phiên này không còn mở.',
