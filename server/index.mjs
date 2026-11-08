@@ -3123,6 +3123,15 @@ const server = http.createServer((req, res) => {
     });
     return;
   }
+  if (req.method === 'POST' && url.pathname === '/api/production/qa') {   // { project }: run the workspace's video_qa.py on its latest render (this computer only)
+    if (!authorized(req, url) || !isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+    readJson(req).then((b) => {
+      const r = qaRunner.start(videoWs(), String(b?.project || ''));
+      fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} video qa ${r.ok ? 'start' : 'refused ' + r.error} ${JSON.stringify(String(b?.project || '').slice(0, 200))}\n`).catch(() => {});
+      json(res, r.ok ? 200 : r.error === 'busy' ? 409 : 400, r);
+    }).catch(() => json(res, 400, { ok: false }));
+    return;
+  }
   // The page's own files (bundles, fonts, the QR library, the icons and share card in app/): public, no token needed.
   // In development also Next's overlay.
   if (url.pathname.startsWith('/_next/') || url.pathname.startsWith('/assets/') || PAGE_FILES.has(url.pathname) || (DEV && url.pathname.startsWith('/__nextjs'))) { nextHandle(req, res); return; }
@@ -3201,16 +3210,7 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/production/projects') {   // read-only scan of OFFICE_VIDEO_WORKSPACE (server/production/projects.mjs)
     json(res, 200, readProjects(videoWs())); return;
   }
-  if (url.pathname === '/api/production/qa') {   // POST { project }: run the workspace's video_qa.py on its latest render (this computer only); GET ?project=: run state + findings
-    if (req.method === 'POST') {
-      if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
-      readJson(req).then((b) => {
-        const r = qaRunner.start(videoWs(), String(b?.project || ''));
-        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} video qa ${r.ok ? 'start' : 'refused ' + r.error} ${JSON.stringify(String(b?.project || '').slice(0, 200))}\n`).catch(() => {});
-        json(res, r.ok ? 200 : r.error === 'busy' ? 409 : 400, r);
-      }).catch(() => json(res, 400, { ok: false }));
-      return;
-    }
+  if (url.pathname === '/api/production/qa') {   // GET ?project=: run state + findings (POST is above the GET-only gate)
     const id = url.searchParams.get('project');
     json(res, 200, { run: qaRunner.status(), ...(id ? projectQa(videoWs(), id) || { error: 'unknown_project' } : {}) }); return;
   }

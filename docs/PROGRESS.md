@@ -91,3 +91,53 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
   - Typecheck and lint pass.
   - On the real workspace: 1 of 1 reviewed projects passes, 2 revisions, and what-if-360-vision spans 12 h.
 
+## Phase 6 — hardening and docs — VERIFIED (2026-11-08)
+- Bug fix: `POST /api/production/qa` sat after the server's GET-only gate, so it always returned 405. It now sits before the gate and also needs the PIN (`authorized()`), like `/api/todos`.
+- README env table: `OFFICE_VIDEO_WORKSPACE` and `OFFICE_VIDEO_QA_PYTHON`.
+- Live smoke test (`node server/index.mjs --dev`, port 4399, real xuongphim workspace):
+  - GET `/api/production/agents`, `/projects`, `/qa`, `/analytics` all return 200.
+  - POST `/qa` checks: form content type → 403; `../x` → 400 unknown_project; a real project → 200 running; a second POST while running → 409 busy.
+  - A real QA run on what-if-360-vision finished with code 0 in about 43 s, scoring 100.0/100 "PUBLISH AFTER MANUAL REVIEW" (3 manual checks). The project scan then showed the new total.
+- Checks: `npm test` 180 tests (173 pass, 7 skipped, 0 fail), typecheck pass, lint pass.
+
+## Final report against spec §17
+Status: **verified** = checked by a test or a live run; **partial** = server side only, or not checked in a browser; **not done**.
+
+| Area | Criterion | Status |
+|---|---|---|
+| Agents | Real sessions appear | verified (hook events → agent model, `/api/production/agents`) |
+| | Real subagents identified | verified (SubagentStart/Stop, `sess:agentId`) |
+| | Parent-child links correct | verified (unit test) |
+| | Statuses from real events | verified (unit test; no event for 10 min → unknown) |
+| | Task handoffs recorded | partial (subagent start/stop with description; no explicit handoff event exists) |
+| | Failures visible | verified (tool failures, StopFailure → failed) |
+| 3D | Departments accessible | partial (directory board on the HQ wall; not checked in a browser) |
+| | Agents have visual roles | partial (agents mapped to departments; no new avatars) |
+| | Animations reflect real activity | partial (board counts come from real events; existing worker animations unchanged) |
+| | Inspect agents / camera / responsive | unchanged existing features; no e2e run |
+| Video production | Type A and B independent | verified (separate stage lists; type only from `config.json`) |
+| | Stages visible | partial (API only; no page panel) |
+| | Real artifacts registered | verified (file scan of the real workspace) |
+| | Render state accurate | verified (MP4 mtime; `running` only while the render log is fresh) |
+| | Video preview works | not done |
+| Video QA | Real MP4s inspected | verified (live run through the server) |
+| | Technical defects reported | verified (findings with severity) |
+| | Visual review linked to timestamps | verified (findings carry `time`) |
+| | Audio checks | verified (from the workspace's `video_qa.py`) |
+| | Revisions assigned | partial (read from `revisions.json`; assigning is CLI-only, `--revision`) |
+| | Corrected output re-reviewed | partial (re-run QA via POST; approval is CLI-only, `--approve`) |
+| Reliability | Existing features and hooks work | verified (all upstream tests pass; hooks untouched) |
+| | No duplicate event processing | verified (dedup by event id, unit test) |
+| | No fake live data | verified (demo never ingested; missing metrics are `null` with a reason) |
+| | No critical security regression | verified (loopback, same-origin, JSON, PIN on the one POST; fixed argv, no shell; paths inside the workspace) |
+| | No unresolved critical test failures | verified (0 fail; 7 skips are environment-only) |
+
+Delivery: implementation in `server/production/`, `src/shared/agent-events.js`, `src/shared/departments.js`, `src/office/life/departments.js`. Architecture notes are in this file. Install, startup and configuration are in the README (`npm ci`, `npm start` or `node server/index.mjs --dev`, env table). Test results are above.
+
+Known gaps and risks:
+- No page panels for projects, QA review or analytics, and no video preview; the data is API-only.
+- The 3D board has not been checked in a browser, and no e2e test has run.
+- `agent.file_created` can't be told apart from a modify; tokens, cost and render duration are unavailable.
+- None of the 7 real projects sets `type`, so all are unclassified until their `config.json` says A or B.
+- A QA run overwrites the project's previous report (that is how `video_qa.py` works).
+

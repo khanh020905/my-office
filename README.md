@@ -591,6 +591,8 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
 | `OFFICE_USAGE` | on | `0` stops reading your plan's usage. |
 | `OFFICE_CI` | on | `0` stops checking CI runs with `gh`. |
 | `OFFICE_TRANSLATE` | on | `0` leaves Claude's English descriptions untranslated in Vietnamese mode. |
+| `OFFICE_VIDEO_WORKSPACE` | unset | The video studio folder (`~` allowed) that `/api/production/projects`, `/qa` and `/analytics` read. Unset means those routes say `configured: false` and show nothing. |
+| `OFFICE_VIDEO_QA_PYTHON` | `py` (Windows), `python3` | The Python that runs the workspace's `tools/video_qa.py`; `py` gets `-3.14`. |
 
 ## Development
 
