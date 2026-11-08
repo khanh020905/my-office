@@ -30,6 +30,7 @@ import { buildTimeline } from '../src/shared/timeline.js';
 import { createAgentModel } from '../src/shared/agent-events.js';
 import { readProjects } from './production/projects.mjs';
 import { createQaRunner, projectQa } from './production/qa.mjs';
+import { analytics } from './production/analytics.mjs';
 import { dangerKey } from '../src/shared/danger.js';
 import { holdMs, createBarWatch } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
@@ -3196,6 +3197,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/production/agents') { json(res, 200, { agents: agentModel.snapshot() }); return; }
+  if (url.pathname === '/api/production/analytics') { const r = readProjects(videoWs()); json(res, 200, { configured: r.configured, ...analytics(r.projects, agentModel.snapshot()) }); return; }
   if (url.pathname === '/api/production/projects') {   // read-only scan of OFFICE_VIDEO_WORKSPACE (server/production/projects.mjs)
     json(res, 200, readProjects(videoWs())); return;
   }

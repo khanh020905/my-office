@@ -76,3 +76,18 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 - Checks: `npm test` ran 179 tests (172 pass, 7 skipped, 0 fail; 2 new in `tests/unit/qa.test.mjs`), and typecheck and lint pass. Against the real workspace, what-if-360-vision shows 22 findings, and projects without a report show none.
 - Not done: no review-studio panel on the page yet, and a real QA spawn through the live server has not been tested.
 
+## Phase 5 — analytics (server side) — VERIFIED (2026-11-08)
+- `server/production/analytics.mjs` `analytics(projects, agents)` builds its figures from the project scan and the live agent model. Route `GET /api/production/analytics` sits behind the existing auth check.
+- Per project:
+  - the span from its first file to its last (wall-clock, not working time)
+  - render count and last render time
+  - revisions
+  - QA total and recommendation
+- QA: projects reviewed and passed, and the pass rate. A pass means the recommendation starts with `PUBLISH`. Recommendations are listed as written, plus severity totals.
+- Agents: states, active, completed and failed counts, plus tool calls, tool failures and files touched since the office started recording.
+- Tokens, cost and render duration come back as `null` with a reason under `unavailable`. No hook reports tokens, and the renderer writes no start time.
+- Checks:
+  - `npm test`: 180 tests (173 pass, 7 skipped, 0 fail; 1 new in `tests/unit/analytics.test.mjs`).
+  - Typecheck and lint pass.
+  - On the real workspace: 1 of 1 reviewed projects passes, 2 revisions, and what-if-360-vision spans 12 h.
+
