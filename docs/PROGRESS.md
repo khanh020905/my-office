@@ -48,3 +48,23 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 - Checks: `npm test` ran 174 tests (167 pass, 7 skipped, 0 fail; 3 new in `tests/unit/departments.test.mjs`); typecheck and lint pass. The board has not been looked at in a browser yet.
 - Known limit: the page model fills only from events after the page loads, so the board starts idle until new activity arrives.
 
+## Phase 3 — production workflow and timeline (server side) — VERIFIED (2026-11-08)
+- `server/production/projects.mjs`: a read-only scan of the video workspace set in `OFFICE_VIDEO_WORKSPACE` (`~` allowed). Projects are `PROJECTS/<slug>/` and `<studio>/projects/<slug>/` folders that hold a `config.json`. Symlinks are skipped, JSON reads are capped at 5 MB, and the scan stops at 200 projects. If the variable is unset or isn't a folder, the API returns `{ configured: false }` and no sample data.
+- Type comes only from `config.json` `"type": "A" | "B"`. A project without it is unclassified: `type: null`, `stages: null`. Type A and Type B each keep their own §5 stage list, and each stage depends on the one before it.
+- Stage status is file-system state. A stage is `done` when its artifact exists:
+  - script: `input/script.txt`
+  - voiceover: `input/voiceover.*`
+  - storyboard: `story/shots.json`
+  - visual_bible: `story/bible.md`
+  - character_bible: `scenes/cast.js`
+  - visualization / assets: `scenes/sets/`
+  - animation: `scenes/shots/`
+  - editing: `out/*.mp4`
+  - qa: `qa_reports/<mp4 stem>/findings.json`
+  
+  It is `missing` when that file is absent. Research, validation and concept are always `unknown`, since no file proves them. Editing shows `running` only while `build/final_render.log` is under 2 min old and newer than the MP4.
+- Each project lists its artifacts (path and mtime), its QA result (total, recommendation, severity counts, report path), its revisions from `out/revisions/revisions.json`, and a timeline of artifact times and revisions sorted by time.
+- Route: `GET /api/production/projects`, behind the existing auth check.
+- Checks: `npm test` ran 177 tests (170 pass, 7 skipped, 0 fail; 3 new in `tests/unit/projects.test.mjs`). Typecheck and lint pass. Against the real xuongphim folder it finds 7 projects, and what-if-360-vision shows QA 90.4 and 2 revisions. None of the 7 sets `type`, so all are unclassified until their config says A or B.
+- Not done: no page panel for projects yet; an `outdated` state when an upstream file is newer than a downstream one; per-task agent history joined to projects (no event links an agent to a project yet).
+

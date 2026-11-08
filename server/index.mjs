@@ -28,6 +28,7 @@ import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { createAgentModel } from '../src/shared/agent-events.js';
+import { readProjects } from './production/projects.mjs';
 import { dangerKey } from '../src/shared/danger.js';
 import { holdMs, createBarWatch } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
@@ -3192,6 +3193,9 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (url.pathname === '/api/production/agents') { json(res, 200, { agents: agentModel.snapshot() }); return; }
+  if (url.pathname === '/api/production/projects') {   // read-only scan of OFFICE_VIDEO_WORKSPACE (server/production/projects.mjs)
+    json(res, 200, readProjects(String(process.env.OFFICE_VIDEO_WORKSPACE || '').replace(/^~(?=$|[\\/])/, os.homedir()))); return;
+  }
   if (url.pathname === '/api/timeline') {
     const to = Math.min(Number(url.searchParams.get('to')) || Date.now(), Date.now()), from = Math.max(Number(url.searchParams.get('from')) || to - 3600e3, to - 2 * 86400e3);
     const dayOf = (t) => new Date(t).toLocaleDateString('sv-SE');
