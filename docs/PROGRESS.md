@@ -111,10 +111,10 @@ Status: **verified** = checked by a test or a live run; **partial** = server sid
 | | Statuses from real events | verified (unit test; no event for 10 min → unknown) |
 | | Task handoffs recorded | partial (subagent start/stop with description; no explicit handoff event exists) |
 | | Failures visible | verified (tool failures, StopFailure → failed) |
-| 3D | Departments accessible | partial (directory board on the HQ wall; not checked in a browser) |
+| 3D | Departments accessible | verified in a browser (Phase 7: HQ page renders, WebGL canvas, room labels) |
 | | Agents have visual roles | partial (agents mapped to departments; no new avatars) |
 | | Animations reflect real activity | partial (board counts come from real events; existing worker animations unchanged) |
-| | Inspect agents / camera / responsive | unchanged existing features; no e2e run |
+| | Inspect agents / camera / responsive | unchanged existing features; e2e run in Phase 7 (see below) |
 | Video production | Type A and B independent | verified (separate stage lists; type only from `config.json`) |
 | | Stages visible | partial (API only; no page panel) |
 | | Real artifacts registered | verified (file scan of the real workspace) |
@@ -136,8 +136,43 @@ Delivery: implementation in `server/production/`, `src/shared/agent-events.js`, 
 
 Known gaps and risks:
 - No page panels for projects, QA review or analytics, and no video preview; the data is API-only.
-- The 3D board has not been checked in a browser, and no e2e test has run.
+- The 3D page was checked in a browser in Phase 7; see the e2e results there.
 - `agent.file_created` can't be told apart from a modify; tokens, cost and render duration are unavailable.
-- None of the 7 real projects sets `type`, so all are unclassified until their `config.json` says A or B.
-- A QA run overwrites the project's previous report (that is how `video_qa.py` works).
+- None of the 7 real projects sets `type`, so all are unclassified until their `config.json` says A or B (a proposal is in Phase 7; the code still never guesses).
+- Fixed in Phase 7: each QA result is copied into `<data>/qa-history/` before and after a run, so old results are kept.
 
+
+## Phase 7 — visual and functional verification
+What was checked, with evidence:
+- **3D UI in a browser.** Production build, then the HQ page in the in-app browser: the WebGL canvas renders and the room labels show.
+- **Hook events → agents.** Sent SessionStart, UserPromptSubmit, PreToolUse (Bash `ls`) and SessionEnd to `POST /event` on a test server. `/api/production/agents` showed the agent running, last event `agent.tool_started` "Look at files · ls", 1 tool, director department. The session id is hashed.
+- **Production QA API against the real workspace (read-only checks):**
+  - GET for a real project → 200 with 9 findings.
+  - Unknown project or `../` id → `unknown_project`.
+  - Bad Host → 421. POST without JSON content type → 403. Cross-origin POST → 403. PUT → 405.
+  - Broken JSON, an empty project or a `../` project → 400 `unknown_project`.
+- **QA run and state, in a temporary workspace with a stub `video_qa.py`, so the user's reports were not touched:**
+  - POST → 200; a second POST while running → 409 `busy`; the run ends `done` with code 0.
+  - Two runs → `history` shows `[90, 85]`, newest first, and there are two archived folders.
+
+Bugs fixed:
+- **Server hang on start (Windows).** The parent-process walk in `server/system.mjs` looped forever when the process table had a PID cycle (a reused PID). The walks now track visited PIDs. Test: `tests/unit/pid-cycle.test.mjs`.
+- **QA history.** `video_qa.py` rewrites `qa_reports/<stem>/` on every run. The office now copies `findings.json` and `VIDEO_QA_REPORT.md` to `<data>/qa-history/<project>/<report mtime>/` before and after each dashboard run, so a CLI report is kept as well. `GET /api/production/qa` returns `history` (newest 50: time, total, recommendation, severity counts). This writes only to the office data folder, never to the workspace. Test: `tests/unit/qa.test.mjs`.
+
+E2E (Playwright, 150 tests, against the `.next-e2e` build): running at the time of this commit (about 32/150 done after 25 min on this machine); results follow below when it finishes. Unit tests with e2e running alongside: 183 total, 167 pass, 7 skipped, 9 timing failures (`loop-hook`, `codex-accounts`, `tenure`). Each passes or fails differently on re-run, and none touches the files changed here. Typecheck and lint pass.
+
+Type A/B proposal. Nothing is written; the user decides by adding `"type": "A"` or `"type": "B"` to each `config.json`:
+
+| Project | Evidence | Proposal |
+|---|---|---|
+| what-if-360-vision | "What If You Had 360-Degree Vision?": science explainer, full pipeline | A |
+| whatif-bat-tu | "Chuyện gì xảy ra nếu bạn bất tử": "What If" explainer | A |
+| earth-stops-spinning | "What Happens If Earth Stops Spinning": science explainer | A |
+| tang18-tap01 | "Tầng 18 — Tập 1": story episode, own style, cast and bible | B |
+| tang18-char-options, tang18-character-sheet, zombie-18f-style-test | Storyboard or shots only, no script: tests or asset work | leave unclassified |
+
+Still missing: page panels for projects, QA review and history, and a video preview (data is API-only). A non-loopback POST was not tested from another machine. Broken JSON returns `unknown_project` rather than a bad-request error (harmless).
+
+Decisions for the user:
+- Set `type` in the four `config.json` files above, or change the proposal.
+- Whether the slow and Windows-only e2e failures listed above need work.

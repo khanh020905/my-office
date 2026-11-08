@@ -53,8 +53,8 @@ export function fmtDur(sec) {
 /* ---------- raw readings: ./platform ---------- */
 const { processes, memory, disk, listeners, cwds, liteProcs, established, footprints } = OS;
 function descendants(kids, pid) {
-  const out = [], stack = [...(kids.get(pid) || [])];
-  while (stack.length) { const c = stack.pop(); out.push(c); stack.push(...(kids.get(c) || [])); }
+  const out = [], seen = new Set([pid]), stack = [...(kids.get(pid) || [])];
+  while (stack.length) { const c = stack.pop(); if (seen.has(c)) continue; seen.add(c); out.push(c); stack.push(...(kids.get(c) || [])); }
   return out;
 }
 const treeMem = (P, root) => [root, ...descendants(P.kids, root)].reduce((s, pid) => s + (P.procs.get(pid)?.mem || 0), 0);
@@ -202,7 +202,9 @@ function devLabel(p) {
 function rootOf(P, pid) {
   // Climb through npm/pnpm/node wrappers so "Stop" stops the whole dev server, not just its worker.
   let cur = P.procs.get(pid);
-  while (cur) {
+  const seen = new Set();
+  while (cur && !seen.has(cur.pid)) {   // (Windows reuses pids: a parent chain can loop back on itself)
+    seen.add(cur.pid);
     const parent = P.procs.get(cur.ppid);
     if (!parent || parent.pid <= 1 || !mine(parent) || !TREE_BIN.test(binOf(parent.comm)) || parent.comm.includes('.app/')) break;
     cur = parent;
@@ -213,7 +215,8 @@ const appOf = (comm) => OS.appOf(comm);
 function protectedPids(P) {
   const set = new Set([1, process.pid]);
   let cur = P.procs.get(process.pid);
-  while (cur && cur.ppid > 1) { set.add(cur.ppid); cur = P.procs.get(cur.ppid); }
+  // (Windows reuses pids, so a parent chain can loop back on itself: stop at the first pid seen twice)
+  while (cur && cur.ppid > 1 && !set.has(cur.ppid)) { set.add(cur.ppid); cur = P.procs.get(cur.ppid); }
   return set;
 }
 
@@ -563,3 +566,6 @@ export async function sysAction({ action, target, force, start, items }) {
   }
   return { ok: false, message: tr('server.sys.result.unknown') };
 }
+
+// exposed for tests: the process-tree walks must end even when Windows pid reuse makes a parent chain loop
+export const _walks = { descendants, rootOf, protectedPids };

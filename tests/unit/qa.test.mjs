@@ -46,3 +46,25 @@ test('qa: findings come from the report without evidence paths', () => {
     assert.equal(projectQa(ws, 'nope'), null);
   } finally { fs.rmSync(ws, { recursive: true, force: true }); }
 });
+
+test('qa: each report is kept in the office history, so a new run does not erase the old one', () => {
+  const ws = fs.mkdtempSync(path.join(os.tmpdir(), 'vqa-')), hist = fs.mkdtempSync(path.join(os.tmpdir(), 'vqah-'));
+  try {
+    put(path.join(ws, 'tools', 'video_qa.py')); put(path.join(ws, 'PROJECTS', 'p', 'config.json'), '{}'); put(path.join(ws, 'PROJECTS', 'p', 'out', 'P.mp4'));
+    const f = path.join(ws, 'qa_reports', 'P', 'findings.json');
+    put(f, JSON.stringify({ total: 60, recommendation: 'fix', findings: [{ severity: 'HIGH' }, { severity: 'HIGH' }, { severity: 'LOW' }] }));
+    fs.utimesSync(f, new Date(1e12), new Date(1e12));
+    const calls = [], r = createQaRunner({ historyDir: hist, spawn: fakeSpawn(calls), python: 'python3' });
+    assert.equal(r.start(ws, 'PROJECTS/p').ok, true);   // the old report is saved before the tool rewrites it
+    put(f, JSON.stringify({ total: 90, recommendation: 'publish', findings: [] }));
+    fs.utimesSync(f, new Date(2e12), new Date(2e12));
+    calls.child.emit('close', 0);
+    const h = projectQa(ws, 'PROJECTS/p', hist).history;
+    assert.deepEqual(h, [
+      { at: 2e12, total: 90, recommendation: 'publish', severities: {} },
+      { at: 1e12, total: 60, recommendation: 'fix', severities: { HIGH: 2, LOW: 1 } }]);
+    assert.equal(fs.readdirSync(path.join(hist, 'PROJECTS_p')).length, 2);
+    assert.ok(!fs.existsSync(path.join(ws, 'qa_reports', 'P', 'history')));   // nothing written into the workspace
+    assert.deepEqual(projectQa(ws, 'PROJECTS/p').history, []);
+  } finally { fs.rmSync(ws, { recursive: true, force: true }); fs.rmSync(hist, { recursive: true, force: true }); }
+});

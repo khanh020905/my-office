@@ -263,7 +263,7 @@ try {
 } catch { /* first run */ }
 // spec §7 normalised agent model: recovers from the saved feed after a restart, then onHook feeds it live
 const agentModel = createAgentModel();
-const qaRunner = createQaRunner();
+const qaRunner = createQaRunner({ historyDir: path.join(DATA_DIR, 'qa-history') });
 const videoWs = () => String(process.env.OFFICE_VIDEO_WORKSPACE || '').replace(/^~(?=$|[\\/])/, os.homedir());
 agentModel.load(feed);
 setInterval(() => {
@@ -3212,7 +3212,7 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/production/qa') {   // GET ?project=: run state + findings (POST is above the GET-only gate)
     const id = url.searchParams.get('project');
-    json(res, 200, { run: qaRunner.status(), ...(id ? projectQa(videoWs(), id) || { error: 'unknown_project' } : {}) }); return;
+    json(res, 200, { run: qaRunner.status(), ...(id ? projectQa(videoWs(), id, path.join(DATA_DIR, 'qa-history')) || { error: 'unknown_project' } : {}) }); return;
   }
   if (url.pathname === '/api/timeline') {
     const to = Math.min(Number(url.searchParams.get('to')) || Date.now(), Date.now()), from = Math.max(Number(url.searchParams.get('from')) || to - 3600e3, to - 2 * 86400e3);
