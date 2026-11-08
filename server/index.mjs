@@ -29,6 +29,7 @@ import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { createAgentModel } from '../src/shared/agent-events.js';
 import { readProjects } from './production/projects.mjs';
+import { createQaRunner, projectQa } from './production/qa.mjs';
 import { dangerKey } from '../src/shared/danger.js';
 import { holdMs, createBarWatch } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
@@ -261,6 +262,8 @@ try {
 } catch { /* first run */ }
 // spec §7 normalised agent model: recovers from the saved feed after a restart, then onHook feeds it live
 const agentModel = createAgentModel();
+const qaRunner = createQaRunner();
+const videoWs = () => String(process.env.OFFICE_VIDEO_WORKSPACE || '').replace(/^~(?=$|[\\/])/, os.homedir());
 agentModel.load(feed);
 setInterval(() => {
   if (!dirty) return;
@@ -3194,7 +3197,20 @@ const server = http.createServer((req, res) => {
   }
   if (url.pathname === '/api/production/agents') { json(res, 200, { agents: agentModel.snapshot() }); return; }
   if (url.pathname === '/api/production/projects') {   // read-only scan of OFFICE_VIDEO_WORKSPACE (server/production/projects.mjs)
-    json(res, 200, readProjects(String(process.env.OFFICE_VIDEO_WORKSPACE || '').replace(/^~(?=$|[\\/])/, os.homedir()))); return;
+    json(res, 200, readProjects(videoWs())); return;
+  }
+  if (url.pathname === '/api/production/qa') {   // POST { project }: run the workspace's video_qa.py on its latest render (this computer only); GET ?project=: run state + findings
+    if (req.method === 'POST') {
+      if (!isLoopback(req) || !sameOriginOf(req) || !String(req.headers['content-type'] || '').startsWith('application/json')) { json(res, 403, { ok: false, message: tr('server.api.approveOnMac') }); return; }
+      readJson(req).then((b) => {
+        const r = qaRunner.start(videoWs(), String(b?.project || ''));
+        fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} video qa ${r.ok ? 'start' : 'refused ' + r.error} ${JSON.stringify(String(b?.project || '').slice(0, 200))}\n`).catch(() => {});
+        json(res, r.ok ? 200 : r.error === 'busy' ? 409 : 400, r);
+      }).catch(() => json(res, 400, { ok: false }));
+      return;
+    }
+    const id = url.searchParams.get('project');
+    json(res, 200, { run: qaRunner.status(), ...(id ? projectQa(videoWs(), id) || { error: 'unknown_project' } : {}) }); return;
   }
   if (url.pathname === '/api/timeline') {
     const to = Math.min(Number(url.searchParams.get('to')) || Date.now(), Date.now()), from = Math.max(Number(url.searchParams.get('from')) || to - 3600e3, to - 2 * 86400e3);

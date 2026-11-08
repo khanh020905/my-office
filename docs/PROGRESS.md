@@ -68,3 +68,11 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 - Checks: `npm test` ran 177 tests (170 pass, 7 skipped, 0 fail; 3 new in `tests/unit/projects.test.mjs`). Typecheck and lint pass. Against the real xuongphim folder it finds 7 projects, and what-if-360-vision shows QA 90.4 and 2 revisions. None of the 7 sets `type`, so all are unclassified until their config says A or B.
 - Not done: no page panel for projects yet; an `outdated` state when an upstream file is newer than a downstream one; per-task agent history joined to projects (no event links an agent to a project yet).
 
+## Phase 4 — video QA runner (server side) — VERIFIED (2026-11-08)
+- `server/production/qa.mjs`: `projectQa(ws, id)` returns a project's latest render and its findings from `qa_reports/<stem>/findings.json` (time, severity, category, issue, fix, status, source). Evidence paths are dropped and the list is capped at 300.
+- `createQaRunner()` runs the workspace's own `tools/video_qa.py` on that render. The request sends only a project id, and the video path comes from the project scan and must be inside the workspace. It uses a fixed argv with no shell, allows one run at a time, kills a run after 30 min and keeps a 2000-char tail of output. Python is `py -3.14` on Windows, or `OFFICE_VIDEO_QA_PYTHON`.
+- Route `/api/production/qa`: `GET ?project=` returns the run status and findings. `POST {project}` starts a run and must be loopback, same-origin and JSON. Every start or refusal is written to the action log.
+- Only the read-only QA run is offered. `--revision` and `--approve` stay on the command line, because the approval is the user's decision.
+- Checks: `npm test` ran 179 tests (172 pass, 7 skipped, 0 fail; 2 new in `tests/unit/qa.test.mjs`), and typecheck and lint pass. Against the real workspace, what-if-360-vision shows 22 findings, and projects without a report show none.
+- Not done: no review-studio panel on the page yet, and a real QA spawn through the live server has not been tested.
+
