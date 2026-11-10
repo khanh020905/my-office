@@ -345,6 +345,11 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   editing".
 - **When this applies**: only while the page is open and visible, and for at most 45 seconds. Otherwise Claude Code
   asks as usual. You can turn this off in Settings.
+- **Away from the Mac, the phone answers**: with approving from a phone on and a phone getting push notifications,
+  a request that comes in after 2 minutes without a key or mouse on the Mac waits for the phone instead (up to 10
+  minutes), and the phone gets a push right away: the approval, Claude's question or its plan, answered on the phone's
+  Overview tab. A key or the mouse on the Mac hands it back to Claude Code's own prompt within a few seconds. Installed
+  before this: run `my-office install` once so the hooks may wait that long (they stop at 45 s otherwise).
 - **Stuck loops get broken**: when a session runs the same thing and gets the same error three times in a row, its
   fourth try is blocked and Claude is told to change course (a synchronous `PreToolUse` hook that answers from memory;
   it gives up after 0.3 s, so with the office closed or busy the call simply goes ahead). The person's name tag turns
@@ -528,8 +533,10 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   (an older Claude Code, one skipping every approval, settings that hold or refuse such messages) is said so in the chat,
   and the note goes as an ordinary message once it is done.
 - On a phone the office lays itself out like an app, upright or held sideways: a compact top bar (plan, Mac, settings),
-  the office filling the screen, and a tab bar (Office · Sessions · Activity · Approve · Chat, with counts) whose tabs
-  open each panel as a full-screen sheet. A waiting approval floats just above the tabs with thumb-sized buttons.
+  the office filling the screen, and a tab bar (Overview · Sessions · Activity · Approve · Chat, with counts) whose tabs
+  open each panel as a full-screen sheet. Overview puts what waits for you on top (the approval cards themselves), then
+  the sessions at work, the plans' limits and the Mac. A waiting approval floats just above the tabs with thumb-sized
+  buttons.
 
 ## Privacy and safety
 

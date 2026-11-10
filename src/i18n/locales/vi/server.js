@@ -144,6 +144,9 @@ export default {
   steer: { note: '[Người dùng chen lời qua My Office (từ điện thoại) trong lúc bạn đang làm]\n{text}' },
   push: {
     permTitle: '⚠️ {name} cần bạn duyệt (trong 45 giây)',
+    waitTitle: '⚠️ {name} cần bạn duyệt',
+    askTitle: '❓ {name} đang hỏi bạn',
+    planTitle: '📋 {name} xin duyệt kế hoạch',
     testTitle: '🔔 My Office',
     testBody: 'Thông báo đã chạy: Claude trả lời hay cần duyệt là điện thoại báo ngay.',
   },

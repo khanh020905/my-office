@@ -52,8 +52,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s --max-time 50 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/question || true",
-            "timeout": 55
+            "command": "curl -s --max-time 600 -H 'X-Office-Wait: 600' -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/question || true",
+            "timeout": 605
           }
         ]
       },
@@ -106,8 +106,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "curl -s --max-time 50 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/permission || true",
-            "timeout": 55
+            "command": "curl -s --max-time 600 -H 'X-Office-Wait: 600' -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:4310/hook/permission || true",
+            "timeout": 605
           }
         ]
       }

@@ -31,16 +31,20 @@ const EVENTS = ['SessionStart', 'SessionEnd', 'UserPromptSubmit', 'PreToolUse', 
 // Paths use forward slashes there, which both cmd and Git Bash accept.
 const WIN = process.platform === 'win32', fwd = (p) => p.replace(/\\/g, '/');
 const SEND = WIN ? `"${fwd(process.execPath)}" "${fwd(path.join(ROOT, 'hooks', 'send.mjs'))}"` : '';
-const hookCmd = (route, wait) => (WIN ? `${SEND} http://127.0.0.1:${PORT}${route}${wait ? '' : ' --async'}`
-  : wait ? `curl -s --max-time 50 -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}${route} || true`
+// `wait`: the seconds a hook waits for the office's answer (0: fire and forget). The approval and question hooks say how
+// long in an X-Office-Wait header: the office holds a request 45 s while a page looks, and up to this long only while
+// you're away from the Mac and a phone may answer (server/mac-hold.mjs); otherwise it answers at once.
+const WAIT_S = 600;
+const hookCmd = (route, wait, header = false) => (WIN ? `${SEND} http://127.0.0.1:${PORT}${route}${wait ? ` --wait ${wait}` : ' --async'}`
+  : wait ? `curl -s --max-time ${wait}${header ? ` -H 'X-Office-Wait: ${wait}'` : ''} -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}${route} || true`
     : `curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' --data-binary @- http://127.0.0.1:${PORT}${route} || true`);
-const EVENT_CMD = hookCmd('/event', false);
-const PERM_CMD = hookCmd('/hook/permission', true);
+const EVENT_CMD = hookCmd('/event', 0);
+const PERM_CMD = hookCmd('/hook/permission', WAIT_S, true);
 // Claude's questions (AskUserQuestion) and plans (ExitPlanMode) are answered through PreToolUse, the documented way.
-const ASK_CMD = hookCmd('/hook/question', true);
+const ASK_CMD = hookCmd('/hook/question', WAIT_S, true);
 const ASK_MATCHER = 'AskUserQuestion|ExitPlanMode';
 // A call auto mode refused (PermissionDenied): a card in the office, and while one is open, a moment to let Claude retry.
-const DENY_CMD = hookCmd('/hook/denied', true);
+const DENY_CMD = hookCmd('/hook/denied', 50);
 // Before each step, a quick word with the office (server/loops.mjs): a call that keeps failing the same way is blocked.
 // 0.3 s at most, and nothing printed when the office is down or slow: the call goes ahead as if there were no hook.
 const LOOP_CMD = WIN ? `${SEND} http://127.0.0.1:${PORT}/hook/loop --fast`
@@ -83,9 +87,13 @@ async function install() {
     if (!list.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/event')))) { list.push({ hooks: [{ type: 'command', command: EVENT_CMD, timeout: 5, async: true }] }); added++; }
   }
   const perm = (cfg.hooks.PermissionRequest ||= []);
-  if (!args.includes('--no-approve') && !perm.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/permission')))) { perm.push({ hooks: [{ type: 'command', command: PERM_CMD, timeout: 55 }] }); added++; }
+  if (!args.includes('--no-approve') && !perm.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/permission')))) { perm.push({ hooks: [{ type: 'command', command: PERM_CMD, timeout: WAIT_S + 5 }] }); added++; }
   const pre = (cfg.hooks.PreToolUse ||= []);
-  if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: 55 }] }); added++; }
+  if (!args.includes('--no-approve') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/question')))) { pre.push({ matcher: ASK_MATCHER, hooks: [{ type: 'command', command: ASK_CMD, timeout: WAIT_S + 5 }] }); added++; }
+  // an earlier install's approval and question hooks waited 50 s at most: brought up to what a phone needs
+  for (const [list, route, command] of [[perm, '/hook/permission', PERM_CMD], [pre, '/hook/question', ASK_CMD]]) {
+    for (const e of list) for (const h of e.hooks || []) if (ours(h) && h.command.includes(route) && h.command !== command) { h.command = command; h.timeout = WAIT_S + 5; added++; }
+  }
   if (!args.includes('--no-loop-guard') && !pre.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/loop')))) { pre.push({ hooks: [{ type: 'command', command: LOOP_CMD, timeout: 2 }] }); added++; }
   const start = (cfg.hooks.SessionStart ||= []);
   if (!args.includes('--no-pins') && !start.some((e) => (e.hooks || []).some((h) => ours(h) && h.command.includes('/hook/start')))) { start.push({ matcher: 'compact', hooks: [{ type: 'command', command: START_CMD, timeout: 5 }] }); added++; }
