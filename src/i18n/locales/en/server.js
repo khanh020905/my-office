@@ -154,6 +154,9 @@ export default {
   steer: { note: '[The user, cutting in through My Office (from their phone) while you work]\n{text}' },
   push: {
     permTitle: '⚠️ {name} needs your approval (within 45 s)',
+    waitTitle: '⚠️ {name} needs your approval',
+    askTitle: '❓ {name} has a question for you',
+    planTitle: '📋 {name} wants its plan approved',
     testTitle: '🔔 My Office',
     testBody: 'Notifications work: your phone tells you when Claude answers or needs approving.',
   },
