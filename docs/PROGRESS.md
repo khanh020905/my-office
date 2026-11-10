@@ -11,7 +11,7 @@ Repo: clone of https://github.com/khanh020905/my-office at `1df03ee` (v0.5.0). N
 | `npm test` (node --test, tests/unit) | 165 tests: 158 pass, 0 fail, 7 skipped (3 need sqlite3, 1 needs Swift, 3 need a live `claude` / inbox socket) |
 | `npm run typecheck` (tsc --noEmit) | pass, 0 errors |
 | `npm run lint` (eslint .) | pass, 0 warnings |
-| e2e (playwright) | not run yet; needs a browser install and a running server |
+| e2e (playwright) | run in Phase 7: 72/150 pass on Windows; failures are the `.sh` fakes, unix sockets and slow 3D (see Phase 7) |
 
 ### Reusable modules (extend these, don't duplicate them)
 
@@ -159,7 +159,13 @@ Bugs fixed:
 - **Server hang on start (Windows).** The parent-process walk in `server/system.mjs` looped forever when the process table had a PID cycle (a reused PID). The walks now track visited PIDs. Test: `tests/unit/pid-cycle.test.mjs`.
 - **QA history.** `video_qa.py` rewrites `qa_reports/<stem>/` on every run. The office now copies `findings.json` and `VIDEO_QA_REPORT.md` to `<data>/qa-history/<project>/<report mtime>/` before and after each dashboard run, so a CLI report is kept as well. `GET /api/production/qa` returns `history` (newest 50: time, total, recommendation, severity counts). This writes only to the office data folder, never to the workspace. Test: `tests/unit/qa.test.mjs`.
 
-E2E (Playwright, 150 tests, against the `.next-e2e` build): running at the time of this commit (about 32/150 done after 25 min on this machine); results follow below when it finishes. Unit tests with e2e running alongside: 183 total, 167 pass, 7 skipped, 9 timing failures (`loop-hook`, `codex-accounts`, `tenure`). Each passes or fails differently on re-run, and none touches the files changed here. Typecheck and lint pass.
+E2E (Playwright, 150 tests, against the `.next-e2e` build, 2 workers, Windows with software WebGL): 72 passed, 73 failed, 2 skipped, 3 did not run, in 2.4 h. Six of the failing files were re-run with 1 worker (12.6 min): 7 passed, 4 failed, 3 did not run. `overlap` and `lam-bu` pass alone and the `interns` phone and project tests pass, so those were load failures. What still fails:
+- Windows test setup, not product code. The config replaces `cloudflared` and `claude` with `.sh` scripts (`tests/e2e/fake-*.sh`), which Windows cannot spawn directly. So the tunnel goes to `"error"` (`burn:47`, `tunnel-*`), and the specs that need a Claude run fail (`office:391`, `bg-tasks`, `steer`, `prompt-coach`, `session-compose`). `ci-fix` fails on a unix socket (`listen EACCES`).
+- `office:268` (the phone window) opens on the "away" tab instead of "home". It runs right after `burn` turned the tunnel on in the same server, which is likely the cause, but this was not confirmed alone.
+- Timeouts on slow 3D: `office:31` (a panel not visible within 30 s), `interns:47` (a screenshot over 240 s), and most of the other 36 `office.spec` failures, `comnha`, `farewell` and `look-dispose`.
+None of these touch the files changed in this phase, and no product bug was found. Screenshots and traces are in `test-results/`.
+
+Unit tests with e2e running alongside: 183 total, 167 pass, 7 skipped, 9 timing failures (`loop-hook`, `codex-accounts`, `tenure`). Each passes or fails differently on re-run, and none touches the files changed here. Typecheck and lint pass.
 
 Type A/B proposal. Nothing is written; the user decides by adding `"type": "A"` or `"type": "B"` to each `config.json`:
 
