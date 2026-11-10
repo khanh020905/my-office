@@ -22,6 +22,7 @@ import { createVault } from './vault.mjs';
 import { MAIN, SUB, modelsOf, withModels, hasSplit, withSplit } from './models.mjs';
 import { createCodexAccounts } from './codex-accounts.mjs';
 import { createAntigravityAccounts, makeDb, windowsOf } from './antigravity-accounts.mjs';
+import { watchAntigravity } from './antigravity-runs.mjs';
 import { report as promptReport } from './prompt-report.mjs';
 import { testCounts, testRunner } from './testrun.mjs';
 import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
@@ -2395,6 +2396,20 @@ const codex = AI_OFF ? null : createCodexAccounts({
     const o = codex.out(), name = (id) => aiName(o.list.find((a) => a.id === id)), older = o.older.filter((p) => p.where !== 'terminal').map((p) => p.where);
     chat.system(tr(sw.why === 'auto' ? 'chat.ai.codexAuto' : 'chat.ai.codexUsed', { from: name(sw.from), to: name(sw.to), when: sw.until ? hhmmOf(sw.until) : '' })
       + (older.length ? ` ${tr('chat.ai.codexReload', { where: [...new Set(older)].join(', ') })}` : ''));
+  },
+});
+// Antigravity's agent at a desk while its conversation file keeps changing; the 2 s tick rests it after 20 quiet seconds.
+if (!AI_OFF && process.env.OFFICE_AG_RUNS !== '0') watchAntigravity({
+  dirs: process.env.OFFICE_AG_DIRS?.split(path.delimiter) || ['antigravity', 'antigravity-ide'].map((d) => path.join(os.homedir(), '.gemini', d, 'conversations')),
+  onActive: ({ id, dir, mtime }) => {
+    const key = `antigravity:${id}`; let s = sessions.get(key);
+    if (!s) {
+      s = newSession(key); s.agent = 'gemini'; s.provider = 'antigravity'; s.sid = id; s.outcome = 'unknown';
+      s.name = dir.includes('antigravity-ide') ? 'Antigravity IDE' : 'Antigravity'; sessions.set(key, s);
+    }
+    if (s.status !== 'work') s.taskStart = mtime;
+    s.status = 'work'; s.lastEventAt = mtime;
+    broadcast({ k: 'sess', s: pub(s) });
   },
 });
 // Antigravity IDE: its state database and whether it is open (on a Mac: closed and opened again through `open`/osascript)
