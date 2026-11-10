@@ -3,7 +3,7 @@
 import path from 'node:path';
 import os from 'node:os';
 import { createHash } from 'node:crypto';
-import { kidsOf, parseEtime, sh } from './shared.mjs';
+import { kidsOf, parseEtime, readText, sh } from './shared.mjs';
 
 export const NAME = 'macOS';
 export const UID = process.getuid?.() ?? -1;   // (this module is also loaded, unused, on Windows)
@@ -158,7 +158,9 @@ export async function claudeLogin(dir = process.env.CLAUDE_CONFIG_DIR) {
   for (const s of [name]) {
     const out = await sh('security', ['find-generic-password', '-s', s, '-w'], 15000);
     if (!out.trim()) continue;
-    try { return JSON.parse(out).claudeAiOauth || null; } catch { /* not JSON */ }
+    try { const o = JSON.parse(out).claudeAiOauth; if (o) return o; } catch { /* not JSON */ }
   }
-  return null;
+  // not in the Keychain: Claude Code keeps it in the folder's .credentials.json when it can't use the Keychain (a locked
+  // or missing one, a login over SSH), as it always does on Linux and Windows
+  try { return JSON.parse(await readText(path.join(dir || path.join(os.homedir(), '.claude'), '.credentials.json'))).claudeAiOauth || null; } catch { return null; }
 }

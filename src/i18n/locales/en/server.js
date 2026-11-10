@@ -190,7 +190,9 @@ export default {
     modelWeek: '{model} (week)',
   },
   usage: {
-    keychain: "Can't read Claude Code's login from the Keychain.",
+    keychain: "Can't read Claude Code's login from the Keychain or its .credentials.json. Open Claude Code and run /login once.",
+    mainSignedOut: "Claude Code isn't signed in in its main folder ({dir}): run `claude` in Terminal, then /login.",
+    mainSignedOutOthers: "The main folder ({dir}) isn't signed in to Claude Code, so only the other accounts are read. To read it too: run `claude` in Terminal, then /login.",
     rateLimited: { one: 'Anthropic is limiting how often we can ask; reading again in {n} minute.', other: 'Anthropic is limiting how often we can ask; reading again in {n} minutes.' },
     expired: "Claude Code's login has expired; opening Claude Code renews it.",
     httpError: 'Anthropic returned error {status}.',

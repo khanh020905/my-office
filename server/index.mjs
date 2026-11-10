@@ -1790,6 +1790,14 @@ function loginAccount(login, file = ACCOUNT_FILE) {
 }
 // Claude Code's sign-in: the login keychain on a Mac, its credentials file elsewhere (server/platform)
 const keychainLogin = () => OS.claudeLogin();
+// no login to read for the main folder: never signed in there (its .claude.json has no account: ~/.claude.json, or the
+// folder's own when CLAUDE_CONFIG_DIR is set), maybe only other accounts are; or signed in, and its token is nowhere
+function loginMissingNote() {
+  let signedIn = false;
+  try { signedIn = !!JSON.parse(fs.readFileSync(process.env.CLAUDE_CONFIG_DIR ? path.join(CLAUDE_DIR, '.claude.json') : path.join(HOME, '.claude.json'), 'utf8')).oauthAccount; } catch { /* none */ }
+  if (signedIn) return ['server.usage.keychain'];
+  return [otherDirs.length ? 'server.usage.mainSignedOutOthers' : 'server.usage.mainSignedOut', { dir: tilde(CLAUDE_DIR) }];
+}
 function usageWindows(j) {
   const out = [], iso = (t) => (t ? Date.parse(t) || null : null);
   for (const l of Array.isArray(j.limits) ? j.limits : []) {
@@ -1820,7 +1828,7 @@ function fetchPlanUsage(force = false) {
   if (Date.now() < usageWait || (!force && planLimits?.source === 'api' && Date.now() - planLimits.at < 110_000)) return Promise.resolve();
   return (planBusy ??= (async () => {
     const login = await keychainLogin();
-    if (!login?.accessToken) { usageNote = ['server.usage.keychain']; return; }
+    if (!login?.accessToken) { usageNote = loginMissingNote(); return; }
     try {
       const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { Authorization: `Bearer ${login.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
       if (r.status === 429) { usageBackoff = Math.min(30, (usageBackoff || 2.5) * 2); usageWait = Date.now() + Math.max(usageBackoff * 60e3, (Number(r.headers.get('retry-after')) || 0) * 1000); usageNote = ['server.usage.rateLimited', { n: usageBackoff }]; return; }

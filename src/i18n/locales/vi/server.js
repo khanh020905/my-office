@@ -179,7 +179,9 @@ export default {
     modelWeek: '{model} (tuần)',
   },
   usage: {
-    keychain: 'Không đọc được đăng nhập của Claude Code trong Keychain.',
+    keychain: 'Không đọc được đăng nhập của Claude Code trong Keychain hay file .credentials.json. Mở Claude Code, gõ /login một lần là được.',
+    mainSignedOut: 'Claude Code chưa đăng nhập ở thư mục chính ({dir}): gõ `claude` trong Terminal rồi /login.',
+    mainSignedOutOthers: 'Thư mục chính ({dir}) chưa đăng nhập Claude Code, nên văn phòng chỉ đọc được các tài khoản khác. Muốn đọc cả nó: gõ `claude` trong Terminal rồi /login.',
     rateLimited: 'Anthropic đang giới hạn số lần hỏi, đọc lại sau {n} phút.',
     expired: 'Phiên đăng nhập của Claude Code đã hết hạn; mở Claude Code là nó tự gia hạn.',
     httpError: 'Anthropic trả lỗi {status}.',
