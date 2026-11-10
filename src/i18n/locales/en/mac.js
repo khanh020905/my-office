@@ -42,7 +42,9 @@ export default {
     unread: "can't read it yet",
     reading: 'reading…',
     labelResets: '{label} resets {when}',
-    pillTitle: '{text}. Click for details.',
+    pillTitle: '{text}. {hint}',
+    hint: 'Click for details.',
+    hintAi: 'Click for the limits, and to add Claude, Codex or Antigravity accounts.',
     // another Claude Code login on this machine (its own config folder, e.g. ~/.claude-org2): its name is the folder's
     otherAccount: 'Account {name}',
     title: 'Claude plan usage limits',

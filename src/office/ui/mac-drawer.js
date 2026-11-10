@@ -352,7 +352,9 @@ export function renderLimits() {
     $('plan-mini').textContent = (top ? `${top.key === 'session' ? tr('mac.plan.fiveHour') : top.label} ${Math.round(top.pct)}%` : state.limitsNote ? tr('mac.plan.unread') : tr('mac.plan.reading')) + more;
     $('plan-bar').style.width = `${top ? Math.min(100, Math.max(2, top.pct)) : 0}%`;
     pill.dataset.level = top ? limitLevel(top.pct) : 'normal';
-    pill.title = top ? tr('mac.plan.pillTitle', { text: `${ws.map((w) => `${w.label} ${Math.round(w.pct)}%`).join(' · ')}${top.resetsAt ? ` · ${tr('mac.plan.labelResets', { label: top.label, when: resetText(top.resetsAt) })}` : ''}` }) : state.limitsNote || tr('mac.plan.title');
+    const hint = tr(state.ai ? 'mac.plan.hintAi' : 'mac.plan.hint');   // (it opens on a click: say so, and what is behind it)
+    pill.title = top ? tr('mac.plan.pillTitle', { hint, text: `${ws.map((w) => `${w.label} ${Math.round(w.pct)}%`).join(' · ')}${top.resetsAt ? ` · ${tr('mac.plan.labelResets', { label: top.label, when: resetText(top.resetsAt) })}` : ''}` })
+      : `${state.limitsNote || tr('mac.plan.title')} ${hint}`;
   }
   const acc = state.limits?.account, accText = acc ? [acc.plan, acc.org].filter(Boolean).join(' · ') : '';
   $('plan-acct').hidden = true;   // (the plan sits in the main account's heading)
