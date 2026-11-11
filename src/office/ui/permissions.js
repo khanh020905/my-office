@@ -94,7 +94,15 @@ function permCard(p) {
   // a phone, while the Mac doesn't let phones approve: the card says where to answer it instead of offering buttons
   if (!state.isLocal && !state.phoneApprove && !DEMO) acts.replaceChildren(el('small', 'pc-phone-note', tr('perm.phoneOff')));
   // (a background session's waits until answered: no countdown)
-  card._tick = () => { if (!p.until) { left.textContent = tr('perm.noDeadline'); fill.style.width = '100%'; return; } const ms = Math.max(0, p.until - Date.now()); left.textContent = tr('time.sec', { n: Math.ceil(ms / 1000) }); fill.style.width = `${(ms / 45000) * 100}%`; };
+  // (card._p: the request as last sent; held longer for the phone, it comes again with its new deadline)
+  card._p = p;
+  card._tick = () => {
+    const q = card._p;
+    if (!q.until) { left.textContent = tr('perm.noDeadline'); fill.style.width = '100%'; return; }
+    const ms = Math.max(0, q.until - Date.now()), whole = Math.max(1, q.until - (q.at || q.until - 45000));
+    left.textContent = ms > 90_000 ? tr('time.min', { n: Math.ceil(ms / 60_000) }) : tr('time.sec', { n: Math.ceil(ms / 1000) });
+    fill.style.width = `${Math.min(100, (ms / whole) * 100)}%`;
+  };
   card._tick();
   return card;
 }
@@ -105,7 +113,9 @@ export function renderPerms() {
   stack.hidden = !perms.size;
 }
 export function onPerm(p) {
-  perms.set(p.id, p); renderPerms(); sfx.play('perm');
+  const again = perms.has(p.id); perms.set(p.id, p);
+  if (again) { const card = $('perm-stack')?.querySelector(`.perm-card[data-id="${CSS.escape(p.id)}"]`); if (card) { card._p = p; card._tick?.(); } return; }   // (held longer: its new deadline, no second card, no sound)
+  renderPerms(); sfx.play('perm');
   const w = workers.get(p.sess); if (w) { w.anim = 'hand'; if (!state.selectedId && autoCam()) panTo(w); }
 }
 

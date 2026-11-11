@@ -195,6 +195,8 @@ export default {
     approveOnMac: 'Chỉ duyệt được trên {mac}.',
     riskyOnMac: 'Từ điện thoại chỉ Cho phép một lần hoặc Từ chối; lệnh nguy hiểm chỉ cho phép được trên {mac}.',
     expired: 'Yêu cầu này đã hết hạn hoặc đã được trả lời.',
+    wentBack: 'Yêu cầu này đã quay về Claude Code trên Mac lúc {time} ({why}): trả lời nó ở đó.',
+    why: { timeout: 'hết thời gian chờ', blur: 'lúc đó không ai đang xem văn phòng', back: 'bạn vừa dùng Mac', hook: 'Claude Code thôi chờ, có thể đã được trả lời trên Mac', skip: 'đã chọn trả lời trong IDE', macoff: 'đã tắt duyệt từ thông báo Mac' },
     answerAll: 'Hãy trả lời đủ mọi câu hỏi.',
     openOnMac: 'Chỉ mở được trên {mac}.',
   },

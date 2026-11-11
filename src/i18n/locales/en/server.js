@@ -206,6 +206,8 @@ export default {
     approveOnMac: 'Approvals only work on the {mac}.',
     riskyOnMac: 'From a phone: allow once or deny; a risky command can only be allowed on the {mac}.',
     expired: 'This request has expired or was already answered.',
+    wentBack: 'This request went back to Claude Code on the Mac at {time} ({why}): answer it there.',
+    why: { timeout: 'its time was up', blur: 'nobody was looking at the office', back: 'you used the Mac', hook: 'Claude Code stopped waiting, maybe answered on the Mac', skip: 'you chose to answer in the IDE', macoff: "approving from the Mac's notifications was turned off" },
     answerAll: 'Please answer every question.',
     openOnMac: 'This only opens on the {mac}.',
   },
