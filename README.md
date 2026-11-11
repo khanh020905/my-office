@@ -349,7 +349,10 @@ node bin/cli.mjs install --service   # the same commands as `my-office …`, its
   a request that comes in after 2 minutes without a key or mouse on the Mac waits for the phone instead (up to 10
   minutes), and the phone gets a push right away: the approval, Claude's question or its plan, answered on the phone's
   Overview tab. A key or the mouse on the Mac hands it back to Claude Code's own prompt within a few seconds. Installed
-  before this: run `my-office install` once so the hooks may wait that long (they stop at 45 s otherwise).
+  before this: run `my-office install` once so the hooks may wait that long (they stop at 45 s otherwise). A request a page
+  was holding (its 45 s up, or the page put away) also stays for the phone while nobody touches the Mac, instead of
+  going to an IDE nobody is in front of; one that did go back tells the phone when and why, and each one is written to
+  the actions log.
 - **Stuck loops get broken**: when a session runs the same thing and gets the same error three times in a row, its
   fourth try is blocked and Claude is told to change course (a synchronous `PreToolUse` hook that answers from memory;
   it gives up after 0.3 s, so with the office closed or busy the call simply goes ahead). The person's name tag turns

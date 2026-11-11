@@ -28,7 +28,7 @@ import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { dangerKey } from '../src/shared/danger.js';
-import { holdPlan, createBarWatch, backAtMac, PHONE_HOLD_MS } from './mac-hold.mjs';
+import { holdPlan, createBarWatch, backAtMac, PHONE_HOLD_MS, BACK_SEC } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
@@ -1383,7 +1383,7 @@ function watchBack() {
   backTimer = setInterval(async () => {
     if (![...pending.values()].some((x) => x.phone)) { clearInterval(backTimer); backTimer = 0; return; }
     const idle = await barWatch.fresh(4000);
-    if (backAtMac(idle)) for (const [id, x] of [...pending]) if (x.phone) settlePerm(id);
+    if (backAtMac(idle)) for (const [id, x] of [...pending]) if (x.phone) giveBack(id, 'back');
   }, 5000);
   backTimer.unref?.();
 }
@@ -1393,6 +1393,34 @@ function phonePush(entry, text) {
   push.notify({ title, body: clip(text, 180), tag: `perm-${entry.id}`, url: '/', urgent: true }).catch(() => {});
 }
 const pending = new Map();    // request id -> held request
+/* Handing a request back to Claude Code's own prompt (in the IDE or the terminal: a phone can't answer it there). Each one is
+   written to the actions log with why, and a phone that answers it a moment later is told so (and why) instead of a bare
+   "expired" (server.api.wentBack). */
+const released = new Map();   // request id -> { at, why }: the last 100
+function noteBack(p, why) {
+  released.set(p.id, { at: Date.now(), why }); if (released.size > 100) released.delete(released.keys().next().value);
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} back to Claude Code (${why}) ${p.kind || 'perm'} ${p.name} ${p.tool}${p.phone ? ' (held for the phone)' : ''}\n`).catch(() => {});
+}
+function giveBack(id, why) { const p = pending.get(id); if (!p) return; noteBack(p, why); settlePerm(id); }
+/* A request a page or the menu bar held, its time up or the page no longer looked at: when a phone can answer and nobody
+   is at the Mac (no key or mouse for BACK_SEC), it stays, for the phone (a push, the time its hook allows, back to Claude
+   Code the moment the Mac is touched), not handed to an IDE nobody is in front of. Otherwise back to Claude Code. */
+async function keepForPhone(id, why) {
+  const p = pending.get(id); if (!p || p.long) return;
+  const left = p.at + p.limit - Date.now();
+  if (!p.phone && phoneCanAnswer() && left > 15_000) {
+    const idle = await barWatch.fresh(4000);
+    if (!pending.has(id)) return;   // (answered while the Mac was read)
+    if (Number.isFinite(idle) && idle >= BACK_SEC) {
+      clearTimeout(p.timer); p.phone = true; p.until = p.at + p.limit;
+      p.timer = setTimeout(() => giveBack(id, 'timeout'), p.until - Date.now());
+      broadcast({ k: 'perm', p: permPub(p) });   // (the card's countdown: the phone's time now)
+      phonePush(p, p.pushText); watchBack();
+      return;
+    }
+  }
+  giveBack(id, why);
+}
 const permPub = (p) => ({ id: p.id, sess: p.sess, name: p.name, tool: p.tool, type: p.type, label: p.label, detail: p.detail, remember: p.remember, at: p.at, until: p.until,
   kind: p.kind || 'perm', questions: p.questions, plan: p.plan });
 function settlePerm(id, body = '') {
@@ -1437,13 +1465,14 @@ async function onPermission(p, res, long = false, limit = HOLD_MS) {
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
   const id = crypto.randomUUID(), now = Date.now();
   const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, type: c.type, label: c.label, detail: permDetail(p),
-    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + (hold || HOLD_MS), long, phone: forPhone, task: lh.task?.id || null };
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold || HOLD_MS);   // (the long one: until answered, or its hook gives up)
+    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + (hold || HOLD_MS), long, phone: forPhone, task: lh.task?.id || null,
+    limit: Math.min(PHONE_HOLD_MS, limit), pushText: `${c.label}: ${oneLine(permDetail(p))}` };
+  if (!long) entry.timer = setTimeout(() => keepForPhone(id, 'timeout'), hold || HOLD_MS);   // (the long one: until answered, or its hook gives up)
   pending.set(id, entry);
-  res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
+  res.on('close', () => { if (pending.get(id) === entry) { noteBack(entry, 'hook'); pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
-  if (forPhone) { phonePush(entry, `${c.label}: ${oneLine(entry.detail)}`); watchBack(); }
+  if (forPhone) { phonePush(entry, entry.pushText); watchBack(); }
   else if (ours || (long && prefs.get('phoneApprove'))) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
   { const run = tasks.list().find((t) => t.sid === p.session_id || t.from?.sid === p.session_id), card = run && cards.get(run.id);
     if (card) { card.wait = clip(`${c.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: id, risky: !!dangerKey(entry), steps: card.steps, n: card.n });   // (perm: its Allow / Deny buttons)
@@ -1546,7 +1575,8 @@ async function onQuestion(p, res, long = false, limit = HOLD_MS) {
   if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || (!hold && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const i = p.tool_input || {}, id = crypto.randomUUID(), now = Date.now(), txt = (v, n) => clip(redact(oneLine(v)), n);
-  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + hold, long, phone: forPhone, task: lh.task?.id || null };
+  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + hold, long, phone: forPhone, task: lh.task?.id || null,
+    limit: Math.min(PHONE_HOLD_MS, limit) };
   if (p.tool_name === 'AskUserQuestion') {
     const qs = Array.isArray(i.questions) ? i.questions.slice(0, 4) : [];
     if (!qs.length) { res.writeHead(200).end(''); return; }
@@ -1558,12 +1588,13 @@ async function onQuestion(p, res, long = false, limit = HOLD_MS) {
     Object.assign(entry, { kind: 'plan', type: 'plan', label: tr('server.tool.plan') });
     entry.plan = clip(redact(String(i.plan || '')), 20000); entry.detail = clip(oneLine(entry.plan), 200);
   }
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold);
+  entry.pushText = entry.detail;
+  if (!long) entry.timer = setTimeout(() => keepForPhone(id, 'timeout'), hold);
   pending.set(id, entry);
-  res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
+  res.on('close', () => { if (pending.get(id) === entry) { noteBack(entry, 'hook'); pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
-  if (forPhone) { phonePush(entry, entry.detail); watchBack(); }
+  if (forPhone) { phonePush(entry, entry.pushText); watchBack(); }
   // a phone's work asking (a background session): its card says so, answered where approvals are; a push if nobody looks
   const card = lh.task && cards.get(lh.task.id);
   if (card) {
@@ -2694,7 +2725,7 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/presence') {
         const page = String(b.page || '').slice(0, 64);
         if (b.focused) presence.set(page, { focused: true, at: Date.now() }); else presence.delete(page);
-        if (!officeFocused() && !barHolds()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) settlePerm(id);   // nobody is looking: give the prompt back (a background session's waits on, and one held for the phone)
+        if (!officeFocused() && !barHolds()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) keepForPhone(id, 'blur');   // nobody is looking: give the prompt back (a background session's waits on, and one held for the phone)
         json(res, 200, { ok: true, pending: pending.size });
         return;
       }
@@ -2702,8 +2733,9 @@ const server = http.createServer((req, res) => {
       let CHOICES = { perm: ['allow', 'always', 'deny'], ask: ['answer', 'skip'], plan: ['approve', 'revise', 'skip'] }[p?.kind || 'perm'];
       if (phone && p) CHOICES = (p.kind || 'perm') !== 'perm' ? CHOICES : dangerKey(p) ? ['deny', 'skip'] : ['allow', 'deny', 'skip'];
       if (phone && p && !CHOICES.includes(b.choice)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }
-      if (!p || !CHOICES.includes(b.choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
-      if (b.choice === 'skip') { settlePerm(p.id); json(res, 200, { ok: true }); return; }   // Claude Code asks in the IDE as usual
+      if (!p) { const r = released.get(String(b.id || '')); json(res, 404, { ok: false, message: r ? tr('server.api.wentBack', { time: hhmmOf(r.at), why: tr(`server.api.why.${r.why}`) }) : tr('server.api.expired') }); return; }
+      if (!CHOICES.includes(b.choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
+      if (b.choice === 'skip') { giveBack(p.id, 'skip'); json(res, 200, { ok: true }); return; }   // Claude Code asks in the IDE as usual
       const out = p.kind === 'ask' ? askDecision(p, b) : p.kind === 'plan' ? planDecision(p, b.choice, b.note) : permDecision(p, b.choice);
       if (!out) { json(res, 400, { ok: false, message: tr('server.api.answerAll') }); return; }
       settlePerm(p.id, JSON.stringify(out));
@@ -2911,7 +2943,7 @@ const server = http.createServer((req, res) => {
       const p = pending.get(String(b?.id || '')), choice = b?.choice;
       if (!p || (p.kind || 'perm') !== 'perm' || !['allow', 'deny', 'skip'].includes(choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
       if (choice === 'allow' && dangerKey(p)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }   // (a risky command: two clicks, in the office)
-      if (choice === 'skip') settlePerm(p.id); else settlePerm(p.id, JSON.stringify(permDecision(p, choice)));
+      if (choice === 'skip') giveBack(p.id, 'skip'); else settlePerm(p.id, JSON.stringify(permDecision(p, choice)));
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} notification perm ${choice} ${p.name} ${p.tool} ${p.detail.slice(0, 120)}\n`).catch(() => {});
       json(res, 200, { ok: true });
     });
@@ -2922,7 +2954,7 @@ const server = http.createServer((req, res) => {
     if (req.method !== 'POST') { json(res, 200, { ok: true, on: macApprove() }); return; }
     readJson(req).then((b) => {
       prefs.set('macApprove', b?.on === false ? false : undefined);
-      if (b?.on === false && !officeFocused()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) settlePerm(id);   // (nobody else holds them now)
+      if (b?.on === false && !officeFocused()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) keepForPhone(id, 'macoff');   // (nobody else holds them now)
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} mac notification approve ${macApprove() ? 'on' : 'off'}\n`).catch(() => {});
       json(res, 200, { ok: true, on: macApprove() });
     });

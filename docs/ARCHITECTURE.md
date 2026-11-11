@@ -196,7 +196,7 @@ engine switches to demo mode and talks to no API.
 | `ui/mac-drawer.js` | 707 | The Mac drawer: memory, CPU, dev servers, plan limits, cleanup. |
 | `ui/models.js` | 44 | "Model: người điều phối và subagent" (Settings → More; server/models.mjs): the model a Claude session runs on, the one its subagents run on, always that one or only when Claude doesn't pick, and the note asking Claude to split big tasks. |
 | `ui/notify.js` | 64 | Notifications on this phone (Web Push: server/push.mjs sends them, public/sw.js shows them): Claude's answers in the group chat and an approval waiting, even with the office closed and the phone locked. |
-| `ui/permissions.js` | 150 | Approve / deny cards and Claude's questions. |
+| `ui/permissions.js` | 160 | Approve / deny cards and Claude's questions. |
 | `ui/phone-home.js` | 114 | "Tổng quan", the home sheet of the phone layout (ui/phone.js): one screen for "what needs me, and how are things". |
 | `ui/phone.js` | 105 | The office on a phone: an app-like layout for small screens, upright or held sideways. |
 | `ui/photo.js` | 138 | Photo mode: the office alone over the whole window, the camera free (any angle, closer or further, pan with the right button), then a PNG at the screen's size, Full HD or 4K. |
