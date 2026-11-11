@@ -51,6 +51,8 @@ export function resetText(ts) {
   return tr('mac.plan.date', { day: days[d.getDay()], d: pad2(d.getDate()), m: pad2(d.getMonth() + 1), time: t });
 }
 const liveOf = (o) => (o.windows || []).filter((w) => !w.resetsAt || w.resetsAt > Date.now()).sort((a, b) => WIN_ORDER(a) - WIN_ORDER(b));
+// the rows a card lists: a model's own week at 0% says nothing (every account has one, "Fable (tuần) 0%"), so it shows once used
+const shownOf = (ws) => { const s = ws.filter((w) => WIN_ORDER(w) !== 2 || w.pct >= 1); return s.length ? s : ws; };
 const tightest = (ws) => ws.reduce((a, w) => (!a || w.pct > a.pct ? w : a), null);
 function limitRow(rows, w) {
   const m = el('span', 'hl-m'), bar = el('span', 'hl-bar'), fill = el('b', limitLevel(w.pct));
@@ -66,7 +68,7 @@ function renderOthers(rows) {
     // its sign-in token ran out (an account not used for a while): renewed by one quiet Claude Code run (server/index.mjs refreshLogin)
     const renew = () => { const b = addButton(tr('mac.plan.renew'), '', () => { b.disabled = true; post('/api/accounts/renew', { name: o.name }); }); b.disabled = !!o.renewing; return b; };
     if (!ws.length) { block.append(el('small', 'plan-other-note', o.note || tr('mac.plan.loading'))); if (o.expired) block.append(renew()); continue; }
-    for (const w of ws) limitRow(block, w);
+    for (const w of shownOf(ws)) limitRow(block, w);
     // Anthropic not answering for now (it limits how often it's asked): the last reading stays, with when it was read
     if (o.note) block.append(el('small', 'plan-other-note', o.at ? tr('mac.plan.readAt', { time: hhmm(o.at), note: o.note }) : o.note));
     if (o.expired) block.append(renew());
@@ -140,7 +142,8 @@ function acctHead(slug, label, info, until) {
   const a = state.limits?.auto || {}, inUse = switchOn() ? (a.now || '') === slug : !slug;
   const head = el('div', `plan-other acct-head${inUse ? ' is-live' : ''}`), order = a.order || [];
   const name = el('button', 'acct-name'); name.type = 'button'; name.title = tr('mac.plan.rename');
-  name.append(el('b', null, acctName(slug, label)), icon('pencil', 'ic acct-pen'));
+  // (in the list, an account is its name: "phu", not "Tài khoản phu", so its plan and badge fit beside it)
+  name.append(el('b', null, label || slug || acctName('', '')), icon('pencil', 'ic acct-pen'));
   name.addEventListener('click', () => renameIn(head, slug, label));
   const end = el('span', 'acct-end');
   if (!inUse) {
@@ -161,12 +164,12 @@ function acctHead(slug, label, info, until) {
 }
 function renameIn(head, slug, label) {
   editing = slug; head.classList.add('is-editing');
-  const f = el('form', 'acct-rename'), inp = el('input'), plain = acctName(slug, '');
-  inp.maxLength = 24; inp.value = acctName(slug, label); inp.placeholder = plain; inp.autocomplete = 'off'; inp.setAttribute('aria-label', tr('mac.plan.rename'));
+  const f = el('form', 'acct-rename'), inp = el('input'), plain = slug || acctName('', '');   // (its name as the list shows it)
+  inp.maxLength = 24; inp.value = label || plain; inp.placeholder = plain; inp.autocomplete = 'off'; inp.setAttribute('aria-label', tr('mac.plan.rename'));
   let done = false;
   const finish = (save) => {
     if (done) return; done = true; editing = null;
-    const v = inp.value.trim() === plain ? '' : inp.value.trim();   // (its own name again: no name of the user's)
+    const v = [plain, acctName(slug, '')].includes(inp.value.trim()) ? '' : inp.value.trim();   // (its own name again: no name of the user's)
     if (save && v !== (label || '')) {
       const o = slug ? state.limits?.others?.find((x) => x.name === slug) : state.limits;   // (at once; the server sends the card again)
       if (o) o.label = v;
@@ -365,7 +368,7 @@ export function renderLimits() {
   const rows = $('plan-rows'); rows.replaceChildren();
   const mainRows = acctBlock('', state.limits.label, accText, state.limits.until); rows.append(mainRows);
   if (!ws.length) mainRows.append(el('small', 'plan-other-note', state.limitsNote || tr('mac.plan.loading')));
-  for (const w of ws) limitRow(mainRows, w);
+  for (const w of shownOf(ws)) limitRow(mainRows, w);
   // no week over all models: org plans (Team / Enterprise) don't have one; a personal plan that shows none is still being read
   if (ws.length && !ws.some((w) => w.key === 'weekly')) {
     const org = ORG_PLANS.has(acc?.plan), m = el('span', 'hl-m plan-none');
