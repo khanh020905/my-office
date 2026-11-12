@@ -71,6 +71,36 @@ test('runner tool marks reviewing; load() recovers from a saved feed in id order
   assert.equal(m.size, 2, 'reloading the same feed is a no-op');
 });
 
+test('Codex lifecycle events stay distinct from task assignment, tools, and success', () => {
+  const turn = normalize(ev('codexturn', { agent: 'codex', provider: 'codex-cli' }));
+  const msg = normalize(ev('codexmessage', { agent: 'codex', provider: 'codex-cli', label: 'answer' }));
+  const exit = normalize(ev('codexexit', { agent: 'codex', provider: 'codex-cli' }));
+  assert.equal(turn.kind, 'agent.turn_started');
+  assert.equal(msg.kind, 'agent.message');
+  assert.equal(exit.kind, 'agent.execution_ended');
+  const model = createAgentModel(); model.ingest(exit);
+  assert.equal(model.snapshot(exit.ts)[0].state, 'unknown');
+});
+
+test('Codex App hook events map to honest shared states', () => {
+  assert.equal(normalize(ev('codex_start', { provider: 'codex-app' })).kind, 'agent.started');
+  assert.equal(normalize(ev('codex_prompt', { provider: 'codex-app' })).kind, 'agent.task_assigned');
+  assert.equal(normalize(ev('codex_tool_start')).kind, 'agent.tool_started');
+  assert.equal(normalize(ev('codex_tool_complete')).kind, 'agent.tool_completed');
+  assert.equal(normalize(ev('codex_tool_fail')).kind, 'agent.tool_failed');
+  const ended = normalize(ev('codex_execution_end', { provider: 'codex-app' }));
+  const model = createAgentModel(); model.ingest(ended);
+  assert.equal(ended.kind, 'agent.execution_ended');
+  assert.equal(model.snapshot(ended.ts)[0].state, 'unknown');
+});
+
+test('Antigravity file observation stays unknown and is not presented as a tool event', () => {
+  const observed = normalize(ev('antigravity_observed', { provider: 'antigravity' }));
+  assert.equal(observed.kind, 'agent.status.unknown');
+  const model = createAgentModel(); model.ingest(ev('antigravity_observed', { provider: 'antigravity' }));
+  assert.equal(model.snapshot(T + 1000)[0].state, 'unknown');
+});
+
 test('model caps agents and evicts the stalest, not the newest', () => {
   const m = createAgentModel({ max: 2 });
   m.ingest(ev('start', { sess: 'a' })); m.ingest(ev('start', { sess: 'b' })); m.ingest(ev('start', { sess: 'c' }));

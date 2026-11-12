@@ -92,6 +92,7 @@ import * as uiCameraBar from './ui/camera-bar.js';
 import * as uiMacDrawer from './ui/mac-drawer.js';
 import * as uiBurn from './ui/burn.js';
 import * as uiVault from './ui/vault.js';
+import * as uiToolsView from './ui/tools-view.js';
 import * as uiTopbar from './ui/topbar.js';
 import * as interactProps from './interact/props.js';
 import * as interactPlaceChips from './interact/place-chips.js';
@@ -214,6 +215,7 @@ const MODULES = [
   uiMacDrawer,
   uiBurn,
   uiVault,
+  uiToolsView,
   uiTopbar,
   interactProps,
   interactPlaceChips,
@@ -250,7 +252,7 @@ const MODULES = [
 ];
 
 // what the 2D list needs (its rows, the top bar and drawers, the group chat, the live connection or the demo)
-const LIST = new Set([coreEnv, uiEventText, uiIcons, peopleWorkers, uiLite, uiActivity, uiSessionDrawer, uiMacDrawer, uiBurn, uiVault, uiTopbar,
+const LIST = new Set([coreEnv, uiEventText, uiIcons, peopleWorkers, uiLite, uiActivity, uiSessionDrawer, uiMacDrawer, uiBurn, uiVault, uiToolsView, uiTopbar,
   interactPlaceCards, uiSettings, uiGroupChat, uiGroupChatView, uiStuck, uiMacApprove, uiModels, uiCacheWords, netLive, lifeYourTurn, audioSfx, uiPermissions,
   uiPhone, uiNotify, demoDemo, replayReplay, replayTimeline, uiTicks]);
 const done = new Set();

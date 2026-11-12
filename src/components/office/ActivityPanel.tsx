@@ -6,7 +6,7 @@ export default async function ActivityPanel() {
   const t = await getT();
   return (
     <aside className="side side-right" id="feed" aria-label={t('ui.activityPanel.title')}>
-      <button className="act-head" id="feed-toggle" type="button" aria-expanded="false"><span className="act-title">{t('ui.activityPanel.title')}</span><span className="live-tag" id="live-tag"><i></i><span>{t('ui.activityPanel.live')}</span></span></button>
+      <button className="act-head" id="feed-toggle" type="button" aria-expanded="false"><span className="act-title">{t('ui.activityPanel.title')}</span><span className="live-tag" id="live-tag" data-state="reconnecting"><i></i><span>{t('activity.live.reconnecting')}</span></span></button>
       <div className="kpis" id="feed-stats" aria-label={t('ui.activityPanel.today')}></div>
       <button type="button" className="tl-open" id="tl-open"><span data-icon="timeline"></span><b>{t('ui.activityPanel.timeline')}</b><span className="tl-open-v" id="tl-open-v">{t('ui.activityPanel.timelineSub')}</span></button>
       <button type="button" className="tl-open" id="wrap-open"><span data-icon="trophy"></span><b>{t('ui.activityPanel.wrapped')}</b><span className="tl-open-v">{t('ui.activityPanel.wrappedSub')}</span></button>
@@ -21,6 +21,7 @@ export default async function ActivityPanel() {
         <button type="button" data-k="web" aria-pressed="false"><span data-icon="globe"></span>{t('ui.activityPanel.web')}</button>
         <button type="button" data-k="agent" aria-pressed="false"><span data-icon="users"></span>{t('ui.activityPanel.agent')}</button>
       </div>
+      <p className="activity-limits">{t('activity.providerLimits')}</p>
       <ul className="feed-list" id="feed-list"><li className="fi-empty">{t('ui.activityPanel.empty')}</li></ul>
     </aside>
   );

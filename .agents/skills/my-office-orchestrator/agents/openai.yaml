@@ -1,0 +1,4 @@
+interface:
+  display_name: "My Office Orchestrator"
+  short_description: "Continue the verified My Office integration workflow"
+  default_prompt: "Read the My Office workflow checkpoint, verify the current phase and evidence, then continue the approved work safely."

@@ -49,3 +49,4 @@
 .iv-close:hover { background: rgba(255, 255, 255, .14); }
 .iv-close:focus-visible { outline: 2px solid var(--accent); }
 @media (prefers-reduced-motion: reduce) { .img-view { animation: none; } .fg-thumb { transition: none; } }
+.activity-limits { margin: 8px 14px; color: var(--muted); font-size: 11px; line-height: 1.35; }

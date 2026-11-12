@@ -116,6 +116,8 @@
 .act-head { display: flex; align-items: center; justify-content: space-between; padding: 16px 16px 10px; }
 .live-tag { display: inline-flex; align-items: center; gap: 6px; font-size: .7rem; color: var(--muted); }
 .live-tag i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); animation: blink 1.6s ease-in-out infinite; }
+.live-tag[data-state="reconnecting"] i, .live-tag[data-state="degraded"] i { background: var(--yellow); animation: none; }
+.live-tag[data-state="disconnected"] i { background: var(--red); animation: none; }
 @keyframes blink { 50% { opacity: .3; } }
 .kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.75fr); gap: 6px; margin: 0 16px 10px; }
 .kpi { display: grid; justify-items: start; gap: 2px; padding: 8px 8px 7px; border-radius: 11px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
@@ -143,6 +145,7 @@
 .fg-head i { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .fg-head b { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .fg-agent { font-size: .64rem; font-weight: 700; color: var(--blue); background: rgba(106, 174, 255, .14); padding: 2px 6px; border-radius: 999px; }
+.fg-session { font-size: .62rem; color: var(--faint); border: 1px solid var(--line); border-radius: 4px; padding: 1px 4px; }
 .fg-live { font-size: .64rem; font-weight: 700; color: var(--green-ink); background: var(--green-soft); padding: 2px 6px; border-radius: 999px; }
 .fg-head time { margin-left: auto; font: 500 .7rem/1 var(--mono); color: var(--faint); flex: none; }
 .fg-lines { display: grid; gap: 5px; }

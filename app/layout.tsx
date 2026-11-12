@@ -20,6 +20,7 @@ import '@/styles/places.css';
 import '@/styles/csgt.css';
 import '@/styles/todos.css';
 import '@/styles/drawers.css';
+import '@/styles/tools.css';
 import '@/styles/chat.css';
 import '@/styles/group-chat.css';
 import '@/styles/mac.css';

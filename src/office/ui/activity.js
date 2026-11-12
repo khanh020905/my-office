@@ -24,9 +24,10 @@ const ATT = new Set(['wait', 'ask', 'fail', 'cired']);
 export const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 // Consecutive events from the same session (or subagent) within four minutes share one card; alerts stand alone
 // with their actions, so "needs you" never hides inside a group.
-const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'release', 'cired', 'cigreen'], edit: ['edit', 'write'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
+const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'release', 'cired', 'cigreen'], edit: ['edit', 'write', 'create', 'delete'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
 const typeFilter = new Set();
-const kindOk = (e) => !typeFilter.size || [...typeFilter].some((k) => KIND[k].includes(e.type));
+const kindOk = (e) => !typeFilter.size || [...typeFilter].some((k) => KIND[k].includes(e.type) || KIND[k].includes(e.action));
+const LIFECYCLE = new Set(['start', 'end', 'stop', 'codex_start', 'codexturn', 'codex_execution_end', 'codexexit']);
 function lineOf(e) {
   const ln = el('span', 'fg-line'), ic = el('span', 'fi-ico');
   ic.append(icon(TYPE_ICON[e.type] || 'sparkle')); if (TYPE_TONE[e.type]) ic.dataset.tone = TYPE_TONE[e.type];
@@ -49,6 +50,7 @@ function groupCard(g, live) {
   const b = el('button', 'fg-card' + (live ? ' fg--live' : '')); b.type = 'button'; b.dataset.sess = g.sess; if (g.agent) b.dataset.agent = g.agent;
   const head = el('span', 'fg-head'), dot = el('i'); dot.style.background = s ? colorOf(s) : '#5E687B';
   head.append(dot, el('b', null, dnOf(first)));
+  if (g.lifecycle) head.append(el('span', 'fg-session', tr('activity.lifecycle')));
   if (g.agent) head.append(el('span', 'fg-agent', tr('activity.subagent')));
   if (live) head.append(el('span', 'fg-live', tr('activity.working')));
   head.append(el('time', null, hhmm(first.ts)));
@@ -79,9 +81,9 @@ export function renderFeed() {
   if (!rows.length) list.append(el('li', 'fi-empty', tr(feedFilter === 'att' ? 'activity.empty.att' : typeFilter.size ? 'activity.empty.type' : 'activity.empty.all')));
   const groups = [];
   for (const e of rows) {
-    const g = groups[groups.length - 1], att = ATT.has(e.type);
-    if (g && !att && !g.att && g.sess === e.sess && g.agent === (e.agent || null) && g.items[g.items.length - 1].ts - e.ts < 240e3) g.items.push(e);
-    else groups.push({ sess: e.sess, agent: e.agent || null, att, items: [e] });
+    const g = groups[groups.length - 1], att = ATT.has(e.type), lifecycle = LIFECYCLE.has(e.type);
+    if (g && !att && !g.att && lifecycle === g.lifecycle && g.sess === e.sess && g.agent === (e.agent || null) && g.items[g.items.length - 1].ts - e.ts < 240e3) g.items.push(e);
+    else groups.push({ sess: e.sess, agent: e.agent || null, att, lifecycle, items: [e] });
   }
   for (const g of groups) {
     if (g.att) { list.append(alertCard(g.items[0])); continue; }
@@ -227,7 +229,7 @@ function onListClick(ev) {
 }
 export const fmtTok = (n) => (n >= 1e6 ? `${num(n / 1e6, 1)}M` : `${Math.round(n / 1000)}k`);
 export const fmtUsd = (v) => `$${v >= 100 ? Math.round(v) : v.toFixed(2)}`;
-const KPIS = [['prompts', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'coin']];   // labels: activity.kpi.<key>
+const KPIS = [['tasks', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'coin']];   // labels: activity.kpi.<key>
 export function renderHud() {
   const list = [...sessions.values()];
   const waiting = list.filter((s) => s.status === 'wait').length;
@@ -236,8 +238,10 @@ export function renderHud() {
   $('feed-stats').replaceChildren(...KPIS.map(([k, ic]) => {
     const label = tr(`activity.kpi.${k}`);
     const d = el('div', k === 'cost' ? 'kpi kpi--cost' : 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
-    const b = el('b', null, k === 'cost' ? fmtUsd(list.reduce((a, s) => a + (s.usage?.cost || 0), 0)) : num(state.stats[k] || 0));
-    if (k === 'cost') b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
+    const hasCost = list.some((s) => s.usage?.model);
+    const value = k === 'cost' ? (hasCost ? fmtUsd(list.reduce((a, s) => a + (s.usage?.model ? s.usage.cost || 0 : 0), 0)) : '—') : num(state.stats[k] || 0);
+    const b = el('b', null, value);
+    if (k === 'cost' && hasCost) b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
     d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiToday', { label });
     return d;
   }));

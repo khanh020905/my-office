@@ -1,7 +1,9 @@
 // The activity column, the session list and the stat tiles (ui/activity.js), plus the live connection (net/live.js).
 export default {
+  providerLimits: 'Codex CLI shell activity is counted as commands; file reads and edits inside them cannot be separated. Antigravity reports activity only.',
   image: { view: 'View the image', close: 'Close', gone: 'This image is no longer on the computer.' },
   subagent: 'subagent',
+  lifecycle: 'Session',
   working: 'working',
   starting: 'Starting…',
   more: '+{n} more',
@@ -36,22 +38,26 @@ export default {
   ctxTitle: 'Context {used} / {max} · API price ≈ {cost}',
   // the stat tiles
   kpi: {
-    prompts: 'Prompts',
+    tasks: 'Tasks',
     read: 'Reads',
     edit: 'Edits',
     cmd: 'Cmds',   // the tile is narrow: "Commands" does not fit
-    cost: 'API price',
+    cost: 'API est.',
   },
-  kpiToday: '{label} today',
-  costTitle: "Equivalent list API price of the open sessions (not your bill if you're on a Pro/Max plan)",
+  kpiToday: 'Observed {label} today',
+  costTitle: 'Estimated API list price from open Claude transcript usage; not actual spending or a bill.',
   sessions: { one: '{n} session', other: '{n} sessions' },
   subsRunning: { one: '{n} subagent running', other: '{n} subagents running' },
   noSessions: 'No sessions yet',
   docTitle: '({n}) Your turn · My Office',
   // net/live.js: the connection chip and the team name over each pod of desks
   live: {
-    on: 'receiving data',
-    off: 'connection lost, retrying…',
+    on: 'Connected',
+    off: 'Disconnected',
+    connected: 'Connected',
+    reconnecting: 'Reconnecting',
+    disconnected: 'Disconnected',
+    degraded: 'Degraded',
     otherProject: 'other',
     team: 'Team {name}{more} · {n}',
     teamShared: "{name}'s desks, shared with: {others}",

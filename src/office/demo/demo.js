@@ -54,7 +54,7 @@ function demoEmit(s, type, label = '', extra = {}) {
   const k = { read: 'read', grep: 'read', glob: 'read', edit: 'edit', write: 'edit', bash: 'cmd', web: 'web', fetch: 'web' }[type];
   if (k && !extra.agent) s.counts[k] = (s.counts[k] || 0) + 1;
   if (s.usage && !extra.agent) { s.usage.ctx = Math.min(190000, s.usage.ctx + 1800 + Math.random() * 2600); s.usage.cost += 0.02 + Math.random() * 0.05; }
-  if (type === 'prompt') state.stats.prompts = (state.stats.prompts || 0) + 1;
+  if (type === 'prompt') { state.stats.tasks = (state.stats.tasks || 0) + 1; state.stats.prompts = state.stats.tasks; }
   if (type === 'read' || type === 'grep' || type === 'glob') state.stats.read = (state.stats.read || 0) + 1;
   if (type === 'edit' || type === 'write') state.stats.edit = (state.stats.edit || 0) + 1;
   if (type === 'bash' || type === 'test') state.stats.cmd = (state.stats.cmd || 0) + 1;
@@ -194,7 +194,7 @@ const demoReply = (i) => tr(`demo.replies.${REPLY_KEYS[i]}`);
 export function startDemo() {
   $('demo-chip').hidden = false;
   state.todos = DEMO_TODOS.map((t) => ({ ...t })); onTodos();
-  state.stats = { prompts: 0, read: 0, edit: 0, cmd: 0, deploy: 0 };
+  state.stats = { tasks: 0, prompts: 0, read: 0, edit: 0, cmd: 0, deploy: 0 };
   demoProjects().forEach((p, i) => {
     const s = { usage: { cost: 0.4 + i * 0.9, ctx: i === 0 ? 168000 : 38000 + i * 21000, ctxMax: 200000, model: 'claude-opus-5-5', out: 0 }, id: `demo-${i}`, pid: 52000 + i, name: p.name, dir: p.dir, link: null, desk: i, status: 'rest', lastPrompt: '', taskStart: 0, counts: { read: 0, edit: 0, cmd: 0, web: 0 }, subs: [], doneSubs: [], last: null, lastAt: Date.now() - (i + 1) * 9 * 60e3, todos: demoChecklist(i) || [] };
     upsertSession(s, false);
@@ -295,11 +295,11 @@ function ask() {
         const r = await fetch(`/api/live?since=${since}`, { cache: 'no-store', signal: stop.signal });
         if (r.status === 401) { location.reload(); return; }   // (signed out: back to the PIN)
         const j = await r.json();
-        fails = 0; setConn(true); since = j.seq;
+        fails = 0; setConn('connected'); since = j.seq;
         if (!replay.on) for (const d of j.msgs) applyMsg(d);
       } catch {
         if (stop.signal.aborted) return;
-        setConn(false); await new Promise((ok) => setTimeout(ok, Math.min(15_000, 1000 * 2 ** fails++)));
+        setConn(++fails > 5 ? 'degraded' : 'reconnecting'); await new Promise((ok) => setTimeout(ok, Math.min(15_000, 1000 * 2 ** (fails - 1))));
       }
     }
   })();
@@ -308,8 +308,9 @@ export function connect() {
   if (VIA_TUNNEL) { ask(); return; }
   const es = new EventSource(`/stream${TOKEN ? `?k=${encodeURIComponent(TOKEN)}` : ''}`);
   liveES = es;
-  es.onopen = () => setConn(true);
-  es.onerror = () => setConn(false);
+  let failures = 0;
+  es.onopen = () => { failures = 0; setConn('connected'); };
+  es.onerror = () => setConn(es.readyState === EventSource.CLOSED ? 'disconnected' : ++failures > 5 ? 'degraded' : 'reconnecting');
   es.onmessage = (m) => {
     if (replay.on) return;
     let d; try { d = JSON.parse(m.data); } catch { return; }

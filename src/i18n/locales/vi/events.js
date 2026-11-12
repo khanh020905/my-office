@@ -59,7 +59,7 @@ export default {
     agent: 'Giao việc cho {label}',
     deploy: 'Deploy {label}',
     plan: 'Cập nhật việc cần làm',
-    testok: ['Xanh hết! ✅', 'Test qua rồi 🎉', 'Không lỗi nào, ngon!'],
-    testfail: ['Đỏ rồi, xem lại chút…', 'Hỏng một test, sửa tiếp', 'Ơ, sao lại đỏ 🤔'],
+    testok: ['Xanh lè luôn! ✅', 'Test qua hết, đỉnh 🎉', 'Hổng lỗi nào, ngon lành!'],
+    testfail: ['Đỏ lòm òi, coi lại đi…', 'Hỏng 1 test, sửa tiếp nè', 'Ủa sao đỏ vậy trời 🤔'],
   },
 };

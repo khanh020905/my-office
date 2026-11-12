@@ -21,13 +21,19 @@ const WATCH_MS = 8000;   // how often background sessions are looked at while on
     the office's switch and settings) or null; onBg(task, what, detail): 'started' | 'fallback' (why) | a phase it moved to
     ('work' | 'wait', what it waits for). printSettings(task): the `--settings` a `-p` run gets (the office told which
     session it is and where its inbox is: server/steer.mjs), or nothing. */
-export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onBg, bg = null, printSettings = null, max = 3, perHour = 12, watchMs = WATCH_MS }) {
+// a `-p` run has nobody to click "allow": let it edit and commit, never push or delete (the task text says so too)
+const PRINT_ALLOW = ['Bash(git status:*)', 'Bash(git diff:*)', 'Bash(git log:*)', 'Bash(git add:*)', 'Bash(git commit:*)', 'Bash(git show:*)', 'Bash(git branch:*)', 'Bash(npm test:*)', 'Bash(npm run:*)', 'Bash(pnpm:*)', 'Bash(npx:*)', 'Bash(node:*)', 'Bash(ls:*)', 'Bash(cat:*)'];
+const PRINT_DENY = ['Bash(git push:*)', 'Bash(git reset:*)', 'Bash(git clean:*)', 'Bash(git checkout:*)', 'Bash(rm:*)', 'Bash(del:*)', 'Bash(rmdir:*)'];
+export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onBg, bg = null, printSettings = null, max = 3, perHour = 12, watchMs = WATCH_MS, spawnProcess = spawn }) {
   const running = new Map(), recent = [];   // id -> task; when the last ones started (the hourly cap)
   const binds = new Map();   // a background session's short id -> { sid, inbox }, told before its task knew the short id
   const imgDir = path.join(dataDir, 'task-images');
-  const pub = (t) => ({ id: t.id, dir: t.dir, text: t.text.slice(0, 200), at: t.at, from: t.from || null, sid: t.sid || null, mode: t.mode, job: t.job || null });
+  const pub = (t) => ({ id: t.id, dir: t.dir, text: t.text.slice(0, 200), at: t.at, from: t.from || null, sid: t.sid || null, mode: t.mode, job: t.job || null,
+    workflowId: t.workflowId || null, workflowTaskId: t.workflowTaskId || null, dispatchId: t.dispatchId || null, worktreePath: t.worktreePath || '',
+    repoRoot: t.repoRoot || '', branch: t.branch || '' });
   /** { dir, text, images: [data URLs], from: { sid, name, fork } | null } -> { ok, task } or { ok: false, code } */
-  function start({ dir, text, images = [], from = null, env: extra = null, system = '', stopAfter = false }) {
+  function start({ dir, text, images = [], from = null, env: extra = null, system = '', stopAfter = false, workflowId = null, workflowTaskId = null,
+    dispatchId = '', worktreePath = '', repoRoot = '', branch = '', workflowTimeoutMs = 0 }) {
     text = String(text || '').trim().slice(0, MAX_TEXT);
     if (!text) return { ok: false, code: 'empty' };
     if (running.size >= max) return { ok: false, code: 'busy' };
@@ -47,8 +53,10 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
     const prompt = files.length ? `${text}\n\n${files.length > 1 ? 'Attached images' : 'Attached image'} (read ${files.length > 1 ? 'them' : 'it'}):\n${files.join('\n')}` : text;
     const e = { ...env(), ...extra }; for (const k of Object.keys(e)) if (e[k] == null) delete e[k];   // (extra: the conversation's own account; null unsets)
     // (stopAfter: a conversation taken from your editor, stopped once done so the editor takes it up again alone)
-    const t = { id, dir, text, at: now, from, sid: null, result: '', error: '', buf: '', bin, env: e, prompt, system, stopAfter, mode: bg?.want() ? 'bg' : 'print' };
-    if (t.mode === 'print' && !runPrint(t)) return { ok: false, code: 'noClaude' };
+    const t = { id, dir, text, at: now, startedAt: 0, endedAt: 0, exitCode: null, signal: null, pid: null, from, sid: null, result: '', error: '', buf: '', bin, env: e, prompt, system, stopAfter,
+      mode: workflowId ? 'print' : bg?.want() ? 'bg' : 'print', workflowId, workflowTaskId, dispatchId, worktreePath, repoRoot, branch, timedOut: false };
+    if (workflowId && workflowTimeoutMs > 0) { t.timer = setTimeout(() => { t.timedOut = true; stop(t.id); }, Math.min(30 * 60e3, workflowTimeoutMs)); t.timer.unref?.(); }
+    if (t.mode === 'print' && !runPrint(t)) { clearTimeout(t.timer); return { ok: false, code: 'noClaude' }; }
     running.set(id, t); recent.push(now);
     if (t.mode === 'bg') startBg(t);
     onStart?.(t);
@@ -59,11 +67,12 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
     const { from, system } = t;
     // (from.fork false: carry on that very conversation, one this office started for you, instead of a branch of it)
     const set = printSettings?.(t);
-    const args = ['-p', t.prompt, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : []), ...(system ? ['--append-system-prompt', system] : []), ...(set ? ['--settings', set] : [])];   // (system: a word from the office, outside the conversation)
+    const args = ['-p', t.prompt, '--model', process.env.OFFICE_MODEL || 'claude-sonnet-5-5', '--permission-mode', 'acceptEdits', '--allowedTools', ...PRINT_ALLOW, '--disallowedTools', ...PRINT_DENY, '--output-format', 'stream-json', '--verbose', ...(from?.sid ? ['--resume', from.sid, ...(from.fork === false ? [] : ['--fork-session'])] : []), ...(system ? ['--append-system-prompt', system] : []), ...(set ? ['--settings', set] : [])];   // (system: a word from the office, outside the conversation)
     let proc;
-    try { proc = spawn(t.bin.file, args, { cwd: t.dir, env: t.env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }
+    try { proc = spawnProcess(t.bin.file, args, { cwd: t.dir, env: t.env, stdio: ['ignore', 'pipe', 'pipe'], detached: process.platform !== 'win32', windowsHide: true }); }
     catch { return false; }
     Object.assign(t, { mode: 'print', proc, pid: proc.pid });
+    t.startedAt = Date.now();
     proc.stdout.on('data', (c) => {
       t.buf += String(c);
       let nl;
@@ -73,19 +82,20 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
           const j = JSON.parse(line);
           if (j.type === 'system' && j.subtype === 'init' && j.session_id) t.sid = j.session_id;
           if (j.type === 'assistant' && !j.parent_tool_use_id) for (const c of j.message?.content || []) if (c?.type === 'tool_use') onStep?.(t, { name: c.name, input: c.input || {} });
-          if (j.type === 'result') { t.result = String(j.result || ''); if (j.is_error) t.error = t.result || j.subtype || 'error'; }
+          if (j.type === 'result') { t.result = String(j.result || ''); if (j.is_error) { t.isErr = true; t.error = t.result || j.subtype || 'error'; } }
         } catch { /* not a line of its stream */ }
       }
       if (t.buf.length > 1e6) t.buf = '';
     });
-    proc.stderr.on('data', (c) => { t.error = String(c).trim().split('\n').pop().slice(0, 300); });
+    proc.stderr.on('data', (c) => { const l = String(c).trim().split('\n').filter((x) => x && !x.startsWith('⚠')).pop(); if (l) t.error = l.slice(0, 300); });   // (⚠ lines are warnings, not the failure)
     proc.on('error', (e) => { t.error = String(e.message || e).slice(0, 300); });
     // a process can be gone before the last of what it printed has been read (the result line: the answer itself), so
     // its output is read to the end first; 2 s at most, as something it started may keep the pipe open after it
-    proc.on('exit', (code) => {
+    proc.on('exit', (code, signal) => {
       let once = false;
       const done = () => {
         if (once) return; once = true;
+        t.exitCode = code; t.signal = signal || null; t.endedAt = Date.now();
         running.delete(t.id);
         if (code && !t.error) t.error = `exit ${code}`;
         onDone?.(t);
@@ -108,7 +118,7 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
       // (resting: stopped first, or a second one would be a copy; at work, someone on the Mac: never stopped, a copy it is)
       if (row?.id) { keeps = true; if (row.pid && row.state !== 'working' && row.status !== 'busy') await bg.stop(t.bin.file, row.id, t.env).catch(() => false); }
     }
-    const args = ['--bg', ...(t.from?.sid ? ['--resume', t.from.sid] : []),
+    const args = ['--bg', ...(t.from?.sid ? ['--resume', t.from.sid] : ['--model', process.env.OFFICE_MODEL || 'claude-sonnet-5-5']),
       ...(keeps ? [] : ['--settings', bg.settings(), ...(t.system ? ['--append-system-prompt', t.system] : [])]), '--', t.prompt];   // (--: words that start with "-" stay words)
     const r = await bg.run(t.bin.file, args, { cwd: t.dir, env: t.env, timeout: 150_000 });   // (a first start of its service may take a while)
     const got = r.code === 0 && parseBackgrounded(r.out);
@@ -147,6 +157,8 @@ export function createTasks({ dataDir, claude, env, onStart, onStep, onDone, onB
   }
   function end(t) {
     if (t.ended) return; t.ended = true;
+    t.endedAt = Date.now();
+    clearTimeout(t.timer);
     running.delete(t.id);
     if (t.mode === 'bg' && t.job && t.stopAfter && !t.stopped) bg.stop(t.bin.file, t.job, t.env).catch(() => false);
     onDone?.(t);

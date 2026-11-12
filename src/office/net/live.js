@@ -14,7 +14,12 @@ import { closeSession } from '../ui/session-drawer.js';
 import { t as tr } from '../../i18n/index.js';
 
 export let TOKEN;
-export function setConn(on) { const c = $('conn'); c.dataset.state = on ? 'on' : 'off'; c.lastElementChild.textContent = tr(on ? 'activity.live.on' : 'activity.live.off'); }
+export function setConn(status) {
+  const state = typeof status === 'boolean' ? (status ? 'connected' : 'reconnecting') : status;
+  const c = $('conn'); c.dataset.state = state; c.lastElementChild.textContent = tr(`activity.live.${state}`);
+  const tag = $('live-tag');
+  if (tag.dataset.mode !== 'replay') { tag.dataset.state = state; tag.lastElementChild.textContent = tr(`activity.live.${state}`); }
+}
 /* Teams: each project (its git repository, else its folder) has an area of its own: half a pod on the open floor, a
    department room on the headquarters' wing, a row in the small office. A session sits in its project's area (the
    server's desk number is ignored); a project with more people than desks there takes the other half of the pod, or

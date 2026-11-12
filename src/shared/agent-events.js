@@ -7,16 +7,24 @@
 
 import { deptOf } from './departments.js';
 
-export const KINDS =['agent.started', 'agent.stopped', 'agent.task_assigned', 'agent.tool_started', 'agent.tool_completed', 'agent.tool_failed',
-  'agent.file_created', 'agent.file_modified', 'agent.awaiting_approval', 'agent.waiting', 'agent.completed', 'agent.failed'];
+export const KINDS =['agent.started', 'agent.stopped', 'agent.task_assigned', 'agent.turn_started', 'agent.message', 'agent.execution_ended', 'agent.status.unknown', 'agent.tool_started', 'agent.tool_completed', 'agent.tool_failed',
+  'agent.file_created', 'agent.file_modified', 'agent.file_deleted', 'agent.awaiting_approval', 'agent.waiting', 'agent.completed', 'agent.failed'];
 export const STATES = ['running', 'reviewing', 'waiting', 'blocked', 'done', 'failed', 'unknown'];
 // source: how we know (spec §7 data accuracy) — 'execution' is a hook Claude Code sent; 'inferred' is read from a tool's
 // input (an edit was asked for, not yet confirmed on disk).
 const BY_TYPE = {
   start: 'agent.started', substart: 'agent.started', end: 'agent.stopped', substop: 'agent.stopped', interrupt: 'agent.stopped',
   prompt: 'agent.task_assigned', stop: 'agent.completed', fail: 'agent.failed', testfail: 'agent.tool_failed',
+  codexmessage: 'agent.message',
+  codexturn: 'agent.turn_started',
+  codexexit: 'agent.execution_ended',
+  codex_start: 'agent.started', codex_prompt: 'agent.task_assigned',
+  codex_tool_start: 'agent.tool_started', codex_tool_complete: 'agent.tool_completed', codex_tool_fail: 'agent.tool_failed',
+  codex_execution_end: 'agent.execution_ended',
+  antigravity_observed: 'agent.status.unknown',
   testok: 'agent.tool_completed', deploy: 'agent.tool_completed', wait: 'agent.awaiting_approval', idle: 'agent.waiting',
   edit: 'agent.file_modified', write: 'agent.file_modified',
+  create: 'agent.file_created', delete: 'agent.file_deleted',
 };
 const NOT_TOOLS = new Set(['compact', 'other']);
 export const STALE_MS = 10 * 60e3;
@@ -47,7 +55,11 @@ export function normalize(e) {
 
 const STATE_OF = {
   'agent.started': 'running', 'agent.task_assigned': 'running', 'agent.tool_started': 'running', 'agent.tool_completed': 'running',
-  'agent.file_modified': 'running', 'agent.file_created': 'running', 'agent.tool_failed': 'running',
+  'agent.file_modified': 'running', 'agent.file_created': 'running', 'agent.file_deleted': 'running', 'agent.tool_failed': 'running',
+  'agent.message': 'running',
+  'agent.turn_started': 'running',
+  'agent.execution_ended': 'unknown',
+  'agent.status.unknown': 'unknown',
   'agent.awaiting_approval': 'blocked', 'agent.waiting': 'waiting', 'agent.completed': 'done', 'agent.stopped': 'done', 'agent.failed': 'failed',
 };
 
@@ -68,7 +80,7 @@ export function createAgentModel({ max = 200 } = {}) {
     if (n.name && !a.name) a.name = n.name;
     if (n.kind === 'agent.tool_started') a.tools++;
     if (n.kind === 'agent.tool_failed') a.fails++;
-    if (n.kind === 'agent.file_modified') a.files++;
+    if (['agent.file_created', 'agent.file_modified', 'agent.file_deleted'].includes(n.kind)) a.files++;
     const d = deptOf(n); if (d) a.dept = d;   // the last department a real event placed it in; unplaceable events keep it
     // an event that arrives late (lower id than the last one applied) counts, but does not move the state back
     if (n.id > a.lastId) {

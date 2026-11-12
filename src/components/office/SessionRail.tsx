@@ -7,7 +7,7 @@ export default async function SessionRail() {
   return (
     <aside className="side side-left" aria-label={t('ui.sessionRail.title')}>
       <div className="lp-head">
-        <div className="lp-title"><h2>{t('ui.sessionRail.title')}</h2><p className="conn" id="conn" data-state="off"><i></i><span>{t('ui.sessionRail.connecting')}</span></p></div>
+        <div className="lp-title"><h2>{t('ui.sessionRail.title')}</h2><p className="conn" id="conn" data-state="reconnecting"><i></i><span>{t('activity.live.reconnecting')}</span></p></div>
         <p className="lp-sub" id="active-count">{t('ui.sessionRail.loading')}</p>
         <div className="st-row" role="group" aria-label={t('ui.sessionRail.statusFilter')}>
           <button type="button" className="st" data-st="work" aria-pressed="false"><i></i><b id="st-work">0</b><span>{t('ui.sessionRail.work')}</span></button>

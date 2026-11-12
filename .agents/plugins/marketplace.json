@@ -1,0 +1,12 @@
+{
+  "name": "my-office-local",
+  "interface": { "displayName": "My Office" },
+  "plugins": [
+    {
+      "name": "my-office-codex-hooks",
+      "source": { "source": "local", "path": "./plugins/my-office-codex-hooks" },
+      "policy": { "installation": "AVAILABLE", "authentication": "ON_INSTALL" },
+      "interface": { "displayName": "My Office Codex activity" }
+    }
+  ]
+}

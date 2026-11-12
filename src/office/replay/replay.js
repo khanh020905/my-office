@@ -99,7 +99,8 @@ export function renderReplay() {
   const on = replay.on;
   $('rp-bar').hidden = !on && !replay.loading;
   $('replay-chip').hidden = !on;
-  $('live-tag').lastChild.textContent = on ? tr('replay.tagReplay') : tr('replay.tagLive');
+  const tag = $('live-tag'); tag.dataset.mode = on ? 'replay' : 'live'; tag.dataset.state = on ? 'connected' : $('conn').dataset.state;
+  tag.lastChild.textContent = on ? tr('replay.tagReplay') : tr(`activity.live.${tag.dataset.state === 'on' ? 'connected' : tag.dataset.state}`);
   if (on) { const c = $('conn'); c.dataset.state = 'on'; c.lastElementChild.textContent = tr('replay.conn'); }
   $('btn-replay').setAttribute('aria-pressed', String(on));
   const play = $('rp-play'), ic = play.querySelector('.rp-ic');
