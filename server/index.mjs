@@ -38,7 +38,7 @@ import { readProjects } from './production/projects.mjs';
 import { createQaRunner, projectQa } from './production/qa.mjs';
 import { analytics } from './production/analytics.mjs';
 import { dangerKey } from '../src/shared/danger.js';
-import { holdMs, createBarWatch } from './mac-hold.mjs';
+import { holdPlan, createBarWatch, backAtMac, PHONE_HOLD_MS, BACK_SEC } from './mac-hold.mjs';
 import { createChatEngine, REACTIONS } from '../src/shared/chat-engine.js';
 import { createTasks } from './tasks.mjs';
 import { createBg, bgSettings, printSettings } from './bg-sessions.mjs';
@@ -697,6 +697,8 @@ const rewriter = createRewriter({ claude: () => findClaude(), env: () => { const
    from the office needs while nobody has the office open; none while an office page is looked at ---------- */
 const claudeVersion = createClaudeVersion({ dataDir: DATA_DIR });   // (Claude Code's version on this computer, server/claude-version.mjs)
 const push = createPush({ dataDir: DATA_DIR, log: (l) => fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} ${l}\n`).catch(() => {}) });
+// (tests only: a phone that "gets" pushes, each one written to this file as a line of JSON)
+if (process.env.OFFICE_PUSH_FAKE) Object.assign(push, { count: () => 1, notify: async (msg) => { await fsp.appendFile(process.env.OFFICE_PUSH_FAKE, `${JSON.stringify(msg)}\n`); return [201]; } });
 const QUICK_FILE = path.join(DATA_DIR, 'quick.json');   // the chat's quick commands, once you change them (shared by the Mac and the phones)
 const pushOut = (msg) => { if (push.count() && !officeFocused()) push.notify(msg).catch(() => {}); };
 
@@ -1471,10 +1473,14 @@ const lockMsg = (until) => tr('server.pin.locked', { n: Math.max(1, Math.ceil((u
 
 
 /* ---------- approve / deny from the office ----------
-   A synchronous PermissionRequest hook (curl, at most 50 s) posts here. The request is held only while an office page
-   has focus: pages report focus every 2 s and on blur, so a prompt in the IDE or terminal is never held up by a page
-   nobody is looking at. Unanswered after 45 s, the page blurred, or the hook went away: the reply is empty and Claude
-   Code shows its own prompt as usual. "Always allow" echoes Claude Code's own suggestion back (documented).
+   A synchronous PermissionRequest hook (curl) posts here. The request is held only while an office page has focus:
+   pages report focus every 2 s and on blur, so a prompt in the IDE or terminal is never held up by a page nobody is
+   looking at. Unanswered after 45 s, the page blurred, or the hook went away: the reply is empty and Claude Code shows
+   its own prompt as usual. "Always allow" echoes Claude Code's own suggestion back (documented).
+   Away from the Mac (no key or mouse for 2 minutes) with approving from a phone on and a phone subscribed to push, the
+   phone holds it instead (server/mac-hold.mjs): a push at once, held as long as the hook waits (its X-Office-Wait header,
+   10 minutes since `my-office install` sets it; 45 s for a hook from before), whatever page has focus, and handed back to
+   Claude Code as soon as a key or the mouse moves on the Mac.
    A phone's work running as a background session has a hook of its own that waits (`?long=1`, server/bg-sessions.mjs):
    held with no deadline until answered (on the phone, in the office), whoever looks; its usual hook is answered at once.
    OFFICE_HOLD_MS shortens the 45 s for the tests. */
@@ -1486,9 +1492,59 @@ const officeFocused = () => { const now = Date.now(); for (const p of presence.v
    idle time (tests only). "Approve from the Mac's notifications" off (Settings → More): it never holds. */
 const barWatch = createBarWatch({ idle: () => (process.env.OFFICE_IDLE_SEC !== undefined ? Number(process.env.OFFICE_IDLE_SEC) : process.platform === 'darwin' ? idleSeconds() : Infinity) });
 const macApprove = () => prefs.get('macApprove') !== false;
-const holdFor = () => holdMs({ focused: officeFocused(), barAlive: barWatch.alive(), idleSec: barWatch.idleSec(), pref: macApprove(), normalMs: HOLD_MS });
-const barHolds = () => !officeFocused() && holdFor() > 0;
+const phoneCanAnswer = () => !!prefs.get('phoneApprove') && push.count() > 0;
+const planNow = (idleSec, limit = HOLD_MS) => holdPlan({ focused: officeFocused(), barAlive: barWatch.alive(), idleSec, pref: macApprove(), normalMs: HOLD_MS,
+  phone: phoneCanAnswer(), phoneMs: Math.min(PHONE_HOLD_MS, limit) });
+/** who holds a request coming in now, and how long (the Mac's idle time read again when it is old) */
+const holdNow = async (limit) => planNow(await barWatch.fresh(), limit);
+const barHolds = () => !officeFocused() && planNow(barWatch.idleSec()).by === 'bar';
+/** how long the hook that posted may wait (ms): what its X-Office-Wait header says, less 5 s; a hook from before: 45 s */
+const hookLimit = (req) => { const w = Number(req.headers['x-office-wait']); return Number.isFinite(w) && w > 10 ? Math.min(PHONE_HOLD_MS, (w - 5) * 1000) : HOLD_MS; };
+// a request held for the phone goes back to Claude Code's prompt as soon as the owner is at the Mac again (read every 5 s)
+let backTimer = 0;
+function watchBack() {
+  if (backTimer) return;
+  backTimer = setInterval(async () => {
+    if (![...pending.values()].some((x) => x.phone)) { clearInterval(backTimer); backTimer = 0; return; }
+    const idle = await barWatch.fresh(4000);
+    if (backAtMac(idle)) for (const [id, x] of [...pending]) if (x.phone) giveBack(id, 'back');
+  }, 5000);
+  backTimer.unref?.();
+}
+/** the push for a request held for the phone: whatever page has focus (the owner is away from the Mac) */
+function phonePush(entry, text) {
+  const title = tr(entry.kind === 'ask' ? 'server.push.askTitle' : entry.kind === 'plan' ? 'server.push.planTitle' : 'server.push.waitTitle', { name: entry.name });
+  push.notify({ title, body: clip(text, 180), tag: `perm-${entry.id}`, url: '/', urgent: true }).catch(() => {});
+}
 const pending = new Map();    // request id -> held request
+/* Handing a request back to Claude Code's own prompt (in the IDE or the terminal: a phone can't answer it there). Each one is
+   written to the actions log with why, and a phone that answers it a moment later is told so (and why) instead of a bare
+   "expired" (server.api.wentBack). */
+const released = new Map();   // request id -> { at, why }: the last 100
+function noteBack(p, why) {
+  released.set(p.id, { at: Date.now(), why }); if (released.size > 100) released.delete(released.keys().next().value);
+  fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} back to Claude Code (${why}) ${p.kind || 'perm'} ${p.name} ${p.tool}${p.phone ? ' (held for the phone)' : ''}\n`).catch(() => {});
+}
+function giveBack(id, why) { const p = pending.get(id); if (!p) return; noteBack(p, why); settlePerm(id); }
+/* A request a page or the menu bar held, its time up or the page no longer looked at: when a phone can answer and nobody
+   is at the Mac (no key or mouse for BACK_SEC), it stays, for the phone (a push, the time its hook allows, back to Claude
+   Code the moment the Mac is touched), not handed to an IDE nobody is in front of. Otherwise back to Claude Code. */
+async function keepForPhone(id, why) {
+  const p = pending.get(id); if (!p || p.long) return;
+  const left = p.at + p.limit - Date.now();
+  if (!p.phone && phoneCanAnswer() && left > 15_000) {
+    const idle = await barWatch.fresh(4000);
+    if (!pending.has(id)) return;   // (answered while the Mac was read)
+    if (Number.isFinite(idle) && idle >= BACK_SEC) {
+      clearTimeout(p.timer); p.phone = true; p.until = p.at + p.limit;
+      p.timer = setTimeout(() => giveBack(id, 'timeout'), p.until - Date.now());
+      broadcast({ k: 'perm', p: permPub(p) });   // (the card's countdown: the phone's time now)
+      phonePush(p, p.pushText); watchBack();
+      return;
+    }
+  }
+  giveBack(id, why);
+}
 const permPub = (p) => ({ id: p.id, sess: p.sess, name: p.name, tool: p.tool, type: p.type, label: p.label, detail: p.detail, remember: p.remember, at: p.at, until: p.until,
   kind: p.kind || 'perm', questions: p.questions, plan: p.plan });
 function settlePerm(id, body = '') {
@@ -1522,24 +1578,26 @@ function longHold(p, long) {
   if (long) return bg ? { task: bg } : { skip: true };   // (its settings, but not a phone's work now: Claude Code goes on as usual)
   return bg?.hooked ? { skip: true } : {};   // (its long-waiting hook carries this one)
 }
-async function onPermission(p, res, long = false) {
+async function onPermission(p, res, long = false, limit = HOLD_MS) {
   const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
   // a run started from the office (a phone's work) may wait for a phone to answer even with no office open: they get a push
   const ours = !!p?.session_id && push.count() > 0 && !!prefs.get('phoneApprove') && tasks.list().some((t) => t.sid === p.session_id || t.from?.sid === p.session_id);
-  const hold = holdFor();
+  const plan = long ? { ms: 0, by: null } : await holdNow(limit), hold = plan.ms, forPhone = plan.by === 'phone';
   if (!p || !p.session_id || ASK_TOOLS.has(p.tool_name) || (!hold && !ours && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const c = await classifyVi(p.tool_name, p.tool_input);
   const suggestion = Array.isArray(p.permission_suggestions) ? p.permission_suggestions.find((x) => x && x.type === 'addRules' && x.behavior === 'allow') || null : null;
   const id = crypto.randomUUID(), now = Date.now();
   const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, type: c.type, label: c.label, detail: permDetail(p),
-    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + (hold || HOLD_MS), long, task: lh.task?.id || null };
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold || HOLD_MS);   // (the long one: until answered, or its hook gives up)
+    remember: suggestion ? ruleText(suggestion) : null, suggestion, at: now, until: long ? 0 : now + (hold || HOLD_MS), long, phone: forPhone, task: lh.task?.id || null,
+    limit: Math.min(PHONE_HOLD_MS, limit), pushText: `${c.label}: ${oneLine(permDetail(p))}` };
+  if (!long) entry.timer = setTimeout(() => keepForPhone(id, 'timeout'), hold || HOLD_MS);   // (the long one: until answered, or its hook gives up)
   pending.set(id, entry);
-  res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
+  res.on('close', () => { if (pending.get(id) === entry) { noteBack(entry, 'hook'); pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
-  if (ours || (long && prefs.get('phoneApprove'))) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
+  if (forPhone) { phonePush(entry, entry.pushText); watchBack(); }
+  else if (ours || (long && prefs.get('phoneApprove'))) pushOut({ title: tr('server.push.permTitle', { name: entry.name }), body: clip(`${c.label}: ${oneLine(entry.detail)}`, 180), tag: `perm-${id}`, url: '/', urgent: true });
   { const run = tasks.list().find((t) => t.sid === p.session_id || t.from?.sid === p.session_id), card = run && cards.get(run.id);
     if (card) { card.wait = clip(`${c.label}: ${oneLine(entry.detail)}`, 120); chat.setWork(card.id, { state: 'wait', ask: card.wait, perm: id, risky: !!dangerKey(entry), steps: card.steps, n: card.n });   // (perm: its Allow / Deny buttons)
       res.on('close', () => { if (cards.get(run.id) === card) { card.wait = null; chat.setWork(card.id, { state: 'work', ask: null, perm: null }); } }); } }
@@ -1629,18 +1687,20 @@ async function undoAct(b, who) {
 
 /* ---------- questions and plans from Claude, answered in the office ----------
    A synchronous PreToolUse hook (matcher AskUserQuestion|ExitPlanMode) posts here, under the same rule as approvals:
-   held only while an office page has focus, 45 s at most, otherwise Claude Code asks as usual. Documented answer
+   held only while an office page has focus, 45 s at most (away from the Mac: for the phone, see above), otherwise
+   Claude Code asks as usual. Documented answer
    (code.claude.com/docs/en/hooks): permissionDecision "allow" with updatedInput = the original input plus `answers`
    (question text -> chosen label, several labels joined with ", "). A plan is approved by allowing ExitPlanMode, or
    sent back with your note by denying it. The page sends indexes; texts are taken from the original input here. */
 const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
-async function onQuestion(p, res, long = false) {
+async function onQuestion(p, res, long = false, limit = HOLD_MS) {
   const lh = longHold(p, long); if (lh.skip) { res.writeHead(200).end(''); return; }
-  const hold = holdFor();
+  const plan = long ? { ms: 0, by: null } : await holdNow(limit), hold = plan.ms, forPhone = plan.by === 'phone';
   if (!p || !p.session_id || !ASK_TOOLS.has(p.tool_name) || (!hold && !long)) { res.writeHead(200).end(''); return; }
   let s = bySid(p.session_id); if (!s) { await scanSessions(); s = bySid(p.session_id); }
   const i = p.tool_input || {}, id = crypto.randomUUID(), now = Date.now(), txt = (v, n) => clip(redact(oneLine(v)), n);
-  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + hold, long, task: lh.task?.id || null };
+  const entry = { id, res, sess: s?.id || null, name: s?.name || base(p.cwd) || 'claude', tool: p.tool_name, input: i, at: now, until: long ? 0 : now + hold, long, phone: forPhone, task: lh.task?.id || null,
+    limit: Math.min(PHONE_HOLD_MS, limit) };
   if (p.tool_name === 'AskUserQuestion') {
     const qs = Array.isArray(i.questions) ? i.questions.slice(0, 4) : [];
     if (!qs.length) { res.writeHead(200).end(''); return; }
@@ -1652,11 +1712,13 @@ async function onQuestion(p, res, long = false) {
     Object.assign(entry, { kind: 'plan', type: 'plan', label: tr('server.tool.plan') });
     entry.plan = clip(redact(String(i.plan || '')), 20000); entry.detail = clip(oneLine(entry.plan), 200);
   }
-  if (!long) entry.timer = setTimeout(() => settlePerm(id), hold);
+  entry.pushText = entry.detail;
+  if (!long) entry.timer = setTimeout(() => keepForPhone(id, 'timeout'), hold);
   pending.set(id, entry);
-  res.on('close', () => { if (pending.get(id) === entry) { pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
+  res.on('close', () => { if (pending.get(id) === entry) { noteBack(entry, 'hook'); pending.delete(id); clearTimeout(entry.timer); broadcast({ k: 'permDone', id }); } });
   if (s && s.status !== 'wait') { s.status = 'wait'; broadcast({ k: 'sess', s: pub(s) }); }
   broadcast({ k: 'perm', p: permPub(entry) });
+  if (forPhone) { phonePush(entry, entry.pushText); watchBack(); }
   // a phone's work asking (a background session): its card says so, answered where approvals are; a push if nobody looks
   const card = lh.task && cards.get(lh.task.id);
   if (card) {
@@ -1883,6 +1945,14 @@ function loginAccount(login, file = ACCOUNT_FILE) {
 }
 // Claude Code's sign-in: the login keychain on a Mac, its credentials file elsewhere (server/platform)
 const keychainLogin = () => OS.claudeLogin();
+// no login to read for the main folder: never signed in there (its .claude.json has no account: ~/.claude.json, or the
+// folder's own when CLAUDE_CONFIG_DIR is set), maybe only other accounts are; or signed in, and its token is nowhere
+function loginMissingNote() {
+  let signedIn = false;
+  try { signedIn = !!JSON.parse(fs.readFileSync(process.env.CLAUDE_CONFIG_DIR ? path.join(CLAUDE_DIR, '.claude.json') : path.join(HOME, '.claude.json'), 'utf8')).oauthAccount; } catch { /* none */ }
+  if (signedIn) return ['server.usage.keychain'];
+  return [otherDirs.length ? 'server.usage.mainSignedOutOthers' : 'server.usage.mainSignedOut', { dir: tilde(CLAUDE_DIR) }];
+}
 function usageWindows(j) {
   const out = [], iso = (t) => (t ? Date.parse(t) || null : null);
   for (const l of Array.isArray(j.limits) ? j.limits : []) {
@@ -1913,7 +1983,7 @@ function fetchPlanUsage(force = false) {
   if (Date.now() < usageWait || (!force && planLimits?.source === 'api' && Date.now() - planLimits.at < 110_000)) return Promise.resolve();
   return (planBusy ??= (async () => {
     const login = await keychainLogin();
-    if (!login?.accessToken) { usageNote = ['server.usage.keychain']; return; }
+    if (!login?.accessToken) { usageNote = loginMissingNote(); return; }
     try {
       const r = await fetch('https://api.anthropic.com/api/oauth/usage', { headers: { Authorization: `Bearer ${login.accessToken}`, 'anthropic-beta': 'oauth-2025-04-20' }, signal: AbortSignal.timeout(10000) });
       if (r.status === 429) { usageBackoff = Math.min(30, (usageBackoff || 2.5) * 2); usageWait = Date.now() + Math.max(usageBackoff * 60e3, (Number(r.headers.get('retry-after')) || 0) * 1000); usageNote = ['server.usage.rateLimited', { n: usageBackoff }]; return; }
@@ -2836,7 +2906,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && url.pathname === '/hook/question') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    readJson(req, 4_000_000).then((p) => onQuestion(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    readJson(req, 4_000_000).then((p) => onQuestion(p, res, url.searchParams.get('long') === '1', hookLimit(req))).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
   if (req.method === 'POST' && url.pathname === '/hook/bind') {   // a session the office started, saying which it is and where its inbox is (server/bg-sessions.mjs)
@@ -2876,7 +2946,7 @@ const server = http.createServer((req, res) => {
   }
   if (req.method === 'POST' && url.pathname === '/hook/permission') {
     if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }
-    readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1')).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
+    readJson(req, 4_000_000).then((p) => onPermission(p, res, url.searchParams.get('long') === '1', hookLimit(req))).catch(() => { try { res.writeHead(200).end(''); } catch { /* gone */ } });
     return;
   }
   if (!hostAllowed(req)) { res.writeHead(421).end(); return; }
@@ -2920,7 +2990,7 @@ const server = http.createServer((req, res) => {
       if (url.pathname === '/api/presence') {
         const page = String(b.page || '').slice(0, 64);
         if (b.focused) presence.set(page, { focused: true, at: Date.now() }); else presence.delete(page);
-        if (!officeFocused() && !barHolds()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // nobody is looking: give the prompt back (a background session's waits on)
+        if (!officeFocused() && !barHolds()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) keepForPhone(id, 'blur');   // nobody is looking: give the prompt back (a background session's waits on, and one held for the phone)
         json(res, 200, { ok: true, pending: pending.size });
         return;
       }
@@ -2928,8 +2998,9 @@ const server = http.createServer((req, res) => {
       let CHOICES = { perm: ['allow', 'always', 'deny'], ask: ['answer', 'skip'], plan: ['approve', 'revise', 'skip'] }[p?.kind || 'perm'];
       if (phone && p) CHOICES = (p.kind || 'perm') !== 'perm' ? CHOICES : dangerKey(p) ? ['deny', 'skip'] : ['allow', 'deny', 'skip'];
       if (phone && p && !CHOICES.includes(b.choice)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }
-      if (!p || !CHOICES.includes(b.choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
-      if (b.choice === 'skip') { settlePerm(p.id); json(res, 200, { ok: true }); return; }   // Claude Code asks in the IDE as usual
+      if (!p) { const r = released.get(String(b.id || '')); json(res, 404, { ok: false, message: r ? tr('server.api.wentBack', { time: hhmmOf(r.at), why: tr(`server.api.why.${r.why}`) }) : tr('server.api.expired') }); return; }
+      if (!CHOICES.includes(b.choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
+      if (b.choice === 'skip') { giveBack(p.id, 'skip'); json(res, 200, { ok: true }); return; }   // Claude Code asks in the IDE as usual
       const out = p.kind === 'ask' ? askDecision(p, b) : p.kind === 'plan' ? planDecision(p, b.choice, b.note) : permDecision(p, b.choice);
       if (!out) { json(res, 400, { ok: false, message: tr('server.api.answerAll') }); return; }
       settlePerm(p.id, JSON.stringify(out));
@@ -3257,7 +3328,7 @@ const server = http.createServer((req, res) => {
       const p = pending.get(String(b?.id || '')), choice = b?.choice;
       if (!p || (p.kind || 'perm') !== 'perm' || !['allow', 'deny', 'skip'].includes(choice)) { json(res, 404, { ok: false, message: tr('server.api.expired') }); return; }
       if (choice === 'allow' && dangerKey(p)) { json(res, 403, { ok: false, message: tr('server.api.riskyOnMac') }); return; }   // (a risky command: two clicks, in the office)
-      if (choice === 'skip') settlePerm(p.id); else settlePerm(p.id, JSON.stringify(permDecision(p, choice)));
+      if (choice === 'skip') giveBack(p.id, 'skip'); else settlePerm(p.id, JSON.stringify(permDecision(p, choice)));
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} notification perm ${choice} ${p.name} ${p.tool} ${p.detail.slice(0, 120)}\n`).catch(() => {});
       json(res, 200, { ok: true });
     });
@@ -3268,7 +3339,7 @@ const server = http.createServer((req, res) => {
     if (req.method !== 'POST') { json(res, 200, { ok: true, on: macApprove() }); return; }
     readJson(req).then((b) => {
       prefs.set('macApprove', b?.on === false ? false : undefined);
-      if (b?.on === false && !officeFocused()) for (const [id, x] of [...pending]) if (!x.long) settlePerm(id);   // (nobody else holds them now)
+      if (b?.on === false && !officeFocused()) for (const [id, x] of [...pending]) if (!x.long && !x.phone) keepForPhone(id, 'macoff');   // (nobody else holds them now)
       fsp.appendFile(ACTION_LOG, `${new Date().toISOString()} mac notification approve ${macApprove() ? 'on' : 'off'}\n`).catch(() => {});
       json(res, 200, { ok: true, on: macApprove() });
     });

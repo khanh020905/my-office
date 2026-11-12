@@ -5,6 +5,11 @@
 .pop-plan { width: 330px; max-height: calc(100dvh - 84px); overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; }   /* (several accounts: it scrolls inside, never past the screen) */
 @media (max-width: 720px) { .pop-plan { max-height: calc(100dvh - 72px); } }
 .pop-plan .plan-card { display: grid; gap: 5px; }
+/* one column the card's width, down every level: an account's heading never sizes it. (An implicit grid column is as wide as
+   its widest heading: name + "Team · <org>" + its badge, 450 px in a 310 px card, so the popover scrolled sideways and cut
+   the bars, the % and "Đang dùng" off its right edge.) Never a sideways scroll, whatever comes in later. */
+.pop-plan .plan-card, .plan-pane, .plan-rows, .acct-block { grid-template-columns: minmax(0, 1fr); }
+.pop-plan { overflow-x: hidden; }
 /* Claude, Codex, Antigravity as tabs (ai-accounts.js renderTabs): the phone window's two-way switch (.pm-tabs), with the
    tool's state under its name; it stays at the top while its account list scrolls */
 .plan-pane { display: grid; gap: 5px; min-width: 0; }
