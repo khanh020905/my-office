@@ -24,3 +24,4 @@ playwright-report/
 # stray local files
 /Microsoft/
 /tmp/
+*.bak-formal
