@@ -272,12 +272,13 @@ function row(m, prev, nextM) {
   if (m.reply && !m.recalled) bub.append(quote(m.reply));
   bub.append(content(m));
   // the newest answer from a conversation ending in "A) … B) …": one tap sends that choice back to it
-  const sess = !nextM && !m.recalled && m.tag === 'claude' && m.kind === 'text' && sessions.get(m.from), picks = sess?.sid && !DEMO_CHAT ? quickChoices(m.text) : [];
+  // (a new conversation's answers come from "__claude", before it has a person: they go back to the conversation you chose)
+  const sess = !nextM && !m.recalled && m.tag === 'claude' && m.kind === 'text' && (m.from === '__claude' ? target : sessions.get(m.from)), picks = (sess?.sid || sess?.dir) && !DEMO_CHAT ? quickChoices(m.text) : [];
   if (picks.length) {
-    const bar = el('div', 'zc-picks');
+    const bar = el('div', 'zc-choices');
     for (const p of picks) {
-      const b = el('button', 'zc-pick', `${p.key}  ${p.label}`); b.type = 'button';
-      b.addEventListener('click', (e) => { e.stopPropagation(); bar.remove(); sendTo(p.reply, { id: sess.id, sid: sess.sid, name: dn(sess), folder: folderOf(sess) }); });
+      const b = el('button', 'zc-choice', `${p.key}  ${p.label}`); b.type = 'button';
+      b.addEventListener('click', (e) => { e.stopPropagation(); bar.remove(); sendTo(p.reply, m.from === '__claude' ? sess : { id: sess.id, sid: sess.sid, name: dn(sess), folder: folderOf(sess) }); });
       bar.append(b);
     }
     bub.append(bar);
