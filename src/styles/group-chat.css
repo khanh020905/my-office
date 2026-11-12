@@ -476,3 +476,7 @@
   .zc .zc-coach-c { padding: 4px 10px; }
   .zc .zc-coach-ai { padding: 2px 6px 2px 0; }
 }
+/* quick replies under Claude's newest answer */
+.zc-picks { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.zc-pick { all: unset; padding: 8px 12px; border-radius: 14px; border: 1px solid var(--zc-blue); color: var(--zc-blue); font-size: 14px; font-weight: 600; cursor: pointer; text-align: left; }
+.zc-pick:hover { background: #E5F1FF; }
