@@ -20,3 +20,7 @@ playwright-report/
 /.demo-build/
 /demo-site/
 /out/
+
+# stray local files
+/Microsoft/
+/tmp/
