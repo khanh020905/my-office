@@ -94,6 +94,13 @@ test('Codex App hook events map to honest shared states', () => {
   assert.equal(model.snapshot(ended.ts)[0].state, 'unknown');
 });
 
+test('explicit Codex file creation and deletion remain distinct file events', () => {
+  assert.equal(normalize(ev('create')).kind, 'agent.file_created');
+  assert.equal(normalize(ev('delete')).kind, 'agent.file_deleted');
+  const model = createAgentModel(); model.ingest(ev('create')); model.ingest(ev('delete'));
+  assert.equal(model.snapshot(T + 10_000)[0].files, 2);
+});
+
 test('Antigravity file observation stays unknown and is not presented as a tool event', () => {
   const observed = normalize(ev('antigravity_observed', { provider: 'antigravity' }));
   assert.equal(observed.kind, 'agent.status.unknown');

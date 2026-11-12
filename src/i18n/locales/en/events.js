@@ -23,6 +23,8 @@ export default {
     skill: 'open {label}',
     edit: 'edit {label}',
     write: 'write {label}',
+    create: 'create {label}',
+    delete: 'delete {label}',
     plan: 'update {label}',
     web: 'search the web for “{label}”',
     fetch: 'fetch {label}',

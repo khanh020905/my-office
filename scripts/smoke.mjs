@@ -39,6 +39,8 @@ try {
   await codexHook({ hook_event_name: 'UserPromptSubmit', turn_id: 'task-1', prompt: 'activity test' });
   await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'mcp__filesystem__read_file', tool_use_id: 'read-1' });
   await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'apply_patch', tool_use_id: 'edit-1' });
+  await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'mcp__filesystem__create_file', tool_use_id: 'create-1' });
+  await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'mcp__filesystem__delete_file', tool_use_id: 'delete-1' });
   await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_use_id: 'command-1' });
   await codexHook({ hook_event_name: 'PostToolUse', tool_name: 'Bash', tool_use_id: 'command-1' });
   await codexHook({ hook_event_name: 'Stop', turn_id: 'task-1' });
@@ -46,16 +48,16 @@ try {
   await codexHook({ hook_event_name: 'SessionStart', session_id: 'activity-smoke-end' });
   await codexHook({ hook_event_name: 'SessionEnd', session_id: 'activity-smoke-end' });
   const activity = (await (await fetch(`${base}/api/live`)).json()).msgs[0];
-  assert.deepEqual([activity.stats.tasks, activity.stats.read, activity.stats.edit, activity.stats.cmd], [1, 1, 1, 1]);
+  assert.deepEqual([activity.stats.tasks, activity.stats.read, activity.stats.edit, activity.stats.cmd], [1, 1, 3, 1]);
   const types = activity.feed.map((item) => item.type);
-  for (const type of ['codex_start', 'codex_prompt', 'read', 'edit', 'bash', 'codex_execution_end', 'end']) assert.ok(types.includes(type), `feed includes ${type}`);
+  for (const type of ['codex_start', 'codex_prompt', 'read', 'edit', 'create', 'delete', 'bash', 'codex_execution_end', 'end']) assert.ok(types.includes(type), `feed includes ${type}`);
   assert.equal(types.filter((type) => type === 'bash').length, 1, 'duplicate completion is counted and shown once');
   fs.writeFileSync(path.join(antigravityDir, 'conversation-smoke.db'), '');
   await new Promise((resolve) => setTimeout(resolve, 3300));
   const observed = (await (await fetch(`${base}/api/live`)).json()).msgs[0];
   const agEvent = observed.feed.find((item) => item.type === 'antigravity_observed');
   assert.match(agEvent?.label || '', /detailed events unavailable/);
-  assert.deepEqual([observed.stats.tasks, observed.stats.read, observed.stats.edit, observed.stats.cmd], [1, 1, 1, 1]);
+  assert.deepEqual([observed.stats.tasks, observed.stats.read, observed.stats.edit, observed.stats.cmd], [1, 1, 3, 1]);
   step('Codex CLI events and Antigravity unknown-detail observation match counters');
   const sys = await (await fetch(`${base}/api/sys`)).json();
   assert.ok(sys.mem.total > 0 && sys.mem.used > 0 && sys.mem.used <= sys.mem.total, 'memory');

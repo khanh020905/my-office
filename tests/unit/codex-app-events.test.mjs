@@ -39,6 +39,8 @@ test('classifies only known Codex tool names for activity filters and counters',
   assert.equal(codexToolType('Bash'), 'bash');
   assert.equal(codexToolType('mcp__filesystem__read_file'), 'read');
   assert.equal(codexToolType('mcp__filesystem__write_file'), 'edit');
+  assert.equal(codexToolType('mcp__filesystem__create_file'), 'create');
+  assert.equal(codexToolType('mcp__filesystem__delete_file'), 'delete');
   assert.equal(codexToolType('WebSearch'), 'other');
   assert.equal(codexToolType('mcp__private__tool'), 'other');
   assert.equal(codexToolType(null), 'other');
@@ -56,4 +58,6 @@ test('Bash remains a command; only explicit file tools count as reads or edits',
   assert.equal(codexToolType('Bash'), 'bash');
   assert.equal(codexToolType('apply_patch'), 'edit');
   assert.equal(codexToolType('mcp__filesystem__read_file'), 'read');
+  assert.equal(codexToolType('mcp__filesystem__create_file'), 'create');
+  assert.equal(codexToolType('mcp__filesystem__delete_file'), 'delete');
 });

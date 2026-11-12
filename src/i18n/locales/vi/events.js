@@ -16,6 +16,8 @@ export default {
     skill: 'mở {label}',
     edit: 'sửa {label}',
     write: 'ghi file {label}',
+    create: 'tạo {label}',
+    delete: 'xóa {label}',
     plan: 'cập nhật {label}',
     web: 'tra web “{label}”',
     fetch: 'đọc trang {label}',

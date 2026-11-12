@@ -39,6 +39,8 @@ export const ACT = {
   testfail: { station: 'tests',  anim: 'sweat',   icon: '❌', kind: 'fail', dwell: 2.6 },
   start:   { icon: '🚪' }, end: { icon: '👋' }, substart: { icon: '👥' }, substop: { icon: '📋' },
 };
+ACT.create = { station: 'desk', anim: 'type', icon: 'file' };
+ACT.delete = { station: 'desk', anim: 'type', icon: 'file' };
 export const ANIM_AT = { dining: 'eat', desk: 'type', server: 'console', library: 'read', globe: 'globe', board: 'board', coffee: 'coffee', director: 'think', brief: 'board', wc: 'idle', tests: 'think', post: 'idle' };
 // A session's state, translated when read: STATUS_LABEL[s.status] keeps working for every caller.
 const translated = (keys, prefix) => Object.defineProperties({}, Object.fromEntries(keys.map((k) => [k, { enumerable: true, get: () => tr(`${prefix}.${k}`) }])));
@@ -46,7 +48,7 @@ const translated = (keys, prefix) => Object.defineProperties({}, Object.fromEntr
 let STATION_LABEL;
 export const STATUS_LABEL = translated(['work', 'wait', 'rest'], 'events.status');
 // Streamer mode: the event types whose label is replaced by a generic phrase (events.generic.<type>).
-const GENERIC = new Set(['prompt', 'read', 'grep', 'glob', 'skill', 'edit', 'write', 'bash', 'web', 'fetch', 'mcp', 'wait', 'fail', 'deploy', 'test']);
+const GENERIC = new Set(['prompt', 'read', 'grep', 'glob', 'skill', 'edit', 'write', 'create', 'delete', 'bash', 'web', 'fetch', 'mcp', 'wait', 'fail', 'deploy', 'test']);
 export const lbl = (e) => (state.streamer && GENERIC.has(e.type) ? tr(`events.generic.${e.type}`) : e.label || '');
 const V = (key, vars) => tr(`events.verb.${key}`, vars);
 export function verb(e) {
@@ -59,6 +61,8 @@ export function verb(e) {
     case 'skill': return V('skill', { label });
     case 'edit': return V('edit', { label });
     case 'write': return V('write', { label });
+    case 'create': return V('create', { label });
+    case 'delete': return V('delete', { label });
     case 'plan': return V('plan', { label });
     case 'bash': return label;
     case 'web': return V('web', { label });
