@@ -86,11 +86,11 @@ export function renderFeed() {
     else groups.push({ sess: e.sess, agent: e.agent || null, att, lifecycle, items: [e] });
   }
   for (const g of groups) {
-    if (g.att) { list.append(alertCard(g.items[0])); continue; }
+    if (g.att) { if (sessions.has(g.sess)) list.append(alertCard(g.items[0])); continue; }   // (session gone, e.g. after a restart: the button could not open anything)
     const s = sessions.get(g.sess);
     list.append(groupCard(g, s?.status === 'work' && g.items.some((e) => latest.get(g.sess) === e.id)));
   }
-  const att = state.feed.filter((e) => ATT.has(e.type) && nowMs() - e.ts < 3600e3).length;
+  const att = state.feed.filter((e) => ATT.has(e.type) && sessions.has(e.sess) && nowMs() - e.ts < 3600e3).length;
   $('att-count').hidden = !att; $('att-count').textContent = att;
 }
 let feedQueued = false;
@@ -230,6 +230,7 @@ function onListClick(ev) {
 export const fmtTok = (n) => (n >= 1e6 ? `${num(n / 1e6, 1)}M` : `${Math.round(n / 1000)}k`);
 export const fmtUsd = (v) => `$${v >= 100 ? Math.round(v) : v.toFixed(2)}`;
 const KPIS = [['tasks', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cmd', 'terminal'], ['cost', 'coin']];   // labels: activity.kpi.<key>
+const KPI_TYPES = { read: ['read'], edit: ['edit', 'create', 'delete'], cmd: ['bash'] };
 export function renderHud() {
   const list = [...sessions.values()];
   const waiting = list.filter((s) => s.status === 'wait').length;
@@ -239,10 +240,12 @@ export function renderHud() {
     const label = tr(`activity.kpi.${k}`);
     const d = el('div', k === 'cost' ? 'kpi kpi--cost' : 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
     const hasCost = list.some((s) => s.usage?.model);
-    const value = k === 'cost' ? (hasCost ? fmtUsd(list.reduce((a, s) => a + (s.usage?.model ? s.usage.cost || 0 : 0), 0)) : '—') : num(state.stats[k] || 0);
+    const running = k === 'tasks' ? list.filter((s) => s.status === 'work').length : list.filter((s) => s.status === 'work' && (KPI_TYPES[k] || []).includes(s.last?.type)).length;
+    const value = k === 'cost' ? (hasCost ? fmtUsd(list.reduce((a, s) => a + (s.usage?.model ? s.usage.cost || 0 : 0), 0)) : '—') : num(running);
+    if (k !== 'cost') d.classList.toggle('kpi--run', running > 0); if (k === 'tasks' && !running && waiting) d.classList.add('kpi--wait');   // (green = running now, yellow = waiting for you; finished work is not counted)
     const b = el('b', null, value);
     if (k === 'cost' && hasCost) b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
-    d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiToday', { label });
+    d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiNow', { label });
     return d;
   }));
   $('bell-dot').hidden = !waiting;

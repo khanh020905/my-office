@@ -45,6 +45,7 @@ export default {
     cost: 'API est.',
   },
   kpiToday: 'Observed {label} today',
+  kpiNow: 'Running now: {label}',
   costTitle: 'Estimated API list price from open Claude transcript usage; not actual spending or a bill.',
   sessions: { one: '{n} session', other: '{n} sessions' },
   subsRunning: { one: '{n} subagent running', other: '{n} subagents running' },

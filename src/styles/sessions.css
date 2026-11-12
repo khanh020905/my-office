@@ -126,6 +126,10 @@
 .kpi b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .96rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .kpi > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: .64rem; color: var(--muted); white-space: nowrap; }
 /* the API price: wider (dollars and cents), the ≈ small in front, a warm tint so it reads apart from the counts */
+.kpi--run { background: rgba(80, 200, 120, .12); border-color: rgba(80, 200, 120, .45); }
+.kpi--run b { color: #6fdc8c; }
+.kpi--wait { background: rgba(240, 190, 60, .12); border-color: rgba(240, 190, 60, .5); }
+.kpi--wait b { color: #f0be3c; }
 .kpi--cost { background: linear-gradient(160deg, rgba(239, 138, 95, .1), rgba(239, 138, 95, .02) 70%), var(--card); border-color: rgba(239, 138, 95, .22); }
 .kpi--cost .kpi-ic { color: var(--accent); }
 .kpi--cost b small { margin-right: 2px; font-size: .7em; font-weight: 600; color: var(--muted); }

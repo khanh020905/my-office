@@ -42,6 +42,7 @@ export default {
     cost: 'API ước tính',
   },
   kpiToday: 'Đã quan sát {label} hôm nay',
+  kpiNow: 'Đang chạy: {label}',
   costTitle: 'Giá API ước tính từ token trong transcript Claude của các phiên đang mở; không phải chi tiêu thực tế hay hóa đơn.',
   sessions: '{n} phiên',
   subsRunning: '{n} trợ lý đang chạy',
