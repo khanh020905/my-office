@@ -9,11 +9,11 @@ import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
 import { atomicWriteJsonSync, acquireLockSync } from '../tools/fs-utils.mjs';
-import { executeIsolatedProcess } from '../tools/execution-runner.mjs';
 import { createTaskAnalyzer } from './task-analyzer.mjs';
 import { createCapabilityMatcher } from './capability-matcher.mjs';
 import { createAgentSelector } from './agent-selector.mjs';
-import { createPlanGenerator } from './plan-generator.mjs';
+import { createPlanGenerator, computePlanHash } from './plan-generator.mjs';
+import { createNativeAgentExecutor } from './native-agent-executor.mjs';
 
 const DEFAULT_STORE_PATH = path.resolve(process.cwd(), 'data', 'orchestration', 'orchestration-tasks.json');
 
@@ -41,6 +41,7 @@ export function createOrchestrator({
   permissionRegistry = null,
   auditLogger = null,
   workflowEngine = null,
+  nativeAgentExecutor = null,
   storePath = null,
 } = {}) {
   // Retain references for event journaling and underlying workflow binding
@@ -59,8 +60,12 @@ export function createOrchestrator({
   });
   const selector = createAgentSelector({ distributionEngine, policyEngine });
   const planner = createPlanGenerator();
+  const agentExecutor = nativeAgentExecutor || createNativeAgentExecutor({ policyEngine });
 
   const tasks = new Map();
+  // Task ids inside executePlan: load() must not swap their record for the older copy on disk,
+  // or the run's result is written to an object nobody saves.
+  const executing = new Set();
 
   function load() {
     if (!fs.existsSync(store)) {
@@ -70,10 +75,12 @@ export function createOrchestrator({
     try {
       const data = JSON.parse(fs.readFileSync(store, 'utf8'));
       if (Array.isArray(data.tasks)) {
+        const live = [...executing].map((id) => tasks.get(id)).filter(Boolean);
         tasks.clear();
         for (const t of data.tasks) {
           tasks.set(t.task_id, t);
         }
+        for (const r of live) tasks.set(r.task_id, r);
       }
     } catch {
       // Keep in-memory
@@ -127,6 +134,7 @@ export function createOrchestrator({
       const taskId = typeof request === 'object' && request.task_id
         ? request.task_id
         : `orch_${crypto.randomUUID()}`;
+      if (tasks.has(taskId)) throw new Error(`Task '${taskId}' already exists`);
 
       const now = new Date().toISOString();
       const record = {
@@ -135,6 +143,9 @@ export function createOrchestrator({
         created_at: now,
         updated_at: now,
         original_request: typeof request === 'string' ? request : request.prompt || request.text || '',
+        // Kept on the record: original_request is only the prompt text, and re-planning needs both.
+        target_agent: typeof request === 'object' ? (request.target_agent || request.agent_override || null) : null,
+        require_approval: typeof request === 'object' && (request.require_approval === true || request.execution_mode === 'manual_approval'),
         task_spec: null,
         matched_tools: [],
         rejected_tools: [],
@@ -197,7 +208,18 @@ export function createOrchestrator({
         }
       }
 
-      const agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      const targetAgentId = record.target_agent;
+      let agentResult;
+      if (targetAgentId) {
+        agentResult = {
+          selected_agent: { agent_id: targetAgentId, name: targetAgentId === 'claude-code' ? 'Claude Code' : targetAgentId },
+          explanation: `Explicitly selected target agent: '${targetAgentId}' by user request`,
+          ranked_agents: [{ agent_id: targetAgentId, score: 1.0 }],
+          rejected_agents: [],
+        };
+      } else {
+        agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      }
       record.selected_agent = agentResult.selected_agent;
       addTraceEvent(record, 'AGENT_SELECTED', agentResult.explanation, { agent: agentResult.selected_agent });
 
@@ -211,6 +233,9 @@ export function createOrchestrator({
       });
       record.execution_plan = plan;
       record.execution_results.total_steps = plan.steps.length;
+      if (record.require_approval) {
+        plan.requires_human_approval = true;
+      }
       record.approval.required = plan.requires_human_approval;
 
       addTraceEvent(record, 'PLAN_GENERATED', `Execution plan generated with ${plan.steps.length} step(s). Requires approval: ${plan.requires_human_approval}`, {
@@ -294,6 +319,17 @@ export function createOrchestrator({
      */
     async executePlan(taskId) {
       load();
+      if (executing.has(taskId)) throw new Error(`Task '${taskId}' is already executing`);
+      executing.add(taskId);
+      try {
+        return await this._executePlan(taskId);
+      } finally {
+        executing.delete(taskId);
+      }
+    },
+
+    async _executePlan(taskId) {
+      load();
       const record = tasks.get(taskId);
       if (!record) throw new Error(`Task '${taskId}' not found`);
 
@@ -314,7 +350,8 @@ export function createOrchestrator({
         if (record.approval.bound_plan_version != null && record.approval.bound_plan_version !== plan.plan_version) {
           throw new Error(`Execution blocked: Approval was granted for plan v${record.approval.bound_plan_version}, but executing plan v${plan.plan_version}`);
         }
-        if (record.approval.bound_plan_hash != null && plan.plan_hash && record.approval.bound_plan_hash !== plan.plan_hash) {
+        // Recomputed from the plan about to run, not read from its stored plan_hash field.
+        if (record.approval.bound_plan_hash != null && record.approval.bound_plan_hash !== computePlanHash(plan)) {
           throw new Error(`Execution blocked: Approval cryptographic hash mismatch against active plan`);
         }
       }
@@ -332,6 +369,8 @@ export function createOrchestrator({
         const maxAttempts = step.retry_policy?.max_attempts || 1;
         let stepSucceeded = false;
         let stepOutput = null;
+        let stepMetadata = null;
+        let lastError = null;
 
         while (attempt <= maxAttempts && !stepSucceeded) {
           // MANDATORY PHASE 5 SECURITY EVALUATION AT EXECUTION GATE
@@ -378,30 +417,55 @@ export function createOrchestrator({
               stepSucceeded = true;
               stepOutput = 'System artifact verification passed';
             } else if (step.entry_point || step.tool_id) {
-              // Real process execution via ExecutionRunner
-              const stepArtifacts = step.expected_artifacts || [];
-              const execRes = await executeIsolatedProcess({
-                command: 'node',
-                args: ['-e', `console.log("Completed step ${step.step_id} with tool ${toolId || 'native'}. Artifacts: ${stepArtifacts.join(' ')}")`],
-                toolId: toolId || 'system',
-                agentId,
-                policyEngine,
-                timeoutMs: step.timeout_ms || 30_000,
+              // No tool runner exists yet: fail at once rather than report work that never ran.
+              attempt = maxAttempts;
+              throw new Error(`Tool step execution is not implemented (tool '${toolId || step.entry_point}')`);
+            } else {
+              // Real Native Agent Execution (Phase 8 Architecture)
+              const nativeRes = await agentExecutor.executeAgentStep({
+                step,
+                taskContext: {
+                  task_id: taskId,
+                  step_id: step.step_id,
+                  attempt,
+                  plan_id: plan.plan_id,
+                  plan_hash: plan.plan_hash,
+                  plan_version: plan.plan_version,
+                  approval: record.approval,
+                },
+                workspaceDir: process.cwd(),
               });
 
-              if (execRes.ok) {
+              if (nativeRes.ok) {
                 stepSucceeded = true;
-                stepOutput = execRes.stdout;
+                stepOutput = nativeRes.stdout || `Completed natively by ${agentId} with exit code 0`;
+                stepMetadata = {
+                  pid: nativeRes.pid,
+                  duration_ms: nativeRes.duration_ms,
+                  exit_code: nativeRes.exit_code,
+                  start_time: nativeRes.start_time,
+                  end_time: nativeRes.end_time,
+                };
               } else {
-                throw new Error(execRes.error || execRes.stderr || 'Execution failed');
+                record.execution_results.step_results[step.step_id] = {
+                  tool_id: toolId,
+                  agent_id: agentId,
+                  output: nativeRes.stdout || '',
+                  error: nativeRes.error || nativeRes.stderr,
+                  metadata: {
+                    pid: nativeRes.pid,
+                    duration_ms: nativeRes.duration_ms,
+                    exit_code: nativeRes.exit_code,
+                    start_time: nativeRes.start_time,
+                    end_time: nativeRes.end_time,
+                  },
+                  failed_at: new Date().toISOString(),
+                };
+                throw new Error(nativeRes.error || nativeRes.stderr || `Agent execution failed with code ${nativeRes.exit_code}`);
               }
-            } else {
-              // Native agent action
-              stepSucceeded = true;
-              const stepArtifacts = step.expected_artifacts || [];
-              stepOutput = `Completed natively by ${agentId}. Artifacts produced: ${stepArtifacts.join(' ')}`;
             }
           } catch (err) {
+            lastError = err.message;
             addTraceEvent(record, 'STEP_RETRY', `Step ${step.step_id} failed on attempt ${attempt}: ${err.message}`, { error: err.message, attempt });
             attempt++;
             if (attempt <= maxAttempts) {
@@ -412,7 +476,7 @@ export function createOrchestrator({
 
         if (!stepSucceeded) {
           step.status = 'failed';
-          record.error = `Step ${step.step_id} failed after ${maxAttempts} attempt(s)`;
+          record.error = `Step ${step.step_id} failed after ${maxAttempts} attempt(s): ${lastError}`;
           // If some prior steps completed, mark as PARTIALLY_COMPLETED, otherwise FAILED
           const finalState = record.execution_results.completed_steps > 0 ? 'PARTIALLY_COMPLETED' : 'FAILED';
           updateStatus(record, finalState, record.error);
@@ -426,10 +490,17 @@ export function createOrchestrator({
           tool_id: toolId,
           agent_id: agentId,
           output: stepOutput,
+          metadata: stepMetadata || null,
           completed_at: new Date().toISOString(),
         };
 
-        addTraceEvent(record, 'STEP_COMPLETED', `Step ${step.step_id} completed successfully`, { step_id: step.step_id, tool_id: toolId });
+        addTraceEvent(record, 'STEP_COMPLETED', `Step ${step.step_id} completed successfully`, {
+          step_id: step.step_id,
+          tool_id: toolId,
+          pid: stepMetadata?.pid,
+          exit_code: stepMetadata?.exit_code,
+          duration_ms: stepMetadata?.duration_ms,
+        });
       }
 
       // 5. VALIDATING ARTIFACTS
@@ -550,7 +621,18 @@ export function createOrchestrator({
       record.matched_tools = matchResult.ranked_candidates;
       record.rejected_tools = matchResult.rejected_candidates;
 
-      const agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      const targetAgentId = record.target_agent || null;
+      let agentResult;
+      if (targetAgentId) {
+        agentResult = {
+          selected_agent: { agent_id: targetAgentId, name: targetAgentId === 'claude-code' ? 'Claude Code' : targetAgentId },
+          explanation: `Explicitly selected target agent: '${targetAgentId}' by user request`,
+          ranked_agents: [{ agent_id: targetAgentId, score: 1.0 }],
+          rejected_agents: [],
+        };
+      } else {
+        agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      }
       record.selected_agent = agentResult.selected_agent;
 
       updateStatus(record, 'PLANNING');
@@ -561,6 +643,9 @@ export function createOrchestrator({
       });
       record.execution_plan = plan;
       record.execution_results.total_steps = plan.steps.length;
+      if (record.require_approval) {
+        plan.requires_human_approval = true;
+      }
       record.approval.required = plan.requires_human_approval;
 
       if (plan.requires_human_approval) {
@@ -682,7 +767,18 @@ export function createOrchestrator({
       record.rejected_tools = matchResult.rejected_candidates;
 
       // Re-select agent
-      const agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      const targetAgentId = record.target_agent || null;
+      let agentResult;
+      if (targetAgentId) {
+        agentResult = {
+          selected_agent: { agent_id: targetAgentId, name: targetAgentId === 'claude-code' ? 'Claude Code' : targetAgentId },
+          explanation: `Explicitly selected target agent: '${targetAgentId}' by user request`,
+          ranked_agents: [{ agent_id: targetAgentId, score: 1.0 }],
+          rejected_agents: [],
+        };
+      } else {
+        agentResult = selector.selectAgent(spec, matchResult.ranked_candidates);
+      }
       record.selected_agent = agentResult.selected_agent;
 
       // Re-generate plan

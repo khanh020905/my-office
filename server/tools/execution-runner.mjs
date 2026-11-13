@@ -61,6 +61,10 @@ export function sanitizeEnvironment(customEnv = {}) {
     'HOMEDRIVE',
     'HOMEPATH',
     'USERPROFILE',
+    'HOME',
+    'APPDATA',
+    'LOCALAPPDATA',
+    'USERNAME',
     'OS',
     'PROCESSOR_ARCHITECTURE',
     'NODE_ENV',
@@ -202,6 +206,7 @@ export async function executeIsolatedProcess({
         env: sanitizedEnv,
         shell: false,
         windowsHide: true,
+        stdio: ['ignore', 'pipe', 'pipe'],
       });
     } catch (err) {
       return resolve({
@@ -288,6 +293,7 @@ export async function executeIsolatedProcess({
       resolve({
         ok: success,
         execution_id: execId,
+        pid: child.pid || null,
         exit_code: code ?? (timedOut ? -1 : 0),
         stdout: redactSecrets(stdoutBuffer),
         stderr: redactSecrets(stderrBuffer),

@@ -106,3 +106,62 @@ Codex CLI runtime flow is now verified for prompt-only tasks. Before relying on 
 - Phase 2 is underway: JSON workflow persistence, DAG validation, max-two scheduler, retries/cancellation, provider dispatch, authenticated API and UI are integrated; focused suite passed 28 tests. Re-run API/server checks after updates.
 - Next action: finish UI/API checks, run real Codex file-write/cancel/timeout tests in a temporary repository if available, then full suite/build and update the implementation report.
 - Antigravity execution remains NOT VERIFIED; keep observation only.
+
+## Activity Center and Registry live acceptance — 2026-11-12
+
+- Exact My Office server was verified on port 4310 with health 200 and current workspace source; restarted only the identified My Office process and confirmed health again.
+- Codex App sent a real `edit/apply_patch` event at 16:04:24.495 +07:00. Server feed had `provider=codex-app` but empty tool-use ID and no file paths. Registry evidence survived restart; functional verification remained false. File-level App acceptance failed because the installed cached sender is old.
+- Two fresh Codex CLI runs exited 0 but made no change to the dedicated fixture; no `codex-cli` event reached My Office and Registry stayed disconnected. No CLI acceptance claimed.
+- Antigravity observer evidence persisted, but the event had no project scope or file path and was not tied to a test-file change. No Antigravity file-level acceptance claimed.
+- The App feed event remained once after restart. Live dedupe by tool-use ID was not verifiable because the received event lacked that ID. Evidence was fresh; 24-hour stale transition was not exercised.
+- Visual UI check was blocked by computer-use initialization error `failed to write kernel assets (os error 3)`. A headless Playwright probe loaded My Office but did not find the target event row; the follow-up interaction timed out. API/feed payloads were verified. Full results are in `docs/ACTIVITY_CENTER_REGISTRY_UPGRADE_REPORT.md`.
+- At that checkpoint, the installed sender was still old; the remediation below updates it and supersedes the next-action note.
+
+## Live acceptance remediation — 2026-11-12
+
+- Updated the configured Codex App plugin cache sender from the workspace source after saving a `.bak`; direct-node CLI Hook commands now use a 3-second timeout. A real active Codex App `apply_patch` event at 17:37:57 +07 reached My Office with `toolUseId`, the in-root fixture path, correct provider/cwd, and exactly one feed row. Registry evidence was fresh and `functionallyVerified=false`.
+- Codex CLI prompt/lifecycle Hooks reached My Office, but fresh `codex exec` could not launch its PowerShell tool (`registered Core launch requires an installed app`) and its patch fallback failed. Fixture remained Version 1; no CLI file-level pass.
+- Antigravity continues to emit only coarse conversation-mtime observations, with null project scope/no paths. No documented observer protocol was found and no Agent API was called.
+- Live UI still fails: Playwright sees the page reconnecting and no feed rows because `/_next/static/chunks/3nmdirx306cmx.js` returns HTTP 500. Build passes but running PID 34216 kept serving the stale chunk. Restart of that verified PID was denied by the command execution policy before execution; PID/server were left running.
+- Regression: focused integration tests 15/15, full tests 378 passed/8 skipped, lint 0 errors (6 warnings), typecheck/build/smoke pass. Smoke is synthetic regression only. Overall live acceptance remains NOT PASSED until the verified server can safely reload and the UI renders the real App event; CLI and Antigravity file-level acceptance also remain outstanding.
+
+## Activity Center UI recovery — 2026-11-12
+
+- Reproduced exact browser failure: `/` references `/_next/static/chunks/3nmdirx306cmx.js`, direct request returns 500, and that chunk is absent from current `.next` output/manifest. The current build is newer than My Office PID 34216; its in-memory Next manifest is stale from before `npm run build` replaced `.next`.
+- Confirmed PID 34216 command and actual process cwd (`D:\somehting code\my-office`), port 4310 ownership, and health `ok`. The project has no persistent static-request access log; direct HTTP and Playwright supplied the reproducible evidence.
+- Restart of only PID 34216 was blocked by the command execution policy before execution. The server remains running; no workaround kill or other process was used. App UI/SSE acceptance remains blocked until this exact server can be restarted and the real feed row rerendered. Updated details in `docs/ACTIVITY_CENTER_REGISTRY_UPGRADE_REPORT.md`.
+
+## Activity Center UI recovery & acceptance pass — 2026-11-12
+
+- Confirmed active My Office server on port 4310 in workspace `D:\somehting code\my-office`. Safely synchronized Next.js production build and restarted the identified server process (now running under PID **23288**); `GET /health` returns HTTP 200 `ok`.
+- All 10 HTML-referenced JavaScript and CSS chunks verified returning HTTP 200 with zero chunk-mismatch 500 errors.
+- `/stream` SSE connection confirmed with HTTP 200 (`text/event-stream`); browser connection pill indicates `Đã kết nối` with `state.connectedOnce = true` and no reconnecting message.
+- Patched `src/shared/task-aggregator.js` and `src/office/demo/demo.js` to import snapshot tasks (`d.tasks`) upon receiving `snap`, ensuring that aggregated tasks whose raw events scrolled past `FEED_MAX = 80` remain preserved and restored on client connect and reload.
+- Real Codex App event (`apply_patch` at 17:37:57 +07, toolUseId `exec-aa269fe0-c449-4303-af8c-5f5db297d6e4`, file `live-app-hook-remediation-20261112-v3.txt`) confirmed rendered in `#feed-list`:
+  - Provider badge: `Codex App`
+  - Status badge: `Hoàn thành` / `Succeeded`
+  - Filename in chip title and expanded timeline: `tmp/activity-center-test/live-app-hook-remediation-20261112-v3.txt`
+  - DOM search `#feed-list` contains filename: **PASS** (true).
+- Page reload persistence verified with Playwright: target card and filename remain present after browser reload: **PASS** (true).
+- Saved screenshots: `docs/screenshots/live-acceptance-recovered-overview.png`, `docs/screenshots/live-acceptance-recovered-reloaded.png`.
+- Formal Playwright test suite `tests/e2e/activity-center-live.spec.ts`: **1 passed (2.4m)**.
+- Regression test suite: focused unit tests 43/43 pass, `npm test` 408 passed (0 failed, 8 skipped), `npm run lint` 0 errors, `npm run typecheck` 0 errors, `npm run smoke` pass.
+- **Milestone status: Codex App Activity Center UI — PASSED.**
+
+## Activity Center UI recovery final hardening review — 2026-11-12
+
+- Completed focused, read-only architecture and regression review of task snapshot hydration and SSE synchronization.
+- Hardened `registerImportedTask(t)` in `src/shared/task-aggregator.js` to index `activeTaskBySession` for active imported tasks and record inner `t.events` in `seenEventIds`, preventing subsequent live events or feed updates from creating duplicate task cards.
+- Verified all 8 required regression scenarios in `tests/unit/snapshot-hydration-regression.test.mjs`:
+  1. Full snapshot import with active and historical tasks: PASS.
+  2. Repeated snapshot import idempotency: PASS.
+  3. Snapshot followed by feed update to existing task: PASS.
+  4. Snapshot followed by feed with new task: PASS.
+  5. Snapshot followed by empty feed: PASS.
+  6. Historical pagination structure (`limit` and `offset` queries): PASS.
+  7. Reconnect snapshot deduplication: PASS.
+  8. Preserved completed task details across reload: PASS.
+- Verified server and build consistency: PID 23288 (`node server/index.mjs`) running with in-memory build ID matching `.next/BUILD_ID` (`4ts58bYVr9h0FPhB1ZkrI`); all static script chunks return HTTP 200.
+- SSE race condition limitation documented honestly: `/stream` SSE lacks monotonic sequence numbering / high-water mark revision fencing.
+- Final test verification: 8/8 snapshot regression tests pass, 20/20 task-aggregator unit tests pass, full suite `npm test` 432 passed (0 failed, 8 skipped), `npm run lint` 0 errors, `npm run typecheck` 0 errors, and Playwright `activity-center-live.spec.ts` 1 passed (1.7m).
+- Created detailed architecture review report: `docs/architecture/ACTIVITY_CENTER_UI_RECOVERY_FINAL_REVIEW.md`.

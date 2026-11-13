@@ -3,7 +3,6 @@
  * Generates standard Model Context Protocol client configurations for any external client.
  */
 
-import fs from 'node:fs';
 import path from 'node:path';
 import { createDistributionPlan, evaluateVerificationLevels } from './base-adapter.mjs';
 
@@ -14,28 +13,21 @@ export const genericMcpAdapter = {
   supportedProtocols: ['mcp'],
 
   detectAgent() {
-    const claudeDesktopConfig = path.join(process.env.APPDATA || '', 'Claude', 'claude_desktop_config.json');
-    const hasClaudeDesktop = fs.existsSync(claudeDesktopConfig);
-
-    const statuses = ['SUPPORTED'];
-    if (hasClaudeDesktop) statuses.push('CONFIGURED');
-    else statuses.push('NOT_FOUND');
-
     return {
-      detected: hasClaudeDesktop,
+      detected: false,
+      installed: false,
+      configured: false,
       agent_id: 'generic-mcp',
       name: 'Generic MCP Client',
-      status: hasClaudeDesktop ? 'CONFIGURED' : 'SUPPORTED',
-      statuses,
-      verification_level: hasClaudeDesktop ? 1 : 0,
+      status: 'SUPPORTED',
+      statuses: ['SUPPORTED'],
+      verification_level: 0,
       executable_path: null,
       version: null,
       home: null,
-      config_path: hasClaudeDesktop ? claudeDesktopConfig : null,
-      evidence: hasClaudeDesktop
-        ? `Claude Desktop Model Context Protocol config found at ${claudeDesktopConfig}`
-        : 'Virtual adapter for Model Context Protocol (MCP) export; external host MCP client configuration file not detected',
-      detection_error: hasClaudeDesktop ? null : 'No external MCP client configuration found on host',
+      config_path: null,
+      evidence: 'Virtual adapter for Model Context Protocol (MCP) export; no generic external client is installed by this adapter.',
+      detection_error: 'Adapter support does not identify an installed MCP client.',
     };
   },
 

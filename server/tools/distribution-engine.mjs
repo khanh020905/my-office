@@ -19,6 +19,7 @@ export function createDistributionEngine({
   permissionRegistry = null,
   policyEngine = null,
   storePath = null,
+  integrationState = null,
 } = {}) {
   const store = storePath || path.resolve(process.cwd(), 'data', 'tools', 'distribution-registry.json');
   fs.mkdirSync(path.dirname(store), { recursive: true });
@@ -112,6 +113,7 @@ export function createDistributionEngine({
         evidence: env.evidence || null,
         detection_error: env.detection_error || null,
         environment: env,
+        ...(integrationState?.get(adapter.id, env) || {}),
       });
     }
     return results;

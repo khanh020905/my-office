@@ -82,6 +82,8 @@ export const STANDARD_PERMISSION_SCOPES = new Set([
   'process:exec',
   'process:spawn',
   'process:terminate',
+  'agent:invoke',
+  'runtime:spawn',
   'env:read',
   'env:write',
   'secrets:read',

@@ -119,12 +119,12 @@
 .live-tag[data-state="reconnecting"] i, .live-tag[data-state="degraded"] i { background: var(--yellow); animation: none; }
 .live-tag[data-state="disconnected"] i { background: var(--red); animation: none; }
 @keyframes blink { 50% { opacity: .3; } }
-.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.75fr); gap: 6px; margin: 0 16px 10px; }
-.kpi { display: grid; justify-items: start; gap: 2px; padding: 8px 8px 7px; border-radius: 11px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) minmax(0, 1.4fr); gap: 5px; margin: 0 16px 10px; }
+.kpi { display: grid; justify-items: start; gap: 2px; padding: 7px 5px; border-radius: 11px; background: var(--card); border: 1px solid var(--line); min-width: 0; }
 .kpi-ic { display: grid; color: var(--faint); }
 .kpi-ic svg { width: 13px; height: 13px; }
-.kpi b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .96rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
-.kpi > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: .64rem; color: var(--muted); white-space: nowrap; }
+.kpi b { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: .92rem; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.kpi > span:last-child { max-width: 100%; overflow: hidden; text-overflow: ellipsis; font-size: .60rem; color: var(--muted); white-space: nowrap; }
 /* the API price: wider (dollars and cents), the ≈ small in front, a warm tint so it reads apart from the counts */
 .kpi--run { background: rgba(80, 200, 120, .12); border-color: rgba(80, 200, 120, .45); }
 .kpi--run b { color: #6fdc8c; }

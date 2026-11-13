@@ -842,6 +842,8 @@ async function loadAgentsView() {
       const ver = a.version || a.environment?.version;
       const ev = a.evidence || a.environment?.evidence;
       const detErr = a.detection_error || a.environment?.detection_error;
+      const observedAt = a.lastObservedAt ? new Date(a.lastObservedAt).toLocaleString() : 'Never';
+      const verifiedAt = a.lastVerifiedAt ? new Date(a.lastVerifiedAt).toLocaleString() : 'Not verified';
 
       let badgeClass = 'badge-muted';
       let badgeLabel = st;
@@ -883,6 +885,10 @@ async function loadAgentsView() {
             <div><b>Configuration:</b> ${cfg ? `<code>${escapeHtml(cfg)}</code>` : '<span style="color: var(--muted, #8D97AA);">None detected</span>'}</div>
             <div><b>Skills Directory:</b> ${skl ? `<code>${escapeHtml(skl)}</code>` : '<span style="color: var(--muted, #8D97AA);">None detected</span>'}</div>
             <div><b>Integration Protocols:</b> ${(a.supported_protocols || ['skills', 'mcp', 'cli']).map((p) => `<span class="tool-badge badge-blue" style="margin-right: 4px;">${escapeHtml(p)}</span>`).join('')}</div>
+            <div><b>Supported:</b> ${a.supported ? 'Yes' : 'No'} · <b>Installed:</b> ${a.installed == null ? 'Unknown' : a.installed ? 'Yes' : 'No'} · <b>Configured:</b> ${a.configured ? 'Yes' : 'No'}</div>
+            <div><b>Connected:</b> ${a.connected ? 'Yes' : 'No'} · <b>Observed:</b> ${a.observed ? 'Yes' : 'No'} · <b>Functionally verified:</b> ${a.functionallyVerified ? 'Yes' : 'No'}</div>
+            <div><b>Provider:</b> ${escapeHtml(a.provider || a.agent_id)} · <b>Evidence:</b> ${escapeHtml(a.evidenceSource || 'None')} · <b>Last observed:</b> ${escapeHtml(observedAt)} · <b>Last verified:</b> ${escapeHtml(verifiedAt)}${a.evidenceStale ? ' · STALE' : ''}</div>
+            ${a.verificationScope ? `<div><b>Scope:</b> ${escapeHtml(a.verificationScope)}</div>` : ''}
             ${ev ? `<div style="margin-top: 2px;"><b>Evidence:</b> <span style="color: var(--ink, #E8ECF4);">${escapeHtml(ev)}</span></div>` : ''}
             ${detErr ? `<div style="margin-top: 2px; color: var(--amber, #F2B544);"><b>Notice:</b> ${escapeHtml(detErr)}</div>` : ''}
           </div>

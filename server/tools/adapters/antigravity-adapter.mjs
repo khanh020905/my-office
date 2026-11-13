@@ -84,6 +84,8 @@ export const antigravityAdapter = {
 
     return {
       detected: Boolean(homeExists || executablePath),
+      installed: Boolean(executablePath || agentApiExists),
+      configured: Boolean(skillsExists || mcpExists || configExists),
       agent_id: 'antigravity',
       name: 'Antigravity',
       status: primaryStatus,

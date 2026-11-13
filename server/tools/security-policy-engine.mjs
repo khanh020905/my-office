@@ -11,15 +11,16 @@ import { atomicWriteJsonSync, acquireLockSync } from './fs-utils.mjs';
 const DEFAULT_POLICIES_PATH = path.resolve(process.cwd(), 'data', 'tools', 'security-policies.json');
 
 // Sensitive tokens and keys regex for output redaction
+// The key=value patterns stop at a quote or backslash: they also run over JSON text, which must stay parseable.
 const SENSITIVE_OUTPUT_PATTERNS = [
   /(?:sk-[a-zA-Z0-9_-]{20,})/g,
   /(?:ghp_[a-zA-Z0-9]{30,})/g,
   /(?:Bearer\s+[a-zA-Z0-9_.-]{20,})/gi,
-  /(?:ANTHROPIC_API_KEY=[^\s&]+)/gi,
-  /(?:OPENAI_API_KEY=[^\s&]+)/gi,
-  /(?:GEMINI_API_KEY=[^\s&]+)/gi,
-  /(?:password=[^\s&]+)/gi,
-  /(?:token=[^\s&]+)/gi,
+  /(?:ANTHROPIC_API_KEY=[^\s&"\\]+)/gi,
+  /(?:OPENAI_API_KEY=[^\s&"\\]+)/gi,
+  /(?:GEMINI_API_KEY=[^\s&"\\]+)/gi,
+  /(?:password=[^\s&"\\]+)/gi,
+  /(?:token=[^\s&"\\]+)/gi,
 ];
 
 // Agent-specific sensitive environment variable prefixes to maintain strict cross-agent isolation
@@ -53,19 +54,19 @@ const DEFAULT_GLOBAL_POLICIES = {
   // Agent policies
   agent_policies: {
     'claude-code': {
-      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'env:read', 'mcp:connect', 'api:access'],
+      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'agent:invoke', 'runtime:spawn', 'env:read', 'mcp:connect', 'api:access'],
       denied_scopes: ['secrets:write', 'net:inbound'],
     },
     'codex-cli': {
-      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'env:read', 'mcp:connect', 'api:access'],
+      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'agent:invoke', 'runtime:spawn', 'env:read', 'mcp:connect', 'api:access'],
       denied_scopes: ['secrets:write', 'net:inbound'],
     },
     'codex-app': {
-      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'hooks:register'],
+      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'agent:invoke', 'runtime:spawn', 'hooks:register'],
       denied_scopes: ['secrets:write', 'net:inbound'],
     },
     'antigravity': {
-      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'env:read', 'mcp:connect'],
+      allowed_scopes: ['fs:read', 'fs:write', 'net:outbound', 'process:exec', 'agent:invoke', 'runtime:spawn', 'env:read', 'mcp:connect'],
       denied_scopes: ['secrets:write', 'net:inbound'],
     },
     'generic-mcp': {
