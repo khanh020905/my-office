@@ -34,6 +34,7 @@ import { scanUsage, blankUsage, ctxMax } from './usage.mjs';
 import next from 'next';
 import { buildTimeline } from '../src/shared/timeline.js';
 import { createAgentModel } from '../src/shared/agent-events.js';
+import { createTaskAggregator } from '../src/shared/task-aggregator.js';
 import { readProjects } from './production/projects.mjs';
 import { createQaRunner, projectQa } from './production/qa.mjs';
 import { analytics } from './production/analytics.mjs';
@@ -53,6 +54,7 @@ import { handleToolDiscoveryRoutes } from './tools/discovery-api.mjs';
 import { createLifecycleManager } from './tools/lifecycle-manager.mjs';
 import { handleToolLifecycleRoutes } from './tools/lifecycle-api.mjs';
 import { createDistributionEngine } from './tools/distribution-engine.mjs';
+import { createAgentIntegrationState } from './tools/agent-integration-state.mjs';
 import { handleToolDistributionRoutes } from './tools/distribution-api.mjs';
 import { createPermissionRegistry } from './tools/permission-registry.mjs';
 import { createSecurityAuditLogger } from './tools/security-audit.mjs';
@@ -64,6 +66,28 @@ import { createCapabilityMatcher } from './orchestration/capability-matcher.mjs'
 import { createAgentSelector } from './orchestration/agent-selector.mjs';
 import { createPlanGenerator } from './orchestration/plan-generator.mjs';
 import { handleOrchestrationRoutes } from './orchestration/orchestration-api.mjs';
+import { createCapabilityRegistry } from './control/capability-registry.mjs';
+import { createControlManager } from './control/control-manager.mjs';
+import { handleControlRoutes } from './control/control-api.mjs';
+import { createMasterOrchestrator } from './orchestration/engine/master-orchestrator.mjs';
+import { handleMasterOrchestrationRoutes } from './orchestration/engine/master-orchestration-api.mjs';
+import { createReviewEngine } from './orchestration/qa/review-engine.mjs';
+import { handleQaRoutes } from './orchestration/qa/qa-api.mjs';
+import { createSecurityGuard } from './autonomous/security-guard.mjs';
+import { createEmergencyStop } from './autonomous/emergency-stop.mjs';
+import { createRecoveryBudgetTracker } from './autonomous/recovery-budget.mjs';
+import { createPolicyEngine } from './autonomous/policy-engine.mjs';
+import { createAutonomousScheduler } from './autonomous/autonomous-scheduler.mjs';
+import { handleAutonomousRoutes } from './autonomous/autonomous-api.mjs';
+import { createJournal } from './reliability/journal.mjs';
+import { createProcessSupervisor } from './reliability/process-supervisor.mjs';
+import { createIdempotencyManager } from './reliability/idempotency.mjs';
+import { createReconciliationEngine } from './reliability/reconciliation.mjs';
+import { createBackupManager } from './reliability/backup-manager.mjs';
+import { createMetricsCollector } from './reliability/metrics-collector.mjs';
+import { handleReliabilityRoutes } from './reliability/reliability-api.mjs';
+import { createTrialMonitor } from './trial-monitor/trial-monitor.mjs';
+import { handleTrialMonitorRoutes } from './trial-monitor/trial-monitor-api.mjs';
 import { createTrophies } from './trophies.mjs';
 import { createGit } from './git.mjs';
 import { createStranded } from './stranded.mjs';
@@ -274,25 +298,90 @@ let feed = [];
 let seq = 0;
 const today = () => new Date().toLocaleDateString('sv-SE');
 let stats = { day: today(), tasks: 0, prompts: 0, read: 0, edit: 0, cmd: 0, web: 0, deploy: 0 };
+let savedCodexHookIds = [];
 let dirty = false;
 
 const STATE_FILE = path.join(DATA_DIR, 'state.json');
+const TASKS_FILE = path.join(DATA_DIR, 'activity-tasks.json');
 try {
   const saved = JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'));
   if (saved.stats?.day === stats.day) stats = saved.stats;
   stats.tasks ??= stats.prompts || 0;
   if (Array.isArray(saved.feed)) feed = saved.feed.slice(-FEED_MAX);
+  if (Array.isArray(saved.codexHookIds)) savedCodexHookIds = saved.codexHookIds.filter((id) => typeof id === 'string').slice(-5000);
   seq = saved.seq || 0;
 } catch { /* first run */ }
 // spec §7 normalised agent model: recovers from the saved feed after a restart, then onHook feeds it live
 const agentModel = createAgentModel();
+const taskAggregator = createTaskAggregator({ staleMs: 10 * 60e3 });
 const qaRunner = createQaRunner({ historyDir: path.join(DATA_DIR, 'qa-history') });
 const videoWs = () => String(process.env.OFFICE_VIDEO_WORKSPACE || '').replace(/^~(?=$|[\\/])/, os.homedir());
+try {
+  const savedTasks = JSON.parse(fs.readFileSync(TASKS_FILE, 'utf8'));
+  taskAggregator.importState(savedTasks);
+} catch { /* first run */ }
 agentModel.load(feed);
-setInterval(() => {
+taskAggregator.load(feed);
+
+function saveStateSync() {
+  try {
+    const stateTmp = `${STATE_FILE}.${process.pid}.tmp`;
+    const tasksTmp = `${TASKS_FILE}.${process.pid}.tmp`;
+    fs.writeFileSync(stateTmp, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() }));
+    fs.renameSync(stateTmp, STATE_FILE);
+    fs.writeFileSync(tasksTmp, JSON.stringify(taskAggregator.exportState()));
+    fs.renameSync(tasksTmp, TASKS_FILE);
+  } catch {
+    try {
+      fs.writeFileSync(STATE_FILE, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() }));
+      fs.writeFileSync(TASKS_FILE, JSON.stringify(taskAggregator.exportState()));
+    } catch { /* ignore */ }
+  }
+}
+
+let debouncedSaveTimer = null;
+function scheduleSave() {
+  dirty = true;
+  if (!debouncedSaveTimer) {
+    debouncedSaveTimer = setTimeout(async () => {
+      debouncedSaveTimer = null;
+      if (!dirty) return;
+      dirty = false;
+      const stateTmp = `${STATE_FILE}.${process.pid}.tmp`;
+      const tasksTmp = `${TASKS_FILE}.${process.pid}.tmp`;
+      try {
+        await fsp.writeFile(stateTmp, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() }));
+        await fsp.rename(stateTmp, STATE_FILE);
+      } catch {
+        fsp.writeFile(STATE_FILE, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() })).catch(() => {});
+      }
+      try {
+        await fsp.writeFile(tasksTmp, JSON.stringify(taskAggregator.exportState()));
+        await fsp.rename(tasksTmp, TASKS_FILE);
+      } catch {
+        fsp.writeFile(TASKS_FILE, JSON.stringify(taskAggregator.exportState())).catch(() => {});
+      }
+    }, 800);
+  }
+}
+
+setInterval(async () => {
   if (!dirty) return;
   dirty = false;
-  fsp.writeFile(STATE_FILE, JSON.stringify({ stats, feed, seq })).catch(() => {});
+  const stateTmp = `${STATE_FILE}.${process.pid}.tmp`;
+  const tasksTmp = `${TASKS_FILE}.${process.pid}.tmp`;
+  try {
+    await fsp.writeFile(stateTmp, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() }));
+    await fsp.rename(stateTmp, STATE_FILE);
+  } catch {
+    fsp.writeFile(STATE_FILE, JSON.stringify({ stats, feed, seq, codexHookIds: codexHookSeen.ids() })).catch(() => {});
+  }
+  try {
+    await fsp.writeFile(tasksTmp, JSON.stringify(taskAggregator.exportState()));
+    await fsp.rename(tasksTmp, TASKS_FILE);
+  } catch {
+    fsp.writeFile(TASKS_FILE, JSON.stringify(taskAggregator.exportState())).catch(() => {});
+  }
 }, 10_000).unref();
 
 const trophies = createTrophies({ dataDir: DATA_DIR, claudeDir: CLAUDE_DIR, today, deployRe: DEPLOY_RE, tr, num, onChange: (t, earned) => broadcast({ k: 'trophies', t, earned }) });
@@ -1052,7 +1141,12 @@ setInterval(async () => {
 }, 4000).unref();
 
 /* ---------- hook events ---------- */
-function pushFeed(e) { feed.push(e); if (feed.length > FEED_MAX) feed = feed.slice(-FEED_MAX); dirty = true; }
+function pushFeed(e) {
+  feed.push(e);
+  if (feed.length > FEED_MAX) feed = feed.slice(-FEED_MAX);
+  taskAggregator.ingest(e);
+  scheduleSave();
+}
 function count(s, tool, sub) {
   const k = COUNT_OF[tool];
   if (!k) return;
@@ -1209,6 +1303,7 @@ async function onHook(p) {
   if (loopSig) onLoop(s, loopSig);
   if (e) {
     agentModel.ingest(e);
+    taskAggregator.ingest(e);
     if (toFeed) pushFeed(e);
     broadcast({ k: 'ev', e, s: pub(s), stats });
     if (!s.viaOffice) chat.onEvent(e);
@@ -1220,10 +1315,11 @@ async function onHook(p) {
   after?.();
 }
 
-const codexToolSeen = createCodexEventDeduper(), codexTaskSeen = createCodexEventDeduper();
+const codexHookSeen = createCodexEventDeduper(5000, savedCodexHookIds);
 function onCodexAppHook(raw) {
   const p = normalizeCodexAppHook(raw);
   if (!p) return false;
+  agentIntegrationState.observe(p.provider, p.provider, `${p.provider}-hook`, p.sessionId, Date.now(), p.cwd || null);
   const sid = `${p.provider}:${p.sessionId}`;
   let s = sessions.get(sidToKey.get(sid));
   if (!s) {
@@ -1236,13 +1332,14 @@ function onCodexAppHook(raw) {
   s.lastEventAt = now;
   if (p.cwd) s.cwd = p.cwd;
   if (p.model) s.model = p.model;
-  const mk = (type, label = '') => ({ id: ++seq, ts: now, sess: s.id, name: s.name, type, label, provider: p.provider });
+  const mk = (type, label = '') => ({ id: ++seq, ts: now, sess: s.id, name: s.name, type, label, provider: p.provider,
+    toolName: p.tool, toolUseId: p.toolUseId, sessionId: p.sessionId, turnId: p.turnId, cwd: p.cwd, filePaths: p.filePaths || [], fileCount: (p.filePaths || []).length });
   const source = p.provider === 'codex-cli' ? 'Codex CLI' : 'Codex App';
   let e;
   switch (p.event) {
     case 'SessionStart': e = mk('codex_start', `${source} session started`); break;
     case 'UserPromptSubmit': {
-      if (codexTaskSeen(p.sessionId, p.turnId)) { broadcast({ k: 'sess', s: pub(s), stats }); return true; }
+      if (p.turnId && codexHookSeen(p.sessionId, `task:${p.turnId}`)) { broadcast({ k: 'sess', s: pub(s), stats }); return true; }
       const prompt = clip(redact(oneLine(p.prompt)), 90);
       s.status = 'work'; s.taskStart = now; s.doneAt = 0; s.outcome = '';
       s.lastPrompt = prompt; countActivity(stats, null, 'agent.task.started'); dirty = true; e = mk('codex_prompt', clip(prompt, 64));
@@ -1256,12 +1353,12 @@ function onCodexAppHook(raw) {
     case 'PostToolUse': {
       const type = codexToolType(p.tool);
       if (s.status === 'wait') s.status = 'work';
-      if (codexToolSeen(p.sessionId, p.toolUseId)) { broadcast({ k: 'sess', s: pub(s), stats }); return true; }
+      if (p.toolUseId && codexHookSeen(p.sessionId, `tool:${p.toolUseId}`)) { broadcast({ k: 'sess', s: pub(s), stats }); return true; }
       if (type !== 'other') {
         countActivity(stats, s, ({ read: 'tool.read.completed', edit: 'tool.edit.completed', create: 'tool.edit.completed', delete: 'tool.edit.completed', bash: 'tool.command.completed' })[type]);
         dirty = true;
       }
-      e = mk(type, p.tool || 'Tool finished');
+      e = mk(type, p.filePaths.length ? (p.filePaths.length === 1 ? path.basename(p.filePaths[0]) : `${p.filePaths.length} files`) : (p.tool || 'Tool finished'));
       break;
     }
     case 'PostToolUseFailure': {
@@ -1279,7 +1376,6 @@ function onCodexAppHook(raw) {
       e = mk('codex_execution_end', p.event === 'Interrupt' ? `${source} turn interrupted` : `${source} turn ended; outcome unverified`);
       break;
     case 'SessionEnd':
-      if (s.status === 'rest' && s.doneAt) return true;
       s.status = 'rest'; s.doneAt = now; s.outcome = 'unverified';
       e = mk('end', `${source} session ended`);
       break;
@@ -2653,6 +2749,7 @@ const toolSecurityPolicyEngine = createSecurityPolicyEngine({
   policiesPath: path.join(DATA_DIR, 'tools', 'security-policies.json'),
 });
 const toolRegistry = createToolRegistry({ dataDir: DATA_DIR });
+const agentIntegrationState = createAgentIntegrationState({ storePath: path.join(DATA_DIR, 'tools', 'agent-integration-state.json') });
 const toolLifecycleManager = createLifecycleManager({
   registry: toolRegistry,
   baseDir: path.join(DATA_DIR, 'tools'),
@@ -2664,6 +2761,7 @@ const toolDistributionEngine = createDistributionEngine({
   permissionRegistry: toolPermissionRegistry,
   policyEngine: toolSecurityPolicyEngine,
   storePath: path.join(DATA_DIR, 'tools', 'distribution-registry.json'),
+  integrationState: agentIntegrationState,
 });
 const orchestrationTaskAnalyzer = createTaskAnalyzer();
 const orchestrationCapabilityMatcher = createCapabilityMatcher({
@@ -2686,10 +2784,140 @@ const dynamicOrchestrator = createOrchestrator({
   workflowEngine,
   storePath: path.join(DATA_DIR, 'orchestration', 'orchestration-tasks.json'),
 });
+
+// Master Task Phase 1 & 2: Agent Control Center Capability Registry & Control Manager
+const controlCapabilityRegistry = createCapabilityRegistry({
+  adapters: toolDistributionEngine.adapters,
+  integrationState: agentIntegrationState,
+});
+const controlManager = createControlManager({
+  capabilityRegistry: controlCapabilityRegistry,
+  taskAggregator,
+  tasksRunner: tasks,
+  codexRuns,
+  sessionsMap: sessions,
+  storePath: path.join(DATA_DIR, 'control', 'control-state.json'),
+  knownDirs,
+});
+
+// Master Task Phase 3: QA Independent Review & Quality Gate Engine
+const qaReviewEngine = createReviewEngine({
+  controlManager,
+  capabilityRegistry: controlCapabilityRegistry,
+  storePath: path.join(DATA_DIR, 'qa', 'reviews-and-findings.json'),
+  maxReviewIterations: 3,
+});
+
+// Master Task Phase 2 & 3: Multi-Agent Task Orchestration Engine with Quality Gates
+const masterOrchestrator = createMasterOrchestrator({
+  controlManager,
+  capabilityRegistry: controlCapabilityRegistry,
+  qaReviewEngine,
+  taskAggregator,
+  storePath: path.join(DATA_DIR, 'orchestration', 'master-orchestration.json'),
+  maxConcurrentSubtasks: 3,
+});
+
+// Master Task Phase 4: Autonomous Operations Platform
+const autonomousEmergencyStop = createEmergencyStop({
+  controlManager,
+  capabilityRegistry: controlCapabilityRegistry,
+  tasksRunner: tasks,
+  codexRuns,
+  storePath: path.join(DATA_DIR, 'autonomous', 'emergency-stop-state.json'),
+});
+
+const autonomousSecurityGuard = createSecurityGuard({
+  knownDirs,
+});
+
+const autonomousBudgetTracker = createRecoveryBudgetTracker({
+  storePath: path.join(DATA_DIR, 'autonomous', 'budget-state.json'),
+});
+
+const autonomousPolicyEngine = createPolicyEngine({
+  emergencyStop: autonomousEmergencyStop,
+  securityGuard: autonomousSecurityGuard,
+  budgetTracker: autonomousBudgetTracker,
+  storePath: path.join(DATA_DIR, 'autonomous', 'policy-state.json'),
+});
+
+const autonomousScheduler = createAutonomousScheduler({
+  masterOrchestrator,
+  policyEngine: autonomousPolicyEngine,
+  budgetTracker: autonomousBudgetTracker,
+  emergencyStop: autonomousEmergencyStop,
+  qaReviewEngine,
+  capabilityRegistry: controlCapabilityRegistry,
+  storePath: path.join(DATA_DIR, 'autonomous', 'scheduler-state.json'),
+});
+
+const reliabilityJournal = createJournal({
+  walPath: path.join(DATA_DIR, 'reliability', 'execution.wal'),
+  checkpointPath: path.join(DATA_DIR, 'reliability', 'checkpoint.json'),
+});
+
+const reliabilityProcessSupervisor = createProcessSupervisor({
+  storePath: path.join(DATA_DIR, 'reliability', 'processes.json'),
+});
+
+const reliabilityIdempotency = createIdempotencyManager({
+  storePath: path.join(DATA_DIR, 'reliability', 'idempotency-cache.json'),
+});
+
+const reliabilityReconciliation = createReconciliationEngine({
+  processSupervisor: reliabilityProcessSupervisor,
+  controlManager,
+  masterOrchestrator,
+  journal: reliabilityJournal,
+  storePath: path.join(DATA_DIR, 'reliability', 'reconciliation-state.json'),
+});
+
+const reliabilityBackupManager = createBackupManager({
+  rootDataDir: DATA_DIR,
+  backupsLocation: path.join(DATA_DIR, 'backups'),
+  journal: reliabilityJournal,
+});
+
+const reliabilityMetricsCollector = createMetricsCollector({
+  journal: reliabilityJournal,
+  processSupervisor: reliabilityProcessSupervisor,
+  reconciliationEngine: reliabilityReconciliation,
+  budgetTracker: autonomousBudgetTracker,
+  controlManager,
+});
+
+try {
+  reliabilityReconciliation.runReconciliation({ dryRun: false });
+} catch (recErr) {
+  console.warn('[Reliability] Startup reconciliation warning:', recErr.message);
+}
+
+const trialMonitor = createTrialMonitor({
+  rootDir: ROOT,
+  storePath: path.join(DATA_DIR, 'trial-monitor', 'trial-state.json'),
+  outputDir: path.join(ROOT, 'reports', 'operational-trial'),
+  collectorOptions: {
+    rootDir: ROOT,
+    controlManager,
+    masterOrchestrator,
+    processSupervisor: reliabilityProcessSupervisor,
+    journal: reliabilityJournal,
+    backupManager: reliabilityBackupManager,
+    metricsCollector: reliabilityMetricsCollector,
+    qaReviewEngine,
+    policyEngine: autonomousPolicyEngine,
+    emergencyStop: autonomousEmergencyStop,
+    recoveryBudgetTracker: autonomousBudgetTracker,
+  },
+  intervalMs: 60000,
+  autoStart: process.env.OFFICE_TRIAL_MONITOR !== '0',
+});
 // Antigravity's agent at a desk while its conversation file keeps changing; the 2 s tick rests it after 20 quiet seconds.
 if (process.env.OFFICE_AG_RUNS !== '0') watchAntigravity({
   dirs: process.env.OFFICE_AG_DIRS?.split(path.delimiter) || ['antigravity', 'antigravity-ide'].map((d) => path.join(os.homedir(), '.gemini', d, 'conversations')),
   onActive: ({ id, dir, mtime }) => {
+    agentIntegrationState.observe('antigravity', 'antigravity', 'antigravity-observer', id, mtime);
     const key = `antigravity:${id}`; let s = sessions.get(key);
     if (!s) {
       s = newSession(key); s.agent = 'gemini'; s.provider = 'antigravity'; s.sid = id; s.outcome = 'unknown';
@@ -2865,7 +3093,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   if (req.method === 'POST' && url.pathname === '/event') {
-    if (!isLoopback(req)) { res.writeHead(403).end(); return; }
+    if (!isLoopback(req) || req.headers.origin) { res.writeHead(403).end(); return; }   // (never a page: a hook sends no Origin)
     const chunks = []; let size = 0;
     req.on('data', (c) => { size += c.length; if (size <= 8_000_000) chunks.push(c); });
     req.on('end', () => {
@@ -3126,6 +3354,85 @@ const server = http.createServer((req, res) => {
     }).catch((err) => json(res, 500, { ok: false, error: err.message }));
     return;
   }
+  if (url.pathname.startsWith('/api/orchestration/master-tasks')) {
+    handleMasterOrchestrationRoutes(req, res, {
+      url,
+      masterOrchestrator,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
+  if (url.pathname.startsWith('/api/qa')) {
+    handleQaRoutes(req, res, {
+      url,
+      qaReviewEngine,
+      masterOrchestrator,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
+  if (url.pathname.startsWith('/api/autonomous')) {
+    handleAutonomousRoutes(req, res, {
+      url,
+      policyEngine: autonomousPolicyEngine,
+      budgetManager: autonomousBudgetTracker,
+      autonomousScheduler,
+      emergencyStop: autonomousEmergencyStop,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
+  if (url.pathname.startsWith('/api/reliability')) {
+    handleReliabilityRoutes(req, res, {
+      url,
+      journal: reliabilityJournal,
+      processSupervisor: reliabilityProcessSupervisor,
+      reconciliationEngine: reliabilityReconciliation,
+      idempotencyEngine: reliabilityIdempotency,
+      backupManager: reliabilityBackupManager,
+      metricsCollector: reliabilityMetricsCollector,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
+  if (url.pathname.startsWith('/api/trial-monitor')) {
+    handleTrialMonitorRoutes(req, res, {
+      url,
+      trialMonitor,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
   if (url.pathname.startsWith('/api/orchestration')) {
     handleOrchestrationRoutes(req, res, {
       url,
@@ -3134,6 +3441,21 @@ const server = http.createServer((req, res) => {
       matcher: orchestrationCapabilityMatcher,
       selector: orchestrationAgentSelector,
       planner: orchestrationPlanGenerator,
+      isLoopback,
+      sameOriginOf,
+      authorized,
+      readJson,
+      json,
+    }).then((handled) => {
+      if (!handled) json(res, 404, { ok: false, error: 'not_found' });
+    }).catch((err) => json(res, 500, { ok: false, error: err.message }));
+    return;
+  }
+  if (url.pathname.startsWith('/api/control')) {
+    handleControlRoutes(req, res, {
+      url,
+      capabilityRegistry: controlCapabilityRegistry,
+      controlManager,
       isLoopback,
       sameOriginOf,
       authorized,
@@ -3591,6 +3913,22 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/api/chat') { json(res, 200, chatOut()); return; }
   if (url.pathname === '/api/loop') { json(res, 200, loopOut()); return; }
   if (url.pathname === '/api/tenure') { json(res, 200, tenureOut()); return; }
+  if (url.pathname === '/api/activity/tasks') {
+    const provider = url.searchParams.get('provider') || null;
+    const status = url.searchParams.get('status') || null;
+    const projectId = url.searchParams.get('projectId') || null;
+    const agentId = url.searchParams.get('agentId') || null;
+    const search = url.searchParams.get('search') || '';
+    const limit = Math.min(100, Math.max(1, parseInt(url.searchParams.get('limit') || '20', 10)));
+    const offset = Math.max(0, parseInt(url.searchParams.get('offset') || '0', 10));
+    json(res, 200, {
+      ok: true,
+      activeTasks: taskAggregator.getActiveTasks(),
+      history: taskAggregator.getHistoryTasks({ provider, status, projectId, agentId, search, limit, offset }),
+      stats: taskAggregator.getStats(),
+    });
+    return;
+  }
   if (url.pathname === '/api/cache') { json(res, 200, { ok: true, nudge: !!prefs.get('cacheNudge') }); return; }
   if (url.pathname === '/api/tasks') { json(res, 200, tasksOut(isLoopback(req))); return; }
   if (url.pathname === '/api/codex/runs') { json(res, 200, { runs: codexRuns.list() }); return; }
@@ -3630,7 +3968,7 @@ const server = http.createServer((req, res) => {
   // everything as it is now, the first message a page gets (the Mac's own addresses and PIN only for the Mac)
   const snapNow = (local) => {
     const lanOn = lanIsOn();
-    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, local, todos, workflows: workflowEngine.list(), limits: limitsOut(), limitsNote: noteText(), ai: aiOut(), trophies: trophies.pub(),
+    return { k: 'snap', lang: prefs.lang(), sessions: [...sessions.values()].map(pub), perms: [...pending.values()].map(permPub), feed, stats, tasks: taskAggregator.snapshot(), local, todos, workflows: workflowEngine.list(), limits: limitsOut(), limitsNote: noteText(), ai: aiOut(), trophies: trophies.pub(),
       lan: local && lanOn ? lanUrl() : null, lanBase: local && lanOn ? lanUrl(false) : null, pin: local ? currentPin() : null,
       ts: local && lanOn ? tsUrl() : null, tsHere: !!tsUrl(), phoneApprove: !!prefs.get('phoneApprove'), phoneTasks: !!prefs.get('phoneTasks'), lanFixed: local && lanFixed, build: BUILD, lift: liftService.pub() };
   };
@@ -4000,8 +4338,13 @@ function stopTunnel() {
   Object.assign(tunnel, { state: 'off', url: '', host: '', error: '', tries: 0, pid: 0 });
 }
 // (the office stopping: cloudflared keeps going for when it comes back; staying awake ends with it, caffeinate -w)
-process.on('exit', () => { try { awakeProc?.kill(); } catch { /* gone */ } otel.saveSync(); });
-for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => process.exit(0));
+process.on('exit', () => {
+  try { awakeProc?.kill(); } catch { /* gone */ }
+  try { trialMonitor?.scheduler?.stop?.(); } catch { /* gone */ }
+  saveStateSync();
+  otel.saveSync();
+});
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => { saveStateSync(); process.exit(0); });
 
 server.listen(PORT, HOST, () => {
   syncLan();

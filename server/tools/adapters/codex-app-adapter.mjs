@@ -67,6 +67,8 @@ export const codexAppAdapter = {
 
     return {
       detected: Boolean(homeExists || pluginsExists || executablePath),
+      installed: executablePath ? true : null,
+      configured: Boolean(pluginsExists || skillsExists),
       agent_id: 'codex-app',
       name: 'Codex App (Desktop)',
       status: primaryStatus,

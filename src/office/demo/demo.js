@@ -234,7 +234,12 @@ export function applyMsg(d, quiet = false) {
     const ids = new Set(d.sessions.map((s) => s.id));
     for (const id of [...sessions.keys()]) if (!ids.has(id)) (quiet ? dropSessionNow : removeSession)(id);
     for (const s of d.sessions) upsertSession(s, false);
-    state.feed = d.feed || []; state.stats = d.stats || {}; renderFeed();
+    state.feed = d.feed || []; state.stats = d.stats || {};
+    if (state.taskAggregator) {
+      if (d.tasks) state.taskAggregator.importState(d.tasks);
+      state.taskAggregator.load(d.feed);
+    }
+    renderFeed();
     if ('local' in d) {   // only the live snapshot carries these
       perms.clear(); for (const p of d.perms || []) perms.set(p.id, p); renderPerms(); reportPresence();
       if (!quiet) chatLoad();   // (the group chat as it is now: after a reconnect, what was missed)

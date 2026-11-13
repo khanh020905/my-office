@@ -1,0 +1,32 @@
+{
+  "monitorStatus": "running",
+  "heartbeat": 1794541054371,
+  "trialStartAt": {
+    "epoch": 1794508204209,
+    "utc": "2026-11-12T18:30:04.209Z",
+    "asiaHoChiMinh": "2026-11-13T01:30:04.209+07:00",
+    "authorizedBy": "operator-authorized",
+    "day": 1,
+    "totalDays": 7,
+    "preTrialSnapshotsCount": 10,
+    "status": "Day 1/7 (Active Observation)"
+  },
+  "observationStatus": "Day 1/7 (Active Observation)",
+  "lastSuccessfulCollectionAt": "2026-11-13T03:37:34.206Z",
+  "lastSuccessfulCollectionTimestamp": 1794541054206,
+  "nextScheduledCollectionAt": "2026-11-13T03:38:34.206Z",
+  "collectionCount": 559,
+  "preTrialSnapshotsCount": 10,
+  "postStartSnapshotsCount": 549,
+  "preTrialSnapshotsExcluded": true,
+  "totalAlerts": 0,
+  "telemetryGapStatus": {
+    "hasGaps": false,
+    "totalGaps": 0,
+    "latestGap": null
+  },
+  "telemetryCoverage": "100.0%",
+  "reportOutputPath": "D:\\somehting code\\my-office\\reports\\operational-trial\\day-01.md",
+  "uptimeSeconds": 33385,
+  "isReadOnly": true
+}

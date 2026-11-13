@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { codexToolType, createCodexEventDeduper, normalizeCodexAppHook } from '../../server/codex-app-events.mjs';
+import { codexToolType, createCodexEventDeduper, normalizeCodexAppHook, normalizeProjectFilePaths } from '../../server/codex-app-events.mjs';
 
 test('registers Codex CLI hooks only in this repository', () => {
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../..');
@@ -18,13 +18,24 @@ test('accepts Codex App session events with stable session and safe activity fie
     hook_event_name: 'UserPromptSubmit', session_id: 'app-session-1', cwd: 'D:/shop', model: 'gpt-test',
     prompt: 'Review this page', transcript_path: 'private', tool_input: { command: 'secret' }, tool_response: 'secret output',
   });
-  assert.deepEqual(out, { provider: 'codex-app', event: 'UserPromptSubmit', sessionId: 'app-session-1', turnId: '', cwd: 'D:/shop', model: 'gpt-test', prompt: 'Review this page', tool: '', toolUseId: '', reason: '' });
+  assert.deepEqual(out, { provider: 'codex-app', event: 'UserPromptSubmit', sessionId: 'app-session-1', turnId: '', cwd: 'D:/shop', model: 'gpt-test', prompt: '', tool: '', toolUseId: '', filePaths: [], reason: '' });
 });
 
 test('keeps tool activity names but excludes inputs and outputs', () => {
   assert.deepEqual(normalizeCodexAppHook({ provider: 'codex-cli', hook_event_name: 'PreToolUse', session_id: 's', turn_id: 'turn-1', tool_name: 'Bash', tool_use_id: 'call-1', tool_input: { command: 'secret' } }), {
-    provider: 'codex-cli', event: 'PreToolUse', sessionId: 's', turnId: 'turn-1', cwd: '', model: '', prompt: '', tool: 'Bash', toolUseId: 'call-1', reason: '',
+    provider: 'codex-cli', event: 'PreToolUse', sessionId: 's', turnId: 'turn-1', cwd: '', model: '', prompt: '', tool: 'Bash', toolUseId: 'call-1', filePaths: [], reason: '',
   });
+});
+
+test('normalizes in-root paths and rejects traversal or out-of-root paths', () => {
+  assert.deepEqual(normalizeProjectFilePaths('D:/repo', ['src/a.js', 'src/a.js', '../secret.txt', 'D:/outside.txt']), ['src/a.js']);
+  assert.deepEqual(normalizeProjectFilePaths('D:/repo', undefined), []);
+});
+
+test('accepts legacy event payloads without file paths', () => {
+  const out = normalizeCodexAppHook({ hook_event_name: 'PostToolUse', session_id: 'legacy', tool_name: 'apply_patch' });
+  assert.deepEqual(out.filePaths, []);
+  assert.equal(out.toolUseId, '');
 });
 
 test('rejects malformed and unsupported hook payloads', () => {
@@ -52,6 +63,13 @@ test('deduplicates repeated task and tool notifications by stable event id', () 
   assert.equal(seen('session-a', 'tool-1'), true);
   assert.equal(seen('session-b', 'tool-1'), false);
   assert.equal(seen('session-a', ''), false);
+});
+
+test('restores recent stable event ids across server restarts', () => {
+  const seen = createCodexEventDeduper(2, ['session-a:task:turn-1']);
+  assert.equal(seen('session-a', 'task:turn-1'), true);
+  assert.equal(seen('session-b', 'tool:call-1'), false);
+  assert.deepEqual(seen.ids(), ['session-a:task:turn-1', 'session-b:tool:call-1']);
 });
 
 test('Bash remains a command; only explicit file tools count as reads or edits', () => {

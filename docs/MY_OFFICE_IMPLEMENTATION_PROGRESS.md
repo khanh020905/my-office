@@ -201,6 +201,121 @@
 - Documented in `docs/architecture/UI_INTEGRATION_AND_REPAIR_REPORT.md`.
 - External project boundaries strictly maintained: zero modifications to `XUONGPHIM` (`D:\somehting code\xuongphim`) or `AI Video Tool` (`D:\videoaitool`). Zero external tools installed. Existing Git commit history preserved.
 
+### Phase 8 — Real Native Agent Execution Integration — PASS
+- Objective: Replace the simulated `agent_native` execution branch with genuine, observable, secure host-process execution for Claude Code and native CLI agents.
+- Root Cause Eliminated: In `server/orchestration/orchestrator.mjs`, `stepSucceeded = true` previously simulated step completion without spawning host processes.
+- Implementation:
+  - Created `server/orchestration/native-agent-executor.mjs` resolving host `claude.cmd`, evaluating `agent:invoke` against Phase 5 security policies, and assembling strict read-only execution profiles (`--print`, `--restricted`, `--strict-mcp-config`, `--permission-mode dontAsk`, `--permission-prompts none`, `--tools Read,Glob,Grep`, `--disallowed-tools "Bash,Edit,Write,NotebookEdit,mcp__*"`, `--bare`).
+  - Added `agent:invoke` and `runtime:spawn` permission scopes to `STANDARD_PERMISSION_SCOPES` in `server/tools/schemas.mjs` and default policy stores.
+  - Prioritized `.cmd` / `.bat` / `.exe` Windows extensions in `findHostBinary()` (`server/tools/adapters/base-adapter.mjs`).
+  - Added PID tracking and optimized stdio (`stdio: ['ignore', 'pipe', 'pipe']`) in `server/tools/execution-runner.mjs`.
+  - Wired real `NativeAgentExecutor` into `server/orchestration/orchestrator.mjs`, persisting actual process PID, exit code, duration, start/end timestamps, stdout, and stderr.
+  - Enforced strict failure semantics: non-zero exit codes, timeouts, and denials transition tasks to `FAILED` / `PARTIALLY_COMPLETED`. False `COMPLETED` statuses are eliminated.
+- Verification & Checks:
+  - Unit tests in `tests/unit/native-agent-executor.test.mjs`: 5/5 PASS.
+  - Orchestration unit tests in `tests/unit/tools-orchestration.test.mjs`: 9/9 PASS.
+  - Ecosystem test suites: 102/102 PASS across 12 suites.
+  - Full workspace suite (`npm test`): 307 passed, 8 skipped, 0 failed across 315 tests.
+  - Static typecheck (`npm run typecheck`): PASS (0 errors).
+  - Real host binary verification: Executed `executeAgentStep()` against host `claude.cmd` v2.1.322; captured real Windows child PID (18628), exit code (1), duration (1385ms), and verified accurate failure reporting without false `COMPLETED`.
+- Documented in `docs/architecture/PHASE_8_REAL_NATIVE_EXECUTION_REPORT.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` (`D:\somehting code\xuongphim`) or `AI Video Tool` (`D:\videoaitool`). Zero external tools installed. Preserved existing Git commit history (18 commits ahead of origin/main).
+
+### Phase 8.1 — Secure Claude Authentication & Execution Permission Hardening — PASS
+- Objective: Investigate and resolve Claude Code authentication failure (`Not logged in. Please run /login.`) without exposing secrets, harden execution permission model, enforce cryptographic plan hash and approval binding, and verify through unit regression and real host tests.
+- Root Cause Identified:
+  1. `--bare` flag in execution profile explicitly instructs Claude Code to ignore OAuth and keychain credentials (`Anthropic auth is strictly ANTHROPIC_API_KEY or apiKeyHelper via --settings (OAuth and keychain are never read)`).
+  2. Commander.js variadic parsing for `--disallowed-tools <tools...>` consumed prompt text as a tool name unless terminated with `--`.
+- Hardening & Repairs:
+  - Removed `--bare` so Claude Code reads official user OAuth credentials from `~/.claude/.credentials.json`.
+  - Added POSIX double dash `--` before prompt text to cleanly isolate CLI arguments.
+  - Added Windows system user variables (`APPDATA`, `LOCALAPPDATA`, `HOME`, `USERNAME`) to `allowedSystemKeys` in `sanitizeEnvironment()` while continuing to strictly strip all API keys, internal secrets, and cross-agent tokens.
+  - Separated `agent:invoke` (spawning native agent) from `runtime:spawn` (agent spawning subprocesses); disallowed `Bash` and arbitrary child execution.
+  - Implemented pre-flight checks in `NativeAgentExecutor` for task approval requirement, revocation, expiration, and cryptographic plan hash binding (`bound_plan_hash === plan_hash`).
+- Real Host Test Verification:
+  - Unauthorized gate test: blocked with `REQUIRES_APPROVAL` without spawning processes.
+  - Authorized host execution test (`claude.cmd` v2.1.322): Child PID `36176` spawned, duration `2352ms`, exit code `1`. Output received from Anthropic API: `"You've hit your 5-hour limit · resets 7:30pm (Asia/Ho_Chi_Minh)"`. Confirms OAuth authentication succeeded, account was recognized, and failure was accurately captured without simulation.
+  - Zero workspace files modified; zero secrets leaked in output or logs.
+- Regression & Unit Tests:
+  - `tests/unit/native-agent-executor.test.mjs`: 14/14 PASS (covering unauthorized invoke, unauthorized spawn, expired approval, plan hash mismatch, revoked approval, cross-agent isolation, internal secret stripping, read-only tool restrictions, and failure handling).
+  - Ecosystem test suites: 111/111 PASS across 12 suites.
+  - Static typecheck (`npm run typecheck`): PASS (0 errors).
+- Documented in `docs/architecture/PHASE_8_1_AUTHENTICATION_PERMISSION_HARDENING.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` (`D:\somehting code\xuongphim`) or `AI Video Tool` (`D:\videoaitool`). Zero external tools installed. Preserved existing Git commit history.
+
+### Phase 8 Host Execution Acceptance & Quota Reset Hold — NOT YET ACCEPTED
+- Objective: Verify host child process execution, OAuth authentication recognition, strict Read-Only parameters, cryptographic plan hash and approval binding, process telemetry capture, and workspace integrity for native Claude Code execution.
+- Verification Dimensions:
+  - Host process spawn: PASS (Real Windows PIDs `13408` and `10264` captured).
+  - Authentication recognition: PASS (OAuth credentials read from `~/.claude/.credentials.json`; Anthropic API reached).
+  - Security controls: PASS (`--restricted`, `--tools Read,Glob,Grep`, `--disallowed-tools Bash,Edit,Write,NotebookEdit,mcp__*`, sanitized environment).
+  - Workspace integrity: PASS (Zero workspace source files modified, created, or deleted).
+  - Actual AI task execution: BLOCKED_BY_UPSTREAM_QUOTA (`"You've hit your 5-hour limit · resets 7:30pm (Asia/Ho_Chi_Minh)"`).
+  - End-to-end acceptance verdict: **NOT YET ACCEPTED**.
+- Preserved Execution Tasks:
+  - Attempt 1: `orch_3c5ac54d-5cc9-49ba-9123-62d2de762549` (PID `13408`, plan `plan_0cac7c2c-8d13-4228-8a89-8b49d66e9410`, exit code 1).
+  - Attempt 2: `orch_27d701de-c806-48b0-abb8-256c236a1172` (PID `10264`, plan `plan_632ac1e6-afb4-435d-9485-d58bcab601f2`, exit code 1).
+- Quota Reset Hold:
+  - Strict hold active until reported reset time: **19:30 Asia/Ho_Chi_Minh (November 12, 2026)**.
+  - Zero automated retries, speculative executions, or security bypasses permitted.
+  - Exactly one fresh end-to-end acceptance test (fresh task ID, fresh plan hash, fresh approval, fresh grant) will be conducted upon explicit authorization after 19:30.
+- Documented in `docs/architecture/PHASE_8_EXECUTION_ACCEPTANCE_REPORT.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` (`D:\somehting code\xuongphim`) or `AI Video Tool` (`D:\videoaitool`). Zero external tools installed. Preserved existing Git commit history.
+
+### Phase 2 — Multi-Agent Task Orchestration Engine — PASS
+- Objective: Design, implement, and verify a complete multi-agent DAG task orchestration engine enabling users to formulate high-level objectives, decompose them into subtasks, coordinate dependencies, execute independent branches concurrently, and consolidate results.
+- Architecture & Modules Implemented:
+  - `server/orchestration/engine/dependency-graph.mjs`: Cycle detection DFS, topological sorting, parallel layer partitioning, and dynamic readiness evaluation.
+  - `server/orchestration/engine/handoff-engine.mjs`: Structured handoff records, downstream prompt synthesis with upstream context, secret redaction, and consolidated master result generation.
+  - `server/orchestration/engine/master-orchestrator.mjs`: Master Task data model, DAG execution loop, concurrency enforcement, asynchronous dispatch via Phase 1 Control Manager, retry handling, and atomic state persistence (`master-orchestration.json`).
+  - `server/orchestration/engine/master-orchestration-api.mjs`: REST API endpoints under `/api/orchestration/master-tasks/*`.
+  - `src/components/office/OrchestrationDrawer.tsx`: Dedicated 4-tab orchestration UI (Master Tasks, New Master Task DAG Composer, Execution Board Kanban, Task Detail & Graph).
+  - `src/office/ui/orchestration-view.js`: Client controller for DAG composition, live Kanban updates, and node graph inspection.
+- Verification & Checks:
+  - Unit tests: 59/59 PASS across 9 suites (including `dependency-graph.test.mjs`, `handoff-engine.test.mjs`, `master-orchestrator.test.mjs`).
+  - Browser E2E Playwright test: PASS (`tests/e2e/orchestration-workspace-live.spec.ts`).
+  - Static checks: `npm run typecheck` (0 errors), `npm run lint` (0 errors), `npm run smoke` (0 errors).
+  - Screenshots captured in `docs/screenshots/orchestration/`.
+- Documented in `docs/MULTI_AGENT_TASK_ORCHESTRATION_REPORT.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` or `AI Video Tool`. Preserved existing Git commit history.
+
+### Phase 3 — Agent Quality Assurance, Independent Review & Verification Engine — PASS
+- Objective: Build an independent Quality Assurance and Review Engine ensuring that work produced by agents is independently inspected, tested, verified, and accepted before a Master Task can be declared successful ("An agent claiming completion is not proof of successful completion").
+- Architecture & Modules Implemented:
+  - `server/orchestration/qa/evidence-collector.mjs`: Objective evidence collection without fabricating pass metrics; secret/credential pattern exposure audit (`sk-...`, Bearer tokens, private keys); project boundary path traversal safety check; test runner & static check normalization.
+  - `server/orchestration/qa/quality-gate-engine.mjs`: Configurable 5-gate acceptance policy (Gate 1: Functional, Gate 2: Static Quality, Gate 3: Security, Gate 4: Requirement Coverage, Gate 5: Integration); blocks Master Task from achieving `succeeded` while mandatory gates fail.
+  - `server/orchestration/qa/review-engine.mjs`: Independent reviewer assignment with provenance tracking (distinct implementation vs reviewer identity); structured review findings (`findingId`, `severity`, `status`, `evidence`, `affectedFiles`, `recommendation`); controlled fix-and-reverify loop with iteration limits preventing infinite loops; manual user risk acceptance (`accepted_risk`).
+  - `server/orchestration/qa/qa-api.mjs`: REST endpoints mounted under `/api/qa/*` (`/overview`, `/reviews`, `/reviews/evaluate`, `/findings`, `/findings/:id/accept-risk`, `/gates/:masterTaskId`, `/remediate`).
+  - `src/components/office/OrchestrationDrawer.tsx`: Embedded dedicated 5th QA tab with Overview KPI cards, Quality Gate dashboard, Findings & Remediation board, and Review Audit Timeline.
+  - `src/office/ui/orchestration-view.js`: Client controller for QA live data fetching, interactive gate evaluation, risk waiver authorization, and remediation dispatch.
+- Verification & Checks:
+  - Unit tests: 83/83 PASS across 11 suites (including `qa-review-engine.test.mjs`, `qa-api.test.mjs`, `master-orchestrator.test.mjs`).
+  - Browser E2E Playwright test: PASS (`tests/e2e/qa-review-workspace-live.spec.ts`).
+  - Static checks: `npm run typecheck` (0 errors), `npm run lint` (0 errors), `node scripts/smoke.mjs` (0 errors).
+  - Screenshots captured in `docs/screenshots/qa/`.
+- Documented in `docs/QA_INDEPENDENT_REVIEW_ENGINE_REPORT.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` or `AI Video Tool`. Preserved existing Git commit history.
+
+### Phase 4 — Autonomous Operations Platform (Native Swarm Orchestration) — PASS
+- Objective: Build an autonomous operations platform with 4 tiered autonomy levels (`readonly`, `assisted`, `supervised`, `autonomous`), intelligent task decomposition, capability-aware dispatch, budget/resource bounds, failure detection, controlled self-healing remediation loops with anti-loop invariants, human approval gates, and instantaneous cross-provider emergency stop.
+- Swarm Team & Implementation:
+  - Architecture (`worker-arch`): `server/autonomous/contracts.mjs`, `docs/architecture/AUTONOMOUS_OPERATIONS_ARCHITECTURE.md`.
+  - Security (`worker-security`): `server/autonomous/security-guard.mjs`, `server/autonomous/emergency-stop.mjs`, `docs/architecture/AUTONOMOUS_OPERATIONS_THREAT_MODEL.md`.
+  - Backend (`worker-backend`): `server/autonomous/policy-engine.mjs`, `server/autonomous/autonomous-scheduler.mjs`, `server/autonomous/recovery-budget.mjs`, `server/autonomous/autonomous-api.mjs`.
+  - Frontend (`worker-frontend`): `src/components/office/AutonomousDrawer.tsx`, `src/office/ui/autonomous-view.js`.
+  - Verification & QA (`worker-qa`): `tests/unit/autonomous-*.test.mjs`, `tests/e2e/autonomous-operations-live.spec.ts`.
+- Verification & Checks:
+  - Unit tests: 99/99 PASS across 14 test suites.
+  - Browser E2E Playwright test: PASS (`tests/e2e/autonomous-operations-live.spec.ts`).
+  - Static checks: `npm run typecheck` (0 errors), `npm run lint` (0 errors), `node scripts/smoke.mjs` (0 errors).
+  - Screenshots captured in `docs/screenshots/autonomous/` (5 screenshots).
+- Documented in `docs/AUTONOMOUS_OPERATIONS_PLATFORM_REPORT.md`.
+- External project boundaries strictly maintained: zero modifications to `XUONGPHIM` or `AI Video Tool`. Preserved existing Git commit history.
+
+
+
+
+
 
 
 

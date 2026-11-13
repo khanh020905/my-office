@@ -50,12 +50,32 @@ describe('Dynamic Task Orchestration & Automated Tool Selection (Phase 6)', () =
     });
     const selector = createAgentSelector({ distributionEngine, policyEngine });
     const planner = createPlanGenerator();
+
+    // Controlled mock native agent executor for unit tests
+    const mockAgentExecutor = {
+      async executeAgentStep({ step }) {
+        return {
+          ok: true,
+          exit_code: 0,
+          pid: 99999,
+          duration_ms: 10,
+          stdout: `Executed native agent test for ${step.step_id}`,
+          stderr: '',
+          error: null,
+          status: 'completed',
+          start_time: new Date().toISOString(),
+          end_time: new Date().toISOString(),
+        };
+      },
+    };
+
     const orchestrator = createOrchestrator({
       registry,
       distributionEngine,
       policyEngine,
       permissionRegistry,
       auditLogger,
+      nativeAgentExecutor: mockAgentExecutor,
       storePath: orchStore,
     });
 

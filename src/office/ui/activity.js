@@ -4,7 +4,7 @@ import { $, el, fmtBytes, fmtClock, hhmm, nowMs } from '../core/env.js';
 import { STATUS_LABEL, verb } from './event-text.js';
 import { TYPE_ICON, TYPE_TONE, icon } from './icons.js';
 import { hoverRing, selRing } from '../interact/rings.js';
-import { AGENT_NAME, agentMark, agentOf, colorOf, dn, dnOf, sessions, workers } from '../people/workers.js';
+import { AGENT_NAME, agentMark, agentOf, colorOf, dn, sessions, workers } from '../people/workers.js';
 import { renderLite } from './lite.js';
 import { openSession, renderActivity, renderSessionHead, renderSubs, tab, toggleSession } from './session-drawer.js';
 import { macSnap } from './mac-drawer.js';
@@ -14,8 +14,15 @@ import { whereabouts } from '../people/outings.js';
 import { imageUrl, openImage } from './image-view.js';
 import { renderHome } from './phone-home.js';
 import { t as tr, num } from '../../i18n/index.js';
+import { createTaskAggregator } from '../../shared/task-aggregator.js';
 
 let feedFilter = 'all';
+let historyFilter = 'all';
+let historyLimit = 15;
+const expandedTasks = new Set();
+const expandedSubgroups = new Set();
+const collapsedDates = new Set();
+
 let query = '';
 let toastEl;
 let toastTimer;
@@ -27,9 +34,11 @@ export const cap = (t) => (t ? t[0].toUpperCase() + t.slice(1) : t);
 const KIND = { cmd: ['bash', 'test', 'testok', 'testfail', 'deploy', 'commit', 'push', 'release', 'cired', 'cigreen'], edit: ['edit', 'write', 'create', 'delete'], read: ['read', 'grep', 'glob', 'skill'], web: ['web', 'fetch', 'mcp'], agent: ['agent', 'substart', 'substop'] };
 const typeFilter = new Set();
 const kindOk = (e) => !typeFilter.size || [...typeFilter].some((k) => KIND[k].includes(e.type) || KIND[k].includes(e.action));
-const LIFECYCLE = new Set(['start', 'end', 'stop', 'codex_start', 'codexturn', 'codex_execution_end', 'codexexit']);
+const taskKindOk = (task) => !typeFilter.size || (task.events && task.events.some(kindOk));
+
 function lineOf(e) {
   const ln = el('span', 'fg-line'), ic = el('span', 'fi-ico');
+  if (Array.isArray(e.filePaths) && e.filePaths.length) ln.title = e.filePaths.join('\n');
   ic.append(icon(TYPE_ICON[e.type] || 'sparkle')); if (TYPE_TONE[e.type]) ic.dataset.tone = TYPE_TONE[e.type];
   ln.append(ic, el('span', 'fg-text', cap(verb(e))));
   if (e.img) {   // an image it read, wrote or edited: a thumbnail, a click opens it (image-view.js)
@@ -44,58 +53,375 @@ export function feedRow(e) {
   li.append(lineOf(e), el('time', null, hhmm(e.ts)));
   return li;
 }
-function groupCard(g, live) {
-  const s = sessions.get(g.sess), first = g.items[0];
-  const li = el('li', 'fg');
-  const b = el('button', 'fg-card' + (live ? ' fg--live' : '')); b.type = 'button'; b.dataset.sess = g.sess; if (g.agent) b.dataset.agent = g.agent;
-  const head = el('span', 'fg-head'), dot = el('i'); dot.style.background = s ? colorOf(s) : '#5E687B';
-  head.append(dot, el('b', null, dnOf(first)));
-  if (g.lifecycle) head.append(el('span', 'fg-session', tr('activity.lifecycle')));
-  if (g.agent) head.append(el('span', 'fg-agent', tr('activity.subagent')));
-  if (live) head.append(el('span', 'fg-live', tr('activity.working')));
-  head.append(el('time', null, hhmm(first.ts)));
-  const lines = el('span', 'fg-lines');
-  for (const e of g.items.slice(0, 4)) lines.append(lineOf(e));
-  if (g.items.length > 4) lines.append(el('span', 'fg-more', tr('activity.more', { n: g.items.length - 4 })));
-  b.append(head, lines);
-  b.title = g.agent ? tr('activity.openSubChat') : tr('activity.openChat');
-  li.append(b);
-  return li;
+function formatDateGroup(ts) {
+  if (!ts) return tr('activity.date.today');
+  const d = new Date(ts);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return tr('activity.date.today');
+  const yest = new Date(now.getTime() - 86400e3);
+  if (d.toDateString() === yest.toDateString()) return tr('activity.date.yesterday');
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: d.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
 }
-function alertCard(e) {
-  const s = sessions.get(e.sess), wait = e.type !== 'fail';
-  const li = el('li', 'fg'), box = el('div', 'fa' + (wait ? ' fa--wait' : ''));
-  const head = el('div', 'fa-head'); head.append(icon('alert'), el('b', null, dnOf(e)), el('time', null, hhmm(e.ts)));
-  const acts = el('div', 'fa-acts');
-  const open = el('button'); open.type = 'button'; open.dataset.sess = e.sess; if (e.agent) open.dataset.agent = e.agent; open.append(icon('monitor'), wait ? tr('activity.openToApprove') : tr('activity.seeError')); acts.append(open);
-  if (s?.link) { const a = el('a'); a.href = s.link; a.target = '_blank'; a.rel = 'noopener'; a.append(icon('phone'), tr('activity.openOnPhone')); acts.append(a); }
-  box.append(head, el('p', null, cap(verb(e))), acts);
-  li.append(box);
-  return li;
+
+function renderTaskTimeline(task) {
+  const tl = el('div', 'tc-timeline');
+  const events = task.events || [];
+  const items = [];
+  let curFileGroup = null;
+  let curCmdGroup = null;
+
+  for (const e of events) {
+    const isFile = ['edit', 'write', 'create', 'delete', 'read', 'grep', 'glob'].includes(e.type);
+    const isCmd = ['bash', 'cmd', 'command'].includes(e.type);
+
+    if (isFile) {
+      curCmdGroup = null;
+      if (!curFileGroup) {
+        curFileGroup = { type: 'file_group', events: [e] };
+        items.push(curFileGroup);
+      } else {
+        curFileGroup.events.push(e);
+      }
+    } else if (isCmd) {
+      curFileGroup = null;
+      if (!curCmdGroup) {
+        curCmdGroup = { type: 'cmd_group', events: [e] };
+        items.push(curCmdGroup);
+      } else {
+        curCmdGroup.events.push(e);
+      }
+    } else {
+      curFileGroup = null;
+      curCmdGroup = null;
+      items.push({ type: 'event', event: e });
+    }
+  }
+
+  for (let idx = 0; idx < items.length; idx++) {
+    const it = items[idx];
+    if (it.type === 'file_group') {
+      const gEl = el('div', 'tc-tl-group');
+      const gHead = el('div', 'tc-tl-group-head');
+      const gKey = `${task.taskId}:fg:${idx}`;
+      const isExp = expandedSubgroups.has(gKey);
+      const paths = new Map();
+      for (const fe of it.events) {
+        const pList = Array.isArray(fe.filePaths) && fe.filePaths.length ? fe.filePaths : (fe.file ? [fe.file] : (fe.label ? [fe.label.replace(/^[a-zA-Z]+:\s*/, '')] : []));
+        for (const p of pList) if (p && typeof p === 'string') paths.set(p, (paths.get(p) || 0) + 1);
+      }
+      gHead.append(icon('file'), el('span', null, tr('activity.sections.fileOps', { n: it.events.length })), el('span', null, isExp ? '▾' : '▸'));
+      gHead.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (isExp) expandedSubgroups.delete(gKey); else expandedSubgroups.add(gKey);
+        renderFeed();
+      });
+      gEl.append(gHead);
+
+      if (isExp) {
+        const subList = el('ul', 'tc-tl-subitems');
+        if (paths.size) {
+          for (const [p, c] of paths.entries()) {
+            const row = el('li', 'tc-tl-subitem');
+            row.append(el('span', null, p));
+            if (c > 1) row.append(el('span', null, tr('activity.sections.editsCount', { n: c })));
+            subList.append(row);
+          }
+        } else {
+          for (const fe of it.events) {
+            const sub = el('li', 'tc-tl-subitem');
+            sub.append(el('span', null, cap(verb(fe))), el('time', null, hhmm(fe.ts)));
+            subList.append(sub);
+          }
+        }
+        gEl.append(subList);
+      }
+      tl.append(gEl);
+    } else if (it.type === 'cmd_group') {
+      const gEl = el('div', 'tc-tl-group');
+      const gHead = el('div', 'tc-tl-group-head');
+      const gKey = `${task.taskId}:cg:${idx}`;
+      const isExp = expandedSubgroups.has(gKey);
+      gHead.append(icon('terminal'), el('span', null, tr('activity.sections.terminalOps', { n: it.events.length })), el('span', null, isExp ? '▾' : '▸'));
+      gHead.addEventListener('click', (ev) => {
+        ev.stopPropagation();
+        if (isExp) expandedSubgroups.delete(gKey); else expandedSubgroups.add(gKey);
+        renderFeed();
+      });
+      gEl.append(gHead);
+
+      if (isExp) {
+        const subList = el('ul', 'tc-tl-subitems');
+        for (const ce of it.events) {
+          const sub = el('li', 'tc-tl-subitem');
+          sub.append(el('span', null, ce.command || ce.label || 'command'), el('time', null, hhmm(ce.ts)));
+          subList.append(sub);
+        }
+        gEl.append(subList);
+      }
+      tl.append(gEl);
+    } else {
+      const ev = it.event;
+      const row = el('div', 'tc-tl-row');
+      const ico = el('span', 'tc-tl-ico');
+      ico.append(icon(TYPE_ICON[ev.type] || 'sparkle'));
+      if (TYPE_TONE[ev.type]) ico.dataset.tone = TYPE_TONE[ev.type];
+      const cnt = el('div', 'tc-tl-content');
+      cnt.append(el('span', null, cap(verb(ev))));
+      if (ev.img) {
+        const th = el('span', 'fg-thumb'), im = el('img'); im.loading = 'lazy'; im.src = imageUrl(ev.img);
+        th.append(im);
+        th.addEventListener('click', (e) => { e.stopPropagation(); openImage(ev.img, ev.label, task.projectId); });
+        cnt.append(th);
+      }
+      row.append(ico, cnt, el('time', 'tc-tl-time', hhmm(ev.ts)));
+      tl.append(row);
+    }
+  }
+  return tl;
 }
+
+function renderTaskCard(task, isActive = true) {
+  const isExp = expandedTasks.has(task.taskId);
+  const card = el('li', `tc-card tc-card--${task.status} ${isActive ? 'tc-card--active' : ''}`);
+  card.dataset.taskId = task.taskId;
+  if (task.conversationId) card.dataset.sess = task.conversationId;
+
+  // Header row
+  const head = el('div', 'tc-head');
+  const meta = el('div', 'tc-meta-row');
+
+  const provBadge = el('span', 'tc-badge-prov', task.provider === 'claude-code' ? 'Claude' : task.provider === 'codex-app' ? 'Codex App' : task.provider === 'codex-cli' ? 'Codex CLI' : task.provider === 'antigravity' ? 'Antigravity' : task.provider);
+  provBadge.dataset.prov = task.provider;
+
+  const stBadge = el('span', 'tc-badge-status', tr(`activity.status.${task.status}`) || task.status);
+  stBadge.dataset.status = task.status;
+
+  meta.append(provBadge, stBadge);
+
+  if (task.currentPhase) {
+    const phKey = task.currentPhase.toLowerCase();
+    const phBadge = el('span', 'tc-badge-phase', tr(`activity.phases.${phKey}`) || task.currentPhase);
+    meta.append(phBadge);
+  }
+
+  const timeEl = el('time', 'tc-time', ago(task.lastEventAt));
+  head.append(meta, timeEl);
+
+  // Title & Project
+  const titleEl = el('h4', 'tc-title', task.title || 'Task');
+  titleEl.title = task.description || task.title || '';
+  const projLabel = el('span', 'tc-proj', task.projectId);
+
+  // Progress representation
+  let progEl = null;
+  if (task.progress?.mode === 'quantitative') {
+    progEl = el('div', 'tc-progress-wrap');
+    const bar = el('div', 'tc-progress-bar');
+    const fill = el('div', 'tc-progress-fill');
+    fill.style.width = `${task.progress.percent}%`;
+    bar.append(fill);
+    const txt = el('div', 'tc-progress-txt');
+    txt.append(el('span', null, task.currentPhase || 'Running'), el('span', null, task.progress.label));
+    progEl.append(bar, txt);
+  } else if (task.progress?.mode === 'phase') {
+    progEl = el('div', 'tc-phase-indicator');
+    progEl.append(el('span', 'tc-phase-dot'), el('span', null, task.progress.label));
+  } else if (task.progress?.mode === 'activity_only') {
+    progEl = el('div', 'tc-activity-only');
+    progEl.append(el('span', 'tc-activity-pulse'), el('span', null, task.progress.label));
+  }
+
+  // Chips for files and commands
+  const chips = el('div', 'tc-chips');
+  if (task.filesChanged.length) {
+    const fc = el('span', 'tc-chip tc-chip-file');
+    fc.append(icon('file'), el('span', null, tr('activity.sections.filesChanged', { n: task.filesChanged.length })));
+    fc.title = task.filesChanged.join('\n');
+    chips.append(fc);
+  }
+  if (task.commandsExecuted.length) {
+    const cc = el('span', 'tc-chip tc-chip-cmd');
+    cc.append(icon('terminal'), el('span', null, tr('activity.sections.commandsRun', { n: task.commandsExecuted.length })));
+    cc.title = task.commandsExecuted.join('\n');
+    chips.append(cc);
+  }
+
+  // Callout for errors or waiting
+  let calloutEl = null;
+  if (task.error || task.status === 'waiting') {
+    calloutEl = el('div', `tc-callout tc-callout--${task.status === 'waiting' ? 'wait' : 'err'}`);
+    calloutEl.append(icon('alert'), el('span', null, task.error || tr('activity.doing.wait')));
+  }
+
+  // Footer & Timeline toggle
+  const footer = el('div', 'tc-footer');
+  const evInfo = el('span', 'tc-ev-count', `${task.eventCount} events`);
+  const toggleBtn = el('button', 'tc-toggle-tl tc-btn-toggle');
+  toggleBtn.type = 'button';
+  toggleBtn.setAttribute('aria-expanded', String(isExp));
+  toggleBtn.append(el('span', null, tr('activity.sections.timeline')), icon('chevron'));
+  toggleBtn.addEventListener('click', (ev) => {
+    ev.stopPropagation();
+    if (isExp) expandedTasks.delete(task.taskId); else expandedTasks.add(task.taskId);
+    renderFeed();
+  });
+  footer.append(evInfo, toggleBtn);
+
+  // Assemble Card
+  card.append(head, titleEl);
+  if (task.projectId && task.projectId !== 'unknown-project') {
+    card.append(projLabel);
+  }
+  if (progEl) card.append(progEl);
+  if (chips.children.length) card.append(chips);
+  if (calloutEl) card.append(calloutEl);
+  card.append(footer);
+
+  if (isExp) {
+    card.append(renderTaskTimeline(task));
+  }
+
+  card.addEventListener('click', (ev) => {
+    if (ev.target.closest('button') || ev.target.closest('.tc-tl-group') || ev.target.closest('.fg-thumb')) return;
+    if (task.conversationId) openSession(task.conversationId);
+  });
+
+  return card;
+}
+
 export function renderFeed() {
   const list = $('feed-list');
-  const latest = new Map(); for (const e of state.feed) latest.set(e.sess, e.id);
-  const rows = state.feed.filter((e) => (feedFilter === 'all' || ATT.has(e.type)) && kindOk(e)).slice(-90).reverse();
+  if (!list) return;
   list.replaceChildren();
-  if (!rows.length) list.append(el('li', 'fi-empty', tr(feedFilter === 'att' ? 'activity.empty.att' : typeFilter.size ? 'activity.empty.type' : 'activity.empty.all')));
-  const groups = [];
-  for (const e of rows) {
-    const g = groups[groups.length - 1], att = ATT.has(e.type), lifecycle = LIFECYCLE.has(e.type);
-    if (g && !att && !g.att && lifecycle === g.lifecycle && g.sess === e.sess && g.agent === (e.agent || null) && g.items[g.items.length - 1].ts - e.ts < 240e3) g.items.push(e);
-    else groups.push({ sess: e.sess, agent: e.agent || null, att, lifecycle, items: [e] });
+
+  state.taskAggregator ||= createTaskAggregator();
+  state.taskAggregator.checkStale(nowMs());
+
+  // === Section B — Active Tasks ===
+  let activeTasks = state.taskAggregator.getActiveTasks(nowMs());
+  if (feedFilter === 'att') {
+    activeTasks = activeTasks.filter((t) => t.status === 'waiting' || t.status === 'failed' || t.status === 'stale');
   }
-  for (const g of groups) {
-    if (g.att) { if (sessions.has(g.sess)) list.append(alertCard(g.items[0])); continue; }   // (session gone, e.g. after a restart: the button could not open anything)
-    const s = sessions.get(g.sess);
-    list.append(groupCard(g, s?.status === 'work' && g.items.some((e) => latest.get(g.sess) === e.id)));
+  if (typeFilter.size > 0) {
+    activeTasks = activeTasks.filter(taskKindOk);
   }
+
+  const activeSec = el('div', 'act-section');
+  const activeHead = el('div', 'act-section-head');
+  const activeTitle = el('h3', 'act-section-title');
+  activeTitle.append(icon('sparkle'), el('span', null, tr('activity.sections.activeTasks')));
+  const activeBadge = el('span', 'act-badge-count', num(activeTasks.length));
+  activeBadge.dataset.count = activeTasks.length;
+  activeHead.append(activeTitle, activeBadge);
+  activeSec.append(activeHead);
+
+  const activeList = el('ul', 'tc-list');
+  if (!activeTasks.length) {
+    activeList.append(el('li', 'fi-empty', tr('activity.sections.noActive')));
+  } else {
+    for (const task of activeTasks) {
+      activeList.append(renderTaskCard(task, true));
+    }
+  }
+  activeSec.append(activeList);
+  list.append(activeSec);
+
+  // === Section C — Recent History ===
+  const historySec = el('div', 'act-section');
+  const histHead = el('div', 'act-section-head');
+  const histTitle = el('h3', 'act-section-title');
+  histTitle.append(icon('timeline'), el('span', null, tr('activity.sections.recentHistory')));
+
+  const histStatus = historyFilter === 'all' ? null : historyFilter;
+  let historyResult = state.taskAggregator.getHistoryTasks({
+    limit: historyLimit,
+    status: histStatus,
+    now: nowMs(),
+  });
+  if (typeFilter.size > 0) {
+    historyResult = {
+      ...historyResult,
+      items: historyResult.items.filter(taskKindOk),
+    };
+  }
+
+  const histBadge = el('span', 'act-badge-count', num(historyResult.total));
+  histBadge.dataset.count = historyResult.total;
+  histHead.append(histTitle, histBadge);
+  historySec.append(histHead);
+
+  // History Filter Buttons
+  const filterRow = el('div', 'act-filters');
+  for (const f of ['all', 'succeeded', 'failed']) {
+    const fBtn = el('button', 'act-filter-btn', tr(`activity.status.${f}`) || cap(f));
+    fBtn.type = 'button';
+    fBtn.setAttribute('aria-pressed', String(historyFilter === f));
+    fBtn.addEventListener('click', () => { historyFilter = f; renderFeed(); });
+    filterRow.append(fBtn);
+  }
+  historySec.append(filterRow);
+
+  if (!historyResult.items.length) {
+    historySec.append(el('div', 'fi-empty', tr('activity.sections.noHistory')));
+  } else {
+    // Group history tasks by date
+    const dateGroups = new Map();
+    for (const task of historyResult.items) {
+      const dateLabel = formatDateGroup(task.completedAt || task.lastEventAt);
+      if (!dateGroups.has(dateLabel)) dateGroups.set(dateLabel, []);
+      dateGroups.get(dateLabel).push(task);
+    }
+
+    for (const [dateLabel, tasks] of dateGroups.entries()) {
+      const dateGrp = el('div', 'act-date-group');
+      const isCollapsed = collapsedDates.has(dateLabel);
+
+      const dateBtn = el('button', 'act-date-btn');
+      dateBtn.type = 'button';
+      dateBtn.setAttribute('aria-expanded', String(!isCollapsed));
+      dateBtn.append(el('span', null, `${dateLabel} (${tasks.length})`), icon('chevron'));
+      dateBtn.addEventListener('click', () => {
+        if (isCollapsed) collapsedDates.delete(dateLabel); else collapsedDates.add(dateLabel);
+        renderFeed();
+      });
+      dateGrp.append(dateBtn);
+
+      if (!isCollapsed) {
+        const histList = el('ul', 'tc-list');
+        for (const task of tasks) {
+          histList.append(renderTaskCard(task, false));
+        }
+        dateGrp.append(histList);
+      }
+      historySec.append(dateGrp);
+    }
+
+    if (historyResult.hasMore) {
+      const moreBtn = el('button', 'act-load-more', tr('activity.sections.loadMore', { n: historyResult.total - historyLimit }));
+      moreBtn.type = 'button';
+      moreBtn.addEventListener('click', () => {
+        historyLimit += 15;
+        renderFeed();
+      });
+      historySec.append(moreBtn);
+    }
+  }
+
+  list.append(historySec);
+
   const att = state.feed.filter((e) => ATT.has(e.type) && sessions.has(e.sess) && nowMs() - e.ts < 3600e3).length;
-  $('att-count').hidden = !att; $('att-count').textContent = att;
+  $('att-count').hidden = !att;
+  $('att-count').textContent = att;
 }
 let feedQueued = false;
 export function queueFeed() { if (feedQueued) return; feedQueued = true; requestAnimationFrame(() => { feedQueued = false; renderFeed(); if (state.selectedId && tab === 'act') renderActivity(); }); }
-export function addFeed(e) { state.feed.push(e); if (state.feed.length > 150) state.feed = state.feed.slice(-150); queueFeed(); }
+export function addFeed(e) {
+  state.feed.push(e);
+  if (state.feed.length > 300) state.feed = state.feed.slice(-300);
+  state.taskAggregator ||= createTaskAggregator();
+  state.taskAggregator.ingest(e);
+  queueFeed();
+}
 export function openFromRow(b) { if (b.dataset.agent) openSession(b.dataset.sess, { tab: 'subs', agent: b.dataset.agent }); else openSession(b.dataset.sess); }
 function setFilter(f) { feedFilter = f; $('flt-all').setAttribute('aria-pressed', String(f === 'all')); $('flt-att').setAttribute('aria-pressed', String(f === 'att')); renderFeed(); }
 function ago(ts) {
@@ -233,18 +559,21 @@ const KPIS = [['tasks', 'clipboard'], ['read', 'file'], ['edit', 'pencil'], ['cm
 const KPI_TYPES = { read: ['read'], edit: ['edit', 'create', 'delete'], cmd: ['bash'] };
 export function renderHud() {
   const list = [...sessions.values()];
-  const waiting = list.filter((s) => s.status === 'wait').length;
+  state.taskAggregator ||= createTaskAggregator();
+  const taskStats = state.taskAggregator.getStats(nowMs());
+  const waiting = taskStats.waiting || list.filter((s) => s.status === 'wait').length;
   const subCount = list.reduce((a, s) => a + (s.subs?.length || 0), 0);
   $('active-count').textContent = list.length ? tr('activity.sessions', { n: list.length }) + (subCount ? ` · ${tr('activity.subsRunning', { n: subCount })}` : '') : tr('activity.noSessions');
   $('feed-stats').replaceChildren(...KPIS.map(([k, ic]) => {
     const label = tr(`activity.kpi.${k}`);
     const d = el('div', k === 'cost' ? 'kpi kpi--cost' : 'kpi'), i = el('span', 'kpi-ic'); i.append(icon(ic));
     const hasCost = list.some((s) => s.usage?.model);
-    const running = k === 'tasks' ? list.filter((s) => s.status === 'work').length : list.filter((s) => s.status === 'work' && (KPI_TYPES[k] || []).includes(s.last?.type)).length;
+    const running = k === 'tasks' ? taskStats.active : list.filter((s) => s.status === 'work' && (KPI_TYPES[k] || []).includes(s.last?.type)).length;
     const value = k === 'cost' ? (hasCost ? fmtUsd(list.reduce((a, s) => a + (s.usage?.model ? s.usage.cost || 0 : 0), 0)) : '—') : num(running);
-    if (k !== 'cost') d.classList.toggle('kpi--run', running > 0); if (k === 'tasks' && !running && waiting) d.classList.add('kpi--wait');   // (green = running now, yellow = waiting for you; finished work is not counted)
+    if (k !== 'cost') d.classList.toggle('kpi--run', running > 0);
+    if (k === 'tasks' && !running && waiting) d.classList.add('kpi--wait');
     const b = el('b', null, value);
-    if (k === 'cost' && hasCost) b.prepend(el('small', null, '≈'));   // (an estimate: the list price, not a bill)
+    if (k === 'cost' && hasCost) b.prepend(el('small', null, '≈'));
     d.append(i, b, el('span', null, label)); d.title = k === 'cost' ? tr('activity.costTitle') : tr('activity.kpiNow', { label });
     return d;
   }));
@@ -271,6 +600,11 @@ export function setup() {
   /* ---------- UI: activity column, session list, chips ---------- */
   state.stats = {};
   state.feed = [];
+  state.taskAggregator = createTaskAggregator();
+  if (typeof window !== 'undefined') {
+    window.__officeState = state;
+    window.__renderFeed = renderFeed;
+  }
   state.selectedId = null;
   state.isLocal = false;
   state.hovered = null; state.hoverAt = 0;

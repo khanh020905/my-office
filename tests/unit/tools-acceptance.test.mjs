@@ -12,7 +12,10 @@ import { createDistributionEngine } from '../../server/tools/distribution-engine
 import { createOrchestrator } from '../../server/orchestration/orchestrator.mjs';
 
 describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
-  function setupTestEnv() {
+  // Stands in for the agent process: these scenarios test the pipeline, not Claude.
+  const okAgent = { async executeAgentStep() { return { ok: true, exit_code: 0, pid: 1, duration_ms: 1, stdout: 'done', stderr: '' }; } };
+
+  function setupTestEnv({ nativeAgentExecutor = null } = {}) {
     const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), 'phase7-e2e-'));
     const registryStore = path.join(tmpDir, 'tools-registry.json');
     const permStore = path.join(tmpDir, 'permission-registry.json');
@@ -42,6 +45,7 @@ describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
       policyEngine,
       permissionRegistry,
       auditLogger,
+      nativeAgentExecutor,
       storePath: orchStore,
     });
 
@@ -58,7 +62,7 @@ describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
   }
 
   // Scenario 1 — Simple task
-  it('Scenario 1 — Simple task: analyzes, matches, plans, executes, and validates code analysis', async () => {
+  it('Scenario 1 — Simple task: analyzes, matches, plans, and fails the tool step honestly (no tool runner yet)', async () => {
     const { tmpDir, registry, permissionRegistry, orchestrator } = setupTestEnv();
 
     permissionRegistry.grantPermission({
@@ -87,9 +91,10 @@ describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
 
     assert.equal(task.task_spec.task_type, 'coding');
     assert.ok(task.task_spec.required_capabilities.includes('code_analysis'));
-    assert.equal(task.status, 'COMPLETED');
-    assert.equal(task.execution_results.completed_steps, 1);
-    assert.equal(task.execution_results.step_results.step_1.tool_id, 'eslint-tool');
+    assert.equal(task.execution_plan.steps[0].tool_id, 'eslint-tool');
+    assert.equal(task.status, 'FAILED');
+    assert.match(task.error, /not implemented/);
+    assert.equal(task.execution_results.completed_steps, 0);
 
     fs.rmSync(tmpDir, { recursive: true, force: true });
   });
@@ -400,25 +405,7 @@ describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
 
   // Scenario 11 — Invalid output detection & PARTIALLY_COMPLETED transition
   it('Scenario 11 — Invalid output: validation fails when expected artifact is missing, transitions to PARTIALLY_COMPLETED', async () => {
-    const { tmpDir, registry, permissionRegistry, orchestrator } = setupTestEnv();
-
-    permissionRegistry.grantPermission({
-      tool_id: 'doc-gen-tool',
-      agent_id: 'claude-code',
-      scopes: ['fs:read', 'process:exec'],
-      approval_reference: 'appr-doc',
-    });
-
-    registry.registerTool({
-      tool_id: 'doc-gen-tool',
-      name: 'Doc Generator',
-      version: '1.0.0',
-      source_repository: 'https://github.com/org/docgen',
-      capabilities: [{ capability_id: 'process_exec', protocol: 'cli', name: 'Exec', entry_point: 'bin/gen' }],
-      compatible_agents: ['claude-code'],
-      required_permissions: ['fs:read', 'process:exec'],
-      installation_status: 'installed',
-    });
+    const { tmpDir, orchestrator } = setupTestEnv({ nativeAgentExecutor: okAgent });
 
     // Request requires expected artifact 'non_existent_output.pdf'
     const task = await orchestrator.submitTask({
@@ -438,25 +425,7 @@ describe('Phase 7 — End-to-End Acceptance Scenarios & Hardening', () => {
 
   // Scenario 12 — User input required & clarification flow
   it('Scenario 12 — User input required: transitions to NEEDS_USER_INPUT and resumes plan upon clarification', async () => {
-    const { tmpDir, registry, permissionRegistry, orchestrator } = setupTestEnv();
-
-    permissionRegistry.grantPermission({
-      tool_id: 'cli-helper',
-      agent_id: 'claude-code',
-      scopes: ['fs:read', 'process:exec'],
-      approval_reference: 'appr-helper',
-    });
-
-    registry.registerTool({
-      tool_id: 'cli-helper',
-      name: 'CLI Helper',
-      version: '1.0.0',
-      source_repository: 'https://github.com/org/clihelper',
-      capabilities: [{ capability_id: 'code_analysis', protocol: 'cli', name: 'Analysis', entry_point: 'bin/helper' }],
-      compatible_agents: ['claude-code'],
-      required_permissions: ['fs:read', 'process:exec'],
-      installation_status: 'installed',
-    });
+    const { tmpDir, orchestrator } = setupTestEnv({ nativeAgentExecutor: okAgent });
 
     // Submit ambiguous task requiring clarification
     const task = await orchestrator.submitTask({

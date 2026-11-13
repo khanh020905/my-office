@@ -20,7 +20,14 @@ export function findHostBinary(name) {
     const whichCmd = isWin ? 'where.exe' : 'which';
     const out = execFileSync(whichCmd, [name], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'], timeout: 3000 });
     const lines = out.trim().split(/\r?\n/).map((l) => l.trim()).filter(Boolean);
-    if (lines.length) return lines[0];
+    if (lines.length) {
+      if (isWin) {
+        // Prefer executable extensions on Windows (.cmd, .bat, .exe) over extensionless files
+        const executableMatch = lines.find((l) => /\.(cmd|bat|exe)$/i.test(l));
+        if (executableMatch) return executableMatch;
+      }
+      return lines[0];
+    }
   } catch {
     /* ignore and try direct paths */
   }

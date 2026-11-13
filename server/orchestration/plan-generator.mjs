@@ -19,6 +19,7 @@ export function computePlanHash(plan) {
     steps: (plan.steps || []).map((s) => ({
       step_id: s.step_id,
       title: s.title,
+      description: s.description, // the prompt the agent receives: approval must cover it
       agent_id: s.agent_id,
       tool_id: s.tool_id,
       capability_id: s.capability_id,

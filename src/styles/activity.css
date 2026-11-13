@@ -50,3 +50,119 @@
 .iv-close:focus-visible { outline: 2px solid var(--accent); }
 @media (prefers-reduced-motion: reduce) { .img-view { animation: none; } .fg-thumb { transition: none; } }
 .activity-limits { margin: 8px 14px; color: var(--muted); font-size: 11px; line-height: 1.35; }
+
+/* ==========================================================================
+   Task-Centric Execution Dashboard Styles (Activity Center Redesign)
+   ========================================================================== */
+
+/* Overview Section metrics */
+.act-overview-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 0 16px 10px; }
+.act-stat-card { display: grid; gap: 2px; padding: 7px 8px; border-radius: 10px; background: var(--card); border: 1px solid var(--line); }
+.act-stat-card b { font-size: 1.05rem; font-weight: 700; font-family: var(--mono); line-height: 1.1; }
+.act-stat-card span { font-size: .62rem; color: var(--muted); text-transform: uppercase; letter-spacing: .04em; }
+.act-stat-card[data-status="active"] b { color: var(--green-ink); }
+.act-stat-card[data-status="waiting"] b { color: var(--amber); }
+.act-stat-card[data-status="completed"] b { color: var(--blue); }
+.act-stat-card[data-status="failed"] b { color: var(--red); }
+
+/* Section Headers */
+.act-section { margin-bottom: 14px; }
+.act-section-head { display: flex; align-items: center; justify-content: space-between; padding: 6px 16px 8px; }
+.act-section-title { font-size: .74rem; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin: 0; display: flex; align-items: center; gap: 6px; }
+.act-badge-count { font-size: .64rem; font-weight: 700; padding: 1px 6px; border-radius: 999px; background: var(--card-3); color: var(--ink); }
+.act-badge-count[data-count="0"] { opacity: .45; }
+
+/* Filter Tabs / Controls */
+.act-filters { display: flex; gap: 6px; margin: 0 16px 8px; overflow-x: auto; scrollbar-width: none; }
+.act-filter-btn { all: unset; padding: 3px 9px; border-radius: 999px; border: 1px solid var(--line); font-size: .68rem; font-weight: 600; color: var(--muted); cursor: pointer; white-space: nowrap; transition: all .15s; }
+.act-filter-btn:hover { color: var(--ink); border-color: var(--line-2); }
+.act-filter-btn[aria-pressed="true"] { background: var(--accent-soft); border-color: var(--accent-line); color: var(--ink); }
+
+/* Task Card (One Task = One Primary Activity Card) */
+.tc-list { list-style: none; margin: 0; padding: 0 12px; display: grid; gap: 6px; }
+.tc-card { border-radius: 10px; background: var(--card); border: 1px solid var(--line); padding: 9px 11px; transition: border-color .15s, background .15s; position: relative; display: grid; gap: 6px; }
+.tc-card:hover { border-color: var(--line-2); background: var(--card-2); }
+.tc-card--active { border-color: rgba(61, 220, 132, .3); box-shadow: inset 3px 0 0 var(--green); }
+.tc-card--waiting { border-color: rgba(242, 181, 68, .45); box-shadow: inset 3px 0 0 var(--amber); background: var(--amber-soft); }
+.tc-card--failed { border-color: rgba(255, 95, 95, .45); box-shadow: inset 3px 0 0 var(--red); background: var(--red-soft); }
+.tc-card--stale { opacity: .75; border-dashed: true; }
+
+/* Task Card Header */
+.tc-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; min-width: 0; }
+.tc-meta-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.tc-badge-prov { font-size: .62rem; font-weight: 700; text-transform: uppercase; padding: 2px 6px; border-radius: 4px; background: var(--card-3); color: var(--ink); border: 1px solid var(--line); }
+.tc-badge-prov[data-prov="claude-code"] { color: #D97706; border-color: rgba(217, 119, 6, .3); background: rgba(217, 119, 6, .1); }
+.tc-badge-prov[data-prov="codex-app"] { color: #10B981; border-color: rgba(16, 185, 129, .3); background: rgba(16, 185, 129, .1); }
+.tc-badge-prov[data-prov="codex-cli"] { color: #3B82F6; border-color: rgba(59, 130, 246, .3); background: rgba(59, 130, 246, .1); }
+.tc-badge-prov[data-prov="antigravity"] { color: #8B5CF6; border-color: rgba(139, 92, 246, .3); background: rgba(139, 92, 246, .1); }
+
+.tc-badge-status { font-size: .62rem; font-weight: 600; padding: 2px 6px; border-radius: 999px; }
+.tc-badge-status[data-status="running"] { background: var(--green-soft); color: var(--green-ink); }
+.tc-badge-status[data-status="waiting"] { background: var(--amber-soft); color: var(--amber); }
+.tc-badge-status[data-status="succeeded"] { background: rgba(106, 174, 255, .15); color: var(--blue); }
+.tc-badge-status[data-status="failed"] { background: var(--red-soft); color: var(--red); }
+.tc-badge-status[data-status="stale"] { background: var(--card-3); color: var(--faint); }
+.tc-badge-status[data-status="unknown"] { background: var(--card-3); color: var(--muted); }
+
+.tc-badge-phase { font-size: .62rem; font-weight: 600; padding: 2px 6px; border-radius: 4px; background: rgba(255, 255, 255, .05); border: 1px solid var(--line); color: var(--muted); }
+.tc-time { font: 500 .68rem/1 var(--mono); color: var(--faint); flex: none; }
+
+.tc-title { font-size: .84rem; font-weight: 600; color: var(--ink); margin: 0; line-height: 1.35; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.tc-proj { font-size: .66rem; color: var(--muted); font-family: var(--mono); }
+
+/* Progress Indicator */
+.tc-progress-wrap { display: grid; gap: 4px; margin-top: 2px; }
+.tc-progress-bar { height: 5px; border-radius: 999px; background: var(--card-3); overflow: hidden; position: relative; }
+.tc-progress-fill { height: 100%; border-radius: 999px; background: var(--green); transition: width .3s ease; }
+.tc-progress-txt { display: flex; justify-content: space-between; font-size: .64rem; color: var(--muted); font-family: var(--mono); }
+
+/* Phase-based indicator */
+.tc-phase-indicator { display: flex; align-items: center; gap: 4px; font-size: .66rem; color: var(--muted); }
+.tc-phase-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: tc-pulse 1.8s infinite; }
+.tc-activity-only { display: flex; align-items: center; gap: 6px; font-size: .66rem; color: var(--muted); font-style: italic; }
+.tc-activity-pulse { width: 6px; height: 6px; border-radius: 50%; background: var(--blue); }
+
+@keyframes tc-pulse {
+  0% { transform: scale(.8); opacity: .5; }
+  50% { transform: scale(1.2); opacity: 1; }
+  100% { transform: scale(.8); opacity: .5; }
+}
+
+/* Chips for Files and Commands */
+.tc-chips { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-top: 2px; }
+.tc-chip { display: inline-flex; align-items: center; gap: 4px; font-size: .66rem; font-family: var(--mono); padding: 2px 6px; border-radius: 6px; background: rgba(255, 255, 255, .04); border: 1px solid var(--line); color: var(--muted); }
+.tc-chip svg { width: 11px; height: 11px; }
+
+/* Callout / Error */
+.tc-callout { padding: 6px 8px; border-radius: 8px; font-size: .72rem; line-height: 1.35; }
+.tc-callout--err { background: var(--red-soft); color: #FFB3B3; border: 1px solid rgba(255, 95, 95, .3); }
+.tc-callout--wait { background: var(--amber-soft); color: #F6E3BE; border: 1px solid rgba(242, 181, 68, .3); }
+
+/* Action Footer & Timeline Toggle */
+.tc-footer { display: flex; align-items: center; justify-content: space-between; margin-top: 4px; padding-top: 6px; border-top: 1px solid var(--line); font-size: .7rem; }
+.tc-toggle-tl { all: unset; display: inline-flex; align-items: center; gap: 5px; font-weight: 600; color: var(--blue); cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+.tc-toggle-tl:hover { text-decoration: underline; }
+.tc-toggle-tl svg { width: 12px; height: 12px; transition: transform .2s; }
+.tc-toggle-tl[aria-expanded="true"] svg { transform: rotate(180deg); }
+
+/* Detailed Chronological Timeline */
+.tc-timeline { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.tc-tl-row { display: grid; grid-template-columns: 18px minmax(0, 1fr) auto; gap: 8px; align-items: start; font-size: .72rem; color: #C3CAD7; }
+.tc-tl-ico { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 4px; background: var(--card-3); color: var(--muted); }
+.tc-tl-ico svg { width: 10px; height: 10px; }
+.tc-tl-content { overflow-wrap: anywhere; line-height: 1.35; }
+.tc-tl-time { font: 500 .64rem/1.35 var(--mono); color: var(--faint); }
+
+.tc-tl-group { border-radius: 8px; background: rgba(255, 255, 255, .03); border: 1px solid var(--line); padding: 6px 8px; display: grid; gap: 4px; }
+.tc-tl-group-head { font-weight: 600; font-size: .7rem; color: var(--ink); display: flex; align-items: center; justify-content: space-between; cursor: pointer; }
+.tc-tl-subitems { list-style: none; margin: 4px 0 0; padding-left: 10px; display: grid; gap: 3px; border-left: 1px solid var(--line); }
+.tc-tl-subitem { font-size: .68rem; font-family: var(--mono); color: var(--muted); display: flex; justify-content: space-between; gap: 6px; }
+
+/* History Date Groups */
+.act-date-group { margin-bottom: 10px; }
+.act-date-btn { all: unset; box-sizing: border-box; width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 4px 16px; font-size: .7rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.act-date-btn:hover { color: var(--ink); }
+.act-date-btn svg { width: 12px; height: 12px; transition: transform .2s; }
+.act-date-btn[aria-expanded="false"] svg { transform: rotate(-90deg); }
+.act-load-more { all: unset; display: block; margin: 10px 16px; padding: 7px; text-align: center; border-radius: 8px; background: var(--card); border: 1px solid var(--line); font-size: .74rem; font-weight: 600; color: var(--blue); cursor: pointer; transition: all .15s; }
+.act-load-more:hover { background: var(--card-2); border-color: var(--line-2); }
