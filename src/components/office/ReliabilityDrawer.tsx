@@ -713,7 +713,7 @@ export default function ReliabilityDrawer() {
               }}
             >
               <div style={{ padding: '20px', textAlign: 'center', color: 'var(--muted, #8D97AA)', fontSize: '0.85rem' }}>
-                No backups created yet. Click "Create Backup Snapshot" to capture an atomic point-in-time snapshot.
+                No backups created yet. Click &quot;Create Backup Snapshot&quot; to capture an atomic point-in-time snapshot.
               </div>
             </div>
           </div>
