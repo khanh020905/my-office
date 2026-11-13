@@ -14,10 +14,12 @@
 // with <html lang="…">, and code in the browser reads it from there. The server builds its own t with createT(lang).
 import en from './locales/en/index.js';
 import vi from './locales/vi/index.js';
+import th from './locales/th/index.js';
 
 export const LANGS = {
   en: { name: 'English', locale: 'en-US', dict: en },
   vi: { name: 'Tiếng Việt', locale: 'vi-VN', dict: vi },
+  th: { name: 'ไทย', locale: 'th-TH', dict: th },
 };
 export const DEFAULT_LANG = 'en';
 export const pickLang = (l) => (typeof l === 'string' && Object.hasOwn(LANGS, l) ? l : DEFAULT_LANG);

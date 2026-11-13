@@ -1,0 +1,35 @@
+// ภาษาไทย. A key missing here falls back to English.
+import common from './common.js';
+import time from './time.js';
+import ui from './ui.js';
+import topbar from './topbar.js';
+import settings from './settings.js';
+import wrapped from './wrapped.js';
+import lite from './lite.js';
+import fp from './fp.js';
+import drawer from './drawer.js';
+import activity from './activity.js';
+import perm from './perm.js';
+import board from './board.js';
+import incident from './incident.js';
+import events from './events.js';
+import people from './people.js';
+import timeline from './timeline.js';
+import replay from './replay.js';
+import demo from './demo.js';
+import places from './places.js';
+import props from './props.js';
+import world from './world.js';
+import life from './life.js';
+import mac from './mac.js';
+import trophies from './trophies.js';
+import server from './server.js';
+import cli from './cli.js';
+import tips from './tips.js';
+import chat from './chat.js';
+import burn from './burn.js';
+import vault from './vault.js';
+import ai from './ai.js';
+import panel from './panel.js';
+
+export default { common, time, ui, topbar, settings, wrapped, lite, fp, drawer, activity, perm, board, incident, events, people, timeline, replay, demo, places, props, world, life, mac, trophies, server, cli, tips, chat, burn, vault, ai, panel };
