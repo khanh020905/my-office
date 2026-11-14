@@ -45,7 +45,9 @@ let last = null, lastAt = 0, reading = null;
 const cpuState = { prev: null, at: 0 };
 function read() {
   if (last && Date.now() - lastAt < 2000) return Promise.resolve(last);
+  const t0 = Date.now();
   reading ??= sh('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', SCRIPT], 30000).then((out) => {
+    if (process.env.OFFICE_SYS_TRACE === '1') console.error(`sys powershell ${Date.now() - t0} ms, ${out.length} chars`);   // (scripts/smoke.mjs)
     const r = parseReading(out);
     if (r) {
       cpuFromDelta(cpuState, r.procs);
