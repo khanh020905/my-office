@@ -27,6 +27,7 @@ import { TOKEN } from '../net/live.js';
 import { pushOn, pushState, pushTest } from './notify.js';
 import { REACTIONS, byId, chat, chatPoll, chatSend, chatSendPhoto, onChat, people, react, recall, rsvp, setOpen, vote, who } from './group-chat.js';
 import { coach, numberTasks } from '../../shared/prompt-coach.js';
+import { quickChoices } from '../../shared/quick-choices.js';
 import { t as tr, lang, locale } from '../../i18n/index.js';
 
 let root, body, typingEl, pinEl, newBtn, input, bar, stickersEl, membersEl, mentionEl, moreEl, replyEl, headSub, headAv, toEl, pickEl, quickEl, attachEl, convEl;
@@ -270,6 +271,18 @@ function row(m, prev, nextM) {
   if (!mine && (first || m.tag === 'claude') && !bare) { const n = el('span', 'zc-name', m.name); if (m.tag === 'claude') n.append(el('i', 'zc-claude', tr('chat.claudeTag'))); bub.append(n); }
   if (m.reply && !m.recalled) bub.append(quote(m.reply));
   bub.append(content(m));
+  // the newest answer from a conversation ending in "A) … B) …": one tap sends that choice back to it
+  // (a new conversation's answers come from "__claude", before it has a person: they go back to the conversation you chose)
+  const sess = !nextM && !m.recalled && m.tag === 'claude' && m.kind === 'text' && (m.from === '__claude' ? target : sessions.get(m.from)), picks = (sess?.sid || sess?.dir) && !DEMO_CHAT ? quickChoices(m.text) : [];
+  if (picks.length) {
+    const bar = el('div', 'zc-choices');
+    for (const p of picks) {
+      const b = el('button', 'zc-choice', `${p.key}  ${p.label}`); b.type = 'button';
+      b.addEventListener('click', (e) => { e.stopPropagation(); bar.remove(); sendTo(p.reply, m.from === '__claude' ? sess : { id: sess.id, sid: sess.sid, name: dn(sess), folder: folderOf(sess) }); });
+      bar.append(b);
+    }
+    bub.append(bar);
+  }
   if (last && !bare) bub.append(el('span', 'zc-time', fmtTime(m.at)));
   if (!m.recalled) {
     const rx = reactPill(m); if (rx) bub.append(rx);
@@ -699,8 +712,8 @@ function askSteer(to, text) {
   ask.append(el('span', null, tr('chat.steer.ask', { name: to.name })), no, yes);
   body.append(ask); body.scrollTop = body.scrollHeight;
 }
-async function sendTo(text) {
-  const to = target, images = attach.slice(), body = to.dir ? { dir: to.dir, text, images, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, images, chat: true };
+async function sendTo(text, to = target) {
+  const images = attach.slice(), body = to.dir ? { dir: to.dir, text, images, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, images, chat: true };
   attach = []; drawAttach();
   const r = await fetch(`/api/tasks${tq()}`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }).then((x) => x.json()).catch(() => null);
   if (!r?.ok && images.length) { attach = images; drawAttach(); }   // (not sent: the photos stay)
