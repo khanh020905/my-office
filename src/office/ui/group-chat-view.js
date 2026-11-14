@@ -278,7 +278,12 @@ function row(m, prev, nextM) {
     const bar = el('div', 'zc-choices');
     for (const p of picks) {
       const b = el('button', 'zc-choice', `${p.key}  ${p.label}`); b.type = 'button';
-      b.addEventListener('click', (e) => { e.stopPropagation(); bar.remove(); sendTo(p.reply, m.from === '__claude' ? sess : { id: sess.id, sid: sess.sid, name: dn(sess), folder: folderOf(sess) }); });
+      b.addEventListener('click', async (e) => {
+        e.stopPropagation();
+        const to = m.from === '__claude' ? sess : await convOf(sess);
+        if (!to) { toast(tr('drawer.unreachable')); return; }
+        bar.remove(); sendTo(p.reply, to);
+      });
       bar.append(b);
     }
     bub.append(bar);
@@ -711,6 +716,14 @@ function askSteer(to, text) {
   no.addEventListener('click', () => { ask.remove(); if (!input.value) { input.value = text; syncBar(); } });
   ask.append(el('span', null, tr('chat.steer.ask', { name: to.name })), no, yes);
   body.append(ask); body.scrollTop = body.scrollHeight;
+}
+// the conversation a person's answer came from, to write back to: the page's sessions carry no Claude Code id (sid), the
+// list the "To" picker reads (/api/tasks) does
+async function convOf(s) {
+  if (s.sid) return { id: s.id, sid: s.sid, name: dn(s), folder: folderOf(s) };
+  if (target?.id === s.id && target.sid) return target;
+  const r = await fetch(`/api/tasks${tq()}`).then((x) => x.json()).catch(() => null), x = r?.sessions?.find((y) => y.id === s.id);
+  return x?.sid ? { id: s.id, sid: x.sid, name: dn(s), folder: folderOf(s) } : null;
 }
 async function sendTo(text, to = target) {
   const images = attach.slice(), body = to.dir ? { dir: to.dir, text, images, chat: true, fresh: !!to.fresh } : { sid: to.sid, text, images, chat: true };
