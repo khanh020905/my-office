@@ -7,6 +7,7 @@ export default {
   tabSubs: 'Subagents',
   tabSubsN: 'Subagents ({n})',
   demoNoWindow: 'Demo: there is no real window to open.',
+  sessionGone: 'This session is no longer open (server restarted or session closed).',
   opened: 'Opened {app}.',
   openFailed: "Couldn't open it.",
   unreachable: "Couldn't reach My Office.",
