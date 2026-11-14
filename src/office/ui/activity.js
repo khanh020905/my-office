@@ -84,11 +84,11 @@ export function renderFeed() {
     else groups.push({ sess: e.sess, agent: e.agent || null, att, items: [e] });
   }
   for (const g of groups) {
-    if (g.att) { list.append(alertCard(g.items[0])); continue; }
+    if (g.att) { if (sessions.has(g.sess)) list.append(alertCard(g.items[0])); continue; }   // (session gone, e.g. after a restart: the button could not open anything)
     const s = sessions.get(g.sess);
     list.append(groupCard(g, s?.status === 'work' && g.items.some((e) => latest.get(g.sess) === e.id)));
   }
-  const att = state.feed.filter((e) => ATT.has(e.type) && nowMs() - e.ts < 3600e3).length;
+  const att = state.feed.filter((e) => ATT.has(e.type) && sessions.has(e.sess) && nowMs() - e.ts < 3600e3).length;
   $('att-count').hidden = !att; $('att-count').textContent = att;
 }
 let feedQueued = false;

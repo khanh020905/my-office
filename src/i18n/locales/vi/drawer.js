@@ -5,6 +5,7 @@ export default {
   tabSubs: 'Trợ lý',
   tabSubsN: 'Trợ lý ({n})',
   demoNoWindow: 'Bản demo: không mở cửa sổ thật.',
+  sessionGone: 'Phiên này không còn mở nữa (server đã khởi động lại hoặc phiên đã đóng).',
   opened: 'Đã mở {app}.',
   openFailed: 'Không mở được.',
   unreachable: 'Không gửi được tới My Office.',

@@ -28,7 +28,7 @@ export let drM;
 export function toggleSession(id) { if (state.selectedId === id && !drS.hidden) closeSession(); else openSession(id); }
 export function openSession(id, opts = {}) {
   unseenDone.delete(id);
-  if (!sessions.has(id)) return;
+  if (!sessions.has(id)) { toast(tr('drawer.sessionGone')); return; }
   closeMac();
   const same = state.selectedId === id && !drS.hidden;
   state.selectedId = id; drS.hidden = false; setView(null);
