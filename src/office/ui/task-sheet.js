@@ -20,7 +20,7 @@ export const canDictate = () => !!SR && window.isSecureContext;
 export function dictate(btn, field, onChange) {
   if (!canDictate()) { toast(tr('chat.task.noMic'), 6000); return null; }
   const rec = new SR(), start = field.value, sep = start && !/\s$/.test(start) ? ' ' : '';
-  rec.lang = locale() === 'vi-VN' ? 'vi-VN' : 'en-US'; rec.interimResults = true; rec.continuous = true;
+  rec.lang = ['vi-VN', 'th-TH'].includes(locale()) ? locale() : 'en-US'; rec.interimResults = true; rec.continuous = true;
   let done = '';
   rec.onresult = (e) => {
     let live = '';
