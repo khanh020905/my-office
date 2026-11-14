@@ -85,11 +85,14 @@ case " $* " in *" -p "*)
   # its SessionStart hook from the office's --settings: which task it is, and its inbox (FAKE_INBOX, a socket the test listens on)
   bind=$(printf '%s' "$*" | grep -o "http://127.0.0.1:[0-9]*/hook/bind?task=[0-9a-z]*" | head -1)
   [ -n "$bind" ] && [ -n "$FAKE_INBOX" ] && curl -s -m 2 -o /dev/null -H 'Content-Type: application/json' -H "X-Office-Inbox: $FAKE_INBOX" --data-binary '{"session_id":"e2e-task-1","hook_event_name":"SessionStart"}' "$bind"
-  echo '{"type":"system","subtype":"init","session_id":"e2e-task-1"}'
+  sid=e2e-task-1   # ("pick one": the conversation it carries on keeps its id, as the real one does with --resume)
+  case " $* " in *"pick one"*) r=$(printf '%s' "$*" | sed -n 's/.*--resume \([^ ]*\).*/\1/p'); [ -n "$r" ] && sid=$r ;; esac
+  printf '{"type":"system","subtype":"init","session_id":"%s"}\n' "$sid"
   echo '{"type":"assistant","message":{"content":[{"type":"tool_use","name":"Read","input":{"file_path":"/e2e/README.md"}}]}}'
   sleep 1
   case " $* " in *"slowly"*) sleep 25 ;; esac   # (long enough to be stopped from its card)
   case " $* " in
+    *"pick one"*) printf '%s\n' '{"type":"result","subtype":"success","is_error":false,"result":"Which way?\nA) Push it now\nB) Wait for CI"}' ;;   # (quick-reply buttons)
     *"with a picture"*) printf '{"type":"result","subtype":"success","is_error":false,"result":"**Done**, with:\\n- one change\\n- and `code`\\nSCREENSHOT: http://127.0.0.1:%s/health"}\n' "$OFFICE_PORT" ;;
     *) echo '{"type":"result","subtype":"success","is_error":false,"result":"Done: the e2e task."}' ;;
   esac
