@@ -302,8 +302,13 @@ export async function sysSnapshot({ open = false } = {}) {
   building ??= buildSnapshot(open).then((s) => { s.open = open; return s; }).then((s) => { cache = s; cacheAt = Date.now(); cacheLang = langOf(); return s; }).finally(() => { building = null; });
   return building;
 }
+// OFFICE_SYS_TRACE=1: each step of a reading and how long it took, on stderr (scripts/smoke.mjs prints it when a reading hangs)
+const TRACE = process.env.OFFICE_SYS_TRACE === '1';
+const traced = (name, p, t0) => (TRACE ? Promise.resolve(p).then((v) => { console.error(`sys ${name} ${Date.now() - t0} ms`); return v; }) : p);
 async function buildSnapshot(open = true) {
-  const [P, mem, dsk, ports, files, est, battery] = await Promise.all([processes(open ? 25_000 : 120_000), memory(), disk(), listeners(), claudeFiles(), established(), OS.battery?.().catch(() => null) ?? null]);
+  const t0 = Date.now(); if (TRACE) console.error('sys reading starts');
+  const [P, mem, dsk, ports, files, est, battery] = await Promise.all([traced('processes', processes(open ? 25_000 : 120_000), t0), traced('memory', memory(), t0), traced('disk', disk(), t0),
+    traced('listeners', listeners(), t0), traced('claudeFiles', claudeFiles(), t0), traced('established', established(), t0), traced('battery', OS.battery?.().catch(() => null) ?? null, t0)]);
   const cores = os.cpus().length;
   const guard = protectedPids(P);
   noteOwners(P, files);
@@ -322,6 +327,7 @@ async function buildSnapshot(open = true) {
     devRoots.set(root, d);
   }
   const cwdMap = await cwds([...devRoots.values()].map((d) => d.listener));
+  if (TRACE) console.error(`sys cwds ${Date.now() - t0} ms`);
   const devServers = [...devRoots.values()].map((d) => {
     const p = P.procs.get(d.listener), r = P.procs.get(d.pid);
     const conns = [...d.ports].reduce((n, port) => n + (est.get(port) || 0), 0);
@@ -442,6 +448,7 @@ async function buildSnapshot(open = true) {
   const group = (t) => (t.disk ? 2 : t.action ? 0 : 1);
   tips.sort((a, b) => group(a) - group(b) || rank[a.level] - rank[b.level] || b.gain - a.gain);
 
+  if (TRACE) console.error(`sys reading done ${Date.now() - t0} ms`);
   return {
     at: now,
     mem, disk: dsk, tight, diskTight, battery,   // (battery: { pct, charging, ac } or null; the street's e-scooters show it)

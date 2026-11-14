@@ -12,7 +12,7 @@ import assert from 'node:assert/strict';
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const PORT = 4398, base = `http://127.0.0.1:${PORT}`, data = fs.mkdtempSync(path.join(os.tmpdir(), 'office-smoke-'));
-const env = { ...process.env, NODE_ENV: 'production', OFFICE_PORT: String(PORT), OFFICE_DATA_DIR: data, OFFICE_USAGE: '0', OFFICE_CI: '0', OFFICE_TRANSLATE: '0', OFFICE_AI_ACCOUNTS: '0' };   // (AI_ACCOUNTS 0: never this computer's own Codex or Antigravity sign-ins)
+const env = { ...process.env, NODE_ENV: 'production', OFFICE_PORT: String(PORT), OFFICE_DATA_DIR: data, OFFICE_USAGE: '0', OFFICE_CI: '0', OFFICE_TRANSLATE: '0', OFFICE_AI_ACCOUNTS: '0', OFFICE_SYS_TRACE: '1' };   // (AI_ACCOUNTS 0: never this computer's own Codex or Antigravity sign-ins)
 const server = spawn(process.execPath, [path.join(ROOT, 'server', 'index.mjs')], { cwd: ROOT, env, stdio: ['ignore', 'pipe', 'pipe'] });
 let log = ''; server.stdout.on('data', (c) => { log += c; }); server.stderr.on('data', (c) => { log += c; });
 const step = (name) => console.log(`  ✓ ${name}`);
@@ -29,7 +29,12 @@ try {
   const ev = await fetch(`${base}/event`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ hook_event_name: 'SessionStart', session_id: 'smoke', cwd: ROOT }) });
   assert.equal(ev.status, 200);
   step('hooks accepted');
-  const sys = await (await fetch(`${base}/api/sys`)).json();
+  // (the machine panel: given 90 s; when it doesn't answer, whether the server answers at all says what hung: the whole
+  // server, or the panel's reading. With OFFICE_SYS_TRACE the server prints each step's time, shown below on failure.)
+  const sys = await fetch(`${base}/api/sys`, { signal: AbortSignal.timeout(90_000) }).then((r) => r.json()).catch(async (err) => {
+    const alive = await fetch(`${base}/health`, { signal: AbortSignal.timeout(5000) }).then((r) => r.ok, () => false);
+    throw new Error(`/api/sys gave no answer in 90 s (${err.name}); the server ${alive ? 'still answers /health: the machine panel reading hung' : 'does not answer /health either: the whole server is stuck'}`);
+  });
   assert.ok(sys.mem.total > 0 && sys.mem.used > 0 && sys.mem.used <= sys.mem.total, 'memory');
   assert.ok(sys.disk.total > 0, 'disk');
   assert.ok(sys.cpu.cores > 0, 'cores');
